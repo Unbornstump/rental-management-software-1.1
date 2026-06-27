@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RMS Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="main-container">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>Navigation</h2>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-button active" data-page="dashboard">Dashboard</button>
+        <button class="nav-button" data-page="properties">Properties</button>
+        <button class="nav-button" data-page="units">Units</button>
+        <button class="nav-button" data-page="landlords">Landlords</button>
+        <button class="nav-button" data-page="tenants">Tenants</button>
+        <button class="nav-button" data-page="leases">Leases</button>
+        <button class="nav-button" data-page="financials">Financials</button>
+        <button class="nav-button" data-page="maintenance">Maintenance</button>
+        <button class="nav-button" data-page="reports">Reports</button>
+      </nav>
+    </aside>
+    <main class="content-area">
+      <div id="page-content"></div>
+    </main>
+  </div>
+  <script src="api-client.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
