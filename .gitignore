@@ -23,3 +23,5 @@ media/
 dist/
 build/
 *.egg-info/
+
+rms_desktop/
