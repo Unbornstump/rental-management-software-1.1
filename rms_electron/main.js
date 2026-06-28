@@ -2,8 +2,27 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+let homepageWindow;
 let loginWindow;
 let mainWindow;
+
+function createHomepageWindow() {
+  homepageWindow = new BrowserWindow({
+    width: 1024,
+    height: 768,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    },
+    title: 'RMS - Rental Management System'
+  });
+
+  homepageWindow.loadFile('homepage.html');
+  
+  homepageWindow.on('closed', () => {
+    homepageWindow = null;
+  });
+}
 
 function createLoginWindow() {
   loginWindow = new BrowserWindow({
@@ -14,7 +33,9 @@ function createLoginWindow() {
       contextIsolation: false
     },
     resizable: false,
-    title: 'RMS Login'
+    title: 'RMS Login',
+    parent: homepageWindow,
+    modal: true
   });
 
   loginWindow.loadFile('login.html');
@@ -51,11 +72,11 @@ function createMainWindow(token) {
 }
 
 app.whenReady().then(() => {
-  createLoginWindow();
+  createHomepageWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createLoginWindow();
+      createHomepageWindow();
     }
   });
 });
@@ -67,9 +88,18 @@ app.on('window-all-closed', () => {
 });
 
 // IPC handlers
+ipcMain.on('open-login-window', () => {
+  if (!loginWindow) {
+    createLoginWindow();
+  }
+});
+
 ipcMain.on('login-success', (event, token) => {
   if (loginWindow) {
     loginWindow.close();
+  }
+  if (homepageWindow) {
+    homepageWindow.close();
   }
   createMainWindow(token);
 });
@@ -78,5 +108,7 @@ ipcMain.on('logout', () => {
   if (mainWindow) {
     mainWindow.close();
   }
-  createLoginWindow();
+  if (!homepageWindow) {
+    createHomepageWindow();
+  }
 });

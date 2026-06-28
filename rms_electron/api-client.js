@@ -67,6 +67,27 @@ class ApiClient {
     return response.data;
   }
 
+  async post(path, data) {
+    const response = await axios.post(`${this.baseURL}${path}`, data, {
+      headers: this.getHeaders()
+    });
+    return response.data;
+  }
+
+  async put(path, data) {
+    const response = await axios.put(`${this.baseURL}${path}`, data, {
+      headers: this.getHeaders()
+    });
+    return response.data;
+  }
+
+  async delete(path) {
+    const response = await axios.delete(`${this.baseURL}${path}`, {
+      headers: this.getHeaders()
+    });
+    return response.data;
+  }
+
   async getProperties() {
     return this.get('/api/properties/');
   }
@@ -109,6 +130,71 @@ class ApiClient {
 
   async getMaintenanceRequests() {
     return this.get('/api/maintenance-requests/');
+  }
+
+  // CRUD methods for Properties
+  async createProperty(data) {
+    return this.post('/api/properties/', data);
+  }
+
+  async updateProperty(id, data) {
+    return this.put(`/api/properties/${id}/`, data);
+  }
+
+  async deleteProperty(id) {
+    return this.delete(`/api/properties/${id}/`);
+  }
+
+  // CRUD methods for Units
+  async createUnit(data) {
+    return this.post('/api/units/', data);
+  }
+
+  async updateUnit(id, data) {
+    return this.put(`/api/units/${id}/`, data);
+  }
+
+  async deleteUnit(id) {
+    return this.delete(`/api/units/${id}/`);
+  }
+
+  // CRUD methods for Landlords
+  async createLandlord(data) {
+    return this.post('/api/landlords/', data);
+  }
+
+  async updateLandlord(id, data) {
+    return this.put(`/api/landlords/${id}/`, data);
+  }
+
+  async deleteLandlord(id) {
+    return this.delete(`/api/landlords/${id}/`);
+  }
+
+  // CRUD methods for Tenants
+  async createTenant(data) {
+    return this.post('/api/tenants/', data);
+  }
+
+  async updateTenant(id, data) {
+    return this.put(`/api/tenants/${id}/`, data);
+  }
+
+  async deleteTenant(id) {
+    return this.delete(`/api/tenants/${id}/`);
+  }
+
+  // CRUD methods for Leases
+  async createLease(data) {
+    return this.post('/api/leases/', data);
+  }
+
+  async updateLease(id, data) {
+    return this.put(`/api/leases/${id}/`, data);
+  }
+
+  async deleteLease(id) {
+    return this.delete(`/api/leases/${id}/`);
   }
 }
 

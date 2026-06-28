@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RMS - Rental Management System</title>
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="homepage.css">
+</head>
+<body>
+  <div class="homepage-container">
+    <header class="homepage-header">
+      <h1 class="homepage-title">Rental Management System</h1>
+      <p class="homepage-subtitle">Your complete solution for property management</p>
+    </header>
+
+    <main class="homepage-content">
+      <section class="homepage-section">
+        <h2>Welcome to RMS</h2>
+        <p class="homepage-description">
+          RMS is a comprehensive platform designed to streamline property management tasks. 
+          Track properties, units, tenants, leases, payments, and maintenance requests all in one place.
+        </p>
+      </section>
+
+      <section class="homepage-features">
+        <div class="feature-card">
+          <h3>Property Management</h3>
+          <p>Manage multiple properties with ease. Track units, tenants, and leases across your entire portfolio.</p>
+          <button class="action-button feature-button" id="enter-property-management">
+            Enter Property Management
+          </button>
+        </div>
+
+        <div class="feature-card">
+          <h3>Financial Tracking</h3>
+          <p>Monitor payments, invoices, and expenses. Generate reports to keep your finances organized.</p>
+        </div>
+
+        <div class="feature-card">
+          <h3>Maintenance Requests</h3>
+          <p>Track and manage maintenance requests efficiently. Keep your properties in top condition.</p>
+        </div>
+      </section>
+
+      <section class="homepage-section">
+        <h2>App Settings</h2>
+        <div class="settings-grid">
+          <div class="setting-item">
+            <label for="backend-url">Backend URL</label>
+            <input type="text" id="backend-url" class="setting-input" placeholder="http://localhost:8000">
+          </div>
+          <div class="setting-item">
+            <label for="theme">Theme</label>
+            <select id="theme" class="setting-select">
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+          <button class="action-button" id="save-settings">Save Settings</button>
+        </div>
+      </section>
+
+      <footer class="homepage-footer">
+        <p>&copy; 2026 Rental Management System. All rights reserved.</p>
+      </footer>
+    </main>
+  </div>
+  <script src="homepage.js"></script>
+</body>
+</html>

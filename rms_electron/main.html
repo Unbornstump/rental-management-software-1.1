@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RMS Dashboard</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="main.css">
 </head>
 <body>
   <div class="main-container">
@@ -13,15 +14,44 @@
         <h2>Navigation</h2>
       </div>
       <nav class="sidebar-nav">
-        <button class="nav-button active" data-page="dashboard">Dashboard</button>
-        <button class="nav-button" data-page="properties">Properties</button>
-        <button class="nav-button" data-page="units">Units</button>
-        <button class="nav-button" data-page="landlords">Landlords</button>
-        <button class="nav-button" data-page="tenants">Tenants</button>
-        <button class="nav-button" data-page="leases">Leases</button>
-        <button class="nav-button" data-page="financials">Financials</button>
-        <button class="nav-button" data-page="maintenance">Maintenance</button>
-        <button class="nav-button" data-page="reports">Reports</button>
+        <button class="nav-button active" data-page="dashboard">
+          <span class="nav-icon">🏠</span>
+          Dashboard
+        </button>
+        <button class="nav-button" data-page="properties">
+          <span class="nav-icon">🏢</span>
+          Properties
+        </button>
+        <div class="property-nav-items" id="property-nav-items" style="display: none;">
+          <button class="nav-button" data-page="units">
+            <span class="nav-icon">🚪</span>
+            Units
+          </button>
+          <button class="nav-button" data-page="landlords">
+            <span class="nav-icon">👤</span>
+            Landlords
+          </button>
+          <button class="nav-button" data-page="tenants">
+            <span class="nav-icon">👥</span>
+            Tenants
+          </button>
+          <button class="nav-button" data-page="leases">
+            <span class="nav-icon">📄</span>
+            Leases
+          </button>
+          <button class="nav-button" data-page="financials">
+            <span class="nav-icon">💰</span>
+            Financials
+          </button>
+          <button class="nav-button" data-page="maintenance">
+            <span class="nav-icon">🛠</span>
+            Maintenance
+          </button>
+          <button class="nav-button" data-page="reports">
+            <span class="nav-icon">📊</span>
+            Reports
+          </button>
+        </div>
       </nav>
     </aside>
     <main class="content-area">
@@ -29,6 +59,9 @@
     </main>
   </div>
   <script src="api-client.js"></script>
+  <script src="state.js"></script>
+  <script src="modals.js"></script>
+  <script src="pages.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>
