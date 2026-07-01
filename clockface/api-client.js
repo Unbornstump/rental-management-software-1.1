@@ -150,6 +150,14 @@ class ApiClient {
     return this.post('/api/units/', data);
   }
 
+  async bulkCreateUnits(unitsArray) {
+    // Create multiple units in parallel
+    const promises = unitsArray.map(unit => 
+      this.post('/api/units/', unit)
+    );
+    return Promise.all(promises);
+  }
+
   async updateUnit(id, data) {
     return this.put(`/api/units/${id}/`, data);
   }

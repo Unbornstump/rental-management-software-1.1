@@ -150,6 +150,11 @@
   color: #7c3aed;
 }
 
+.stat-card-icon.red {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
 .stat-card-title {
   font-size: 14px;
   font-weight: 500;
@@ -834,4 +839,491 @@
 
 .context-selector select:focus {
   outline: 2px solid rgba(47, 128, 237, 0.35);
+}
+
+/* Property Context Header */
+.property-context-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  color: white;
+}
+
+.property-context-icon {
+  font-size: 32px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+}
+
+.property-context-info {
+  flex: 1;
+}
+
+.property-context-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.property-context-label {
+  font-size: 12px;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.back-to-properties-btn {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.back-to-properties-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: white;
+}
+
+.back-to-properties-btn.active {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+/* Units Grid */
+.units-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.units-grid.compact-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.unit-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.unit-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+  border-color: #2563eb;
+}
+
+.unit-card.compact {
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.unit-card-status {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+
+.unit-card-status.status-vacant {
+  background-color: #f59e0b;
+}
+
+.unit-card-status.status-occupied {
+  background-color: #10b981;
+}
+
+.unit-card-content {
+  text-align: center;
+}
+
+.unit-card-number {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.unit-card-type {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.unit-card-rent {
+  font-size: 14px;
+  font-weight: 600;
+  color: #059669;
+}
+
+.unit-card-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.unit-card-badge.occupied {
+  background-color: #ecfdf5;
+  color: #059669;
+}
+
+.unit-card-badge.vacant {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.unit-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.unit-card-icon {
+  font-size: 32px;
+}
+
+.unit-card-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.unit-card-badge.status-occupied {
+  background-color: #ecfdf5;
+  color: #059669;
+}
+
+.unit-card-badge.status-vacant {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.unit-card-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.unit-card-type {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.unit-card-rent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.rent-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.rent-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Tenants Grid */
+.tenants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.tenant-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.tenant-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+  border-color: #2563eb;
+}
+
+.tenant-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.tenant-card-icon {
+  font-size: 32px;
+}
+
+.tenant-card-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tenant-card-badge.status-active {
+  background-color: #ecfdf5;
+  color: #059669;
+}
+
+.tenant-card-badge.status-inactive {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.tenant-card-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.tenant-card-contact {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.tenant-card-unit {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.unit-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.unit-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* Header Actions */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.view-toggle {
+  display: flex;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.view-toggle-btn {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.view-toggle-btn:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.view-toggle-btn.active {
+  background-color: #2f80ed;
+  color: white;
+}
+
+/* Units Table */
+.units-table-container {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.units-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.units-table thead {
+  background-color: #f9fafb;
+}
+
+.units-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.units-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+  color: #111827;
+}
+
+.units-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.units-table tbody tr:hover {
+  background-color: #f9fafb;
+  cursor: pointer;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-badge.status-vacant {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.status-badge.status-occupied {
+  background-color: #ecfdf5;
+  color: #059669;
+}
+
+/* Form Hint */
+.form-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Form Sections */
+.form-section {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.form-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.form-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 16px;
+}
+
+.tenant-modal {
+  max-width: 600px;
+}
+
+/* Unit Selector Grid */
+.unit-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: #f9fafb;
+}
+
+.unit-selector-tile {
+  padding: 12px 8px;
+  background-color: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.unit-selector-tile:hover:not(.occupied) {
+  border-color: #2f80ed;
+  background-color: #f0f7ff;
+}
+
+.unit-selector-tile.selected {
+  border-color: #2f80ed;
+  background-color: #2f80ed;
+  color: white;
+}
+
+.unit-selector-tile.occupied {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+  position: relative;
+}
+
+.unit-selector-tile.occupied::after {
+  content: '×';
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* Form Error */
+.form-error {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #dc2626;
+  font-weight: 500;
 }

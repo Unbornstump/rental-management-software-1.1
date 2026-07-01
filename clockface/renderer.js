@@ -32,6 +32,14 @@ async function initializeApp() {
 // Navigation handling
 document.querySelectorAll('.nav-button').forEach(button => {
   button.addEventListener('click', () => {
+    const action = button.dataset.action;
+    
+    // Handle back button action
+    if (action === 'back-to-properties') {
+      PageLoaders.loadPage('back-to-properties');
+      return;
+    }
+    
     // Update active state
     document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
     button.classList.add('active');

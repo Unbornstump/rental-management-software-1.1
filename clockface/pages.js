@@ -50,30 +50,30 @@ const PageLoaders = {
 
   updateSidebarVisibility() {
     const property = AppState.getPropertyContext();
-    const propertyNavItems = document.getElementById('property-nav-items');
-    if (propertyNavItems) {
-      propertyNavItems.style.display = property ? 'block' : 'none';
+    const globalNav = document.getElementById('global-nav');
+    const propertySpaceNav = document.getElementById('property-space-nav');
+    const propertyContextName = document.getElementById('property-context-name');
+
+    if (property) {
+      globalNav.style.display = 'none';
+      propertySpaceNav.style.display = 'block';
+      propertyContextName.textContent = property.name;
+    } else {
+      globalNav.style.display = 'block';
+      propertySpaceNav.style.display = 'none';
     }
   },
 
-  // Dashboard (Property Space Dashboard - shown when property is selected)
-  async loadDashboard(container) {
+  // Property Dashboard (Property Space Dashboard - shown when property is selected)
+  async loadPropertyDashboard(container) {
     const property = AppState.getPropertyContext();
 
-    // If no property context, show property list instead
     if (!property) {
-      this.loadPropertyList(container);
+      this.loadProperties(container);
       return;
     }
 
     container.innerHTML = `
-      <div class="property-space-header">
-        <div class="property-space-info">
-          <h1 class="property-space-title">${property.name}</h1>
-          <p class="property-space-subtitle">${property.address || 'No address'}</p>
-        </div>
-        <button class="action-button exit-property-btn" data-action="exit">← Back to Properties</button>
-      </div>
       <div class="stats-grid" id="dashboard-stats"></div>
       <div class="dashboard-grid">
         <div class="quick-actions-panel">
@@ -81,9 +81,6 @@ const PageLoaders = {
           <div class="quick-actions-list">
             <button class="quick-action-btn" data-action="add-unit">+ Add Unit</button>
             <button class="quick-action-btn" data-action="register-tenant">+ Register Tenant</button>
-            <button class="quick-action-btn" data-action="create-lease">+ Create Lease</button>
-            <button class="quick-action-btn" data-action="record-payment">+ Record Payment</button>
-            <button class="quick-action-btn" data-action="add-maintenance">+ Log Maintenance</button>
           </div>
         </div>
         <div class="recent-activity-panel">
@@ -99,53 +96,97 @@ const PageLoaders = {
       </div>
     `;
 
-    // Attach exit button handler
-    const exitBtn = container.querySelector('.exit-property-btn');
-    if (exitBtn) {
-      exitBtn.addEventListener('click', () => {
-        AppState.clearPropertyContext();
-        this.updateSidebarVisibility();
-        this.loadPage('properties');
-      });
-    }
-
     const statsGrid = document.getElementById('dashboard-stats');
 
     try {
-      const [units, tenants, leases] = await Promise.all([
+      const [units, tenants, leases, payments] = await Promise.all([
         apiClient.getUnits(),
         apiClient.getTenants(),
-        apiClient.getLeases()
+        apiClient.getLeases(),
+        apiClient.getPayments()
       ]);
 
       // Filter by current property
       const filteredUnits = units.filter(u => u.property == property.id);
       const filteredLeases = leases.filter(l => filteredUnits.some(u => u.id == l.unit));
+      const activeLeases = filteredLeases.filter(l => l.status === 'active');
+      
+      // Calculate occupancy
+      const occupiedUnitsCount = filteredUnits.filter(u => u.status === 'occupied').length;
+      const vacantUnits = filteredUnits.filter(u => u.status === 'vacant').length;
+      const occupancyRate = filteredUnits.length > 0 ? ((occupiedUnitsCount / filteredUnits.length) * 100).toFixed(0) : 0;
+      
+      // Calculate rent stats for current month
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+      
+      // Total rent expected = sum of rent amounts from all occupied units
+      const occupiedUnits = filteredUnits.filter(u => u.status === 'occupied');
+      const totalRentExpected = occupiedUnits.reduce((sum, unit) => sum + (parseFloat(unit.rent_amount) || 0), 0);
+      
+      const propertyLeaseIds = filteredLeases.map(l => l.id);
+      const filteredPayments = payments.filter(p => {
+        const paymentDate = new Date(p.payment_date);
+        return paymentDate.getMonth() + 1 === currentMonth && 
+               paymentDate.getFullYear() === currentYear &&
+               propertyLeaseIds.includes(p.invoice);
+      });
+      
+      const totalRentCollected = filteredPayments.reduce((sum, p) => sum + (parseFloat(p.amount_paid) || 0), 0);
+      const outstandingRent = totalRentExpected - totalRentCollected;
+      
+      // Count active tenants (tenants with active leases in this property)
+      const activeTenantIds = activeLeases.map(l => l.tenant);
+      const activeTenants = tenants.filter(t => activeTenantIds.includes(t.id)).length;
 
       statsGrid.innerHTML = `
         <div class="stat-card">
           <div class="stat-card-header">
             <div class="stat-card-icon green">🚪</div>
-            <div class="stat-card-title">Units</div>
+            <div class="stat-card-title">Total Units</div>
           </div>
           <div class="stat-card-value">${filteredUnits.length}</div>
-          <div class="stat-card-subtitle">Available: ${filteredUnits.length}</div>
+          <div class="stat-card-subtitle">${occupiedUnitsCount} occupied, ${vacantUnits} vacant</div>
         </div>
         <div class="stat-card">
           <div class="stat-card-header">
-            <div class="stat-card-icon orange">�</div>
-            <div class="stat-card-title">Tenants</div>
+            <div class="stat-card-icon blue">📊</div>
+            <div class="stat-card-title">Occupancy Rate</div>
           </div>
-          <div class="stat-card-value">${tenants.length}</div>
-          <div class="stat-card-subtitle">Active leases</div>
+          <div class="stat-card-value">${occupancyRate}%</div>
+          <div class="stat-card-subtitle">${occupiedUnitsCount} of ${filteredUnits.length} units</div>
         </div>
         <div class="stat-card">
           <div class="stat-card-header">
-            <div class="stat-card-icon purple">�</div>
-            <div class="stat-card-title">Leases</div>
+            <div class="stat-card-icon orange">👥</div>
+            <div class="stat-card-title">Active Tenants</div>
           </div>
-          <div class="stat-card-value">${filteredLeases.length}</div>
-          <div class="stat-card-subtitle">Expiring: 0</div>
+          <div class="stat-card-value">${activeTenants}</div>
+          <div class="stat-card-subtitle">With active leases</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header">
+            <div class="stat-card-icon purple">💰</div>
+            <div class="stat-card-title">Rent Expected</div>
+          </div>
+          <div class="stat-card-value">${totalRentExpected.toLocaleString()}</div>
+          <div class="stat-card-subtitle">This month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header">
+            <div class="stat-card-icon green">✅</div>
+            <div class="stat-card-title">Rent Collected</div>
+          </div>
+          <div class="stat-card-value">${totalRentCollected.toLocaleString()}</div>
+          <div class="stat-card-subtitle">This month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header">
+            <div class="stat-card-icon red">⚠️</div>
+            <div class="stat-card-title">Outstanding</div>
+          </div>
+          <div class="stat-card-value">${outstandingRent.toLocaleString()}</div>
+          <div class="stat-card-subtitle">This month</div>
         </div>
       `;
 
@@ -245,10 +286,12 @@ const PageLoaders = {
     }
   },
 
-  // Properties
+  // Properties (General App View - the "lobby" to pick a property)
   async loadProperties(container) {
     container.innerHTML = `
-      <h1 class="page-title">Properties</h1>
+      <div class="property-list-header">
+        <h1 class="page-title">Properties</h1>
+      </div>
       <div class="properties-grid" id="properties-grid"></div>
     `;
 
@@ -261,14 +304,29 @@ const PageLoaders = {
         apiClient.getTenants()
       ]);
 
+      // Store properties in state for later use
+      AppState.setAllProperties(properties);
+
+      if (properties.length === 0) {
+        propertiesGrid.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🏢</div>
+            <h3 class="empty-state-title">No Properties Yet</h3>
+            <p class="empty-state-text">Create your first property to get started managing your rentals.</p>
+            <button class="action-button" onclick="Modals.showPropertyModal()">+ Add Property</button>
+          </div>
+        `;
+        return;
+      }
+
       // Calculate stats for each property
       const propertyStats = properties.map(prop => {
         const propUnits = units.filter(u => u.property == prop.id);
-        const propTenants = tenants.filter(t => propUnits.some(u => u.id == t.unit));
+        const propLeases = tenants.filter(t => propUnits.some(u => u.id == t.unit));
         return {
           ...prop,
           unitCount: propUnits.length,
-          tenantCount: propTenants.length
+          tenantCount: propLeases.length
         };
       });
 
@@ -312,7 +370,7 @@ const PageLoaders = {
           if (property) {
             AppState.setPropertyContext(property);
             this.updateSidebarVisibility();
-            this.loadPage('dashboard');
+            this.loadPage('property-dashboard');
           }
         });
       });
@@ -327,7 +385,211 @@ const PageLoaders = {
     }
   },
 
-  // Units
+  // Property Units (Property Space - Units module)
+  async loadPropertyUnits(container) {
+    const property = AppState.getPropertyContext();
+
+    if (!property) {
+      this.loadProperties(container);
+      return;
+    }
+
+    // Get saved view preference or default to grid
+    const savedView = localStorage.getItem('unitsViewPreference') || 'grid';
+
+    container.innerHTML = `
+      <div class="property-space-header">
+        <div class="property-space-info">
+          <h1 class="property-space-title">Units</h1>
+          <p class="property-space-subtitle">${property.name}</p>
+        </div>
+        <div class="header-actions">
+          <button class="action-button" id="create-unit-btn">+ Bulk Create</button>
+          <div class="view-toggle">
+            <button class="view-toggle-btn ${savedView === 'grid' ? 'active' : ''}" data-view="grid" title="Grid View">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                <rect x="2" y="2" width="7" height="7" rx="1"/>
+                <rect x="11" y="2" width="7" height="7" rx="1"/>
+                <rect x="2" y="11" width="7" height="7" rx="1"/>
+                <rect x="11" y="11" width="7" height="7" rx="1"/>
+              </svg>
+            </button>
+            <button class="view-toggle-btn ${savedView === 'table' ? 'active' : ''}" data-view="table" title="Table View">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                <rect x="2" y="3" width="16" height="3" rx="1"/>
+                <rect x="2" y="8" width="16" height="3" rx="1"/>
+                <rect x="2" y="13" width="16" height="3" rx="1"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="units-container"></div>
+    `;
+
+    document.getElementById('create-unit-btn').addEventListener('click', () => {
+      Modals.showBulkUnitModal(property.id);
+    });
+
+    // Handle view toggle
+    container.querySelectorAll('.view-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        localStorage.setItem('unitsViewPreference', view);
+        container.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.renderUnits(container, property, view);
+      });
+    });
+
+    // Initial render
+    this.renderUnits(container, property, savedView);
+  },
+
+  async renderUnits(container, property, view) {
+    const unitsContainer = document.getElementById('units-container');
+
+    try {
+      const [units, tenants, leases] = await Promise.all([
+        apiClient.getUnits(),
+        apiClient.getTenants(),
+        apiClient.getLeases()
+      ]);
+
+      const filteredUnits = units.filter(u => u.property == property.id);
+
+      // Determine occupancy for each unit based on active leases
+      const activeLeases = leases.filter(l => l.status === 'active');
+      const occupiedUnitIds = activeLeases.map(l => l.unit);
+      
+      const unitsWithOccupancy = filteredUnits.map(unit => ({
+        ...unit,
+        isOccupied: occupiedUnitIds.includes(unit.id)
+      }));
+
+      if (filteredUnits.length === 0) {
+        unitsContainer.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🚪</div>
+            <h3 class="empty-state-title">No Units Yet</h3>
+            <p class="empty-state-text">Bulk create your first units to get started.</p>
+            <button class="action-button" onclick="Modals.showBulkUnitModal(${property.id})">+ Bulk Create Units</button>
+          </div>
+        `;
+        return;
+      }
+
+      if (view === 'grid') {
+        this.renderUnitsGrid(unitsContainer, unitsWithOccupancy);
+      } else {
+        this.renderUnitsTable(unitsContainer, unitsWithOccupancy, tenants, leases);
+      }
+    } catch (error) {
+      unitsContainer.innerHTML = `<p>Error loading units: ${error.message}</p>`;
+    }
+  },
+
+  renderUnitsGrid(container, units) {
+    // Sort units numerically by the number portion
+    const sortedUnits = [...units].sort((a, b) => {
+      const numA = this.extractUnitNumber(a.unit_number);
+      const numB = this.extractUnitNumber(b.unit_number);
+      return numA - numB;
+    });
+
+    container.innerHTML = `<div class="units-grid compact-grid">${sortedUnits.map(unit => `
+      <div class="unit-card compact" data-unit-id="${unit.id}">
+        <div class="unit-card-status status-${unit.isOccupied ? 'occupied' : 'vacant'}"></div>
+        <div class="unit-card-content">
+          <div class="unit-card-number">${unit.unit_number || 'N/A'}</div>
+          <div class="unit-card-badge ${unit.isOccupied ? 'occupied' : 'vacant'}">${unit.isOccupied ? 'Occupied' : 'Vacant'}</div>
+          <div class="unit-card-type">${unit.unit_type || 'N/A'}</div>
+          <div class="unit-card-rent">${parseFloat(unit.rent_amount || 0).toLocaleString()}</div>
+        </div>
+      </div>
+    `).join('')}</div>`;
+
+    // Attach click handlers
+    container.querySelectorAll('.unit-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const unitId = card.dataset.unitId;
+        const unit = sortedUnits.find(u => u.id == unitId);
+        if (unit) {
+          Modals.showUnitEditModal(unit);
+        }
+      });
+    });
+  },
+
+  extractUnitNumber(unitNumber) {
+    // Extract the numeric portion from unit name (e.g., "A 1" -> 1, "Room 10" -> 10, "a1 10" -> 10)
+    if (!unitNumber) return 0;
+    // Match the last sequence of digits in the string to handle formats like "a1 10"
+    const matches = unitNumber.match(/\d+/g);
+    if (!matches || matches.length === 0) return 0;
+    // Return the last number found (the actual unit number)
+    return parseInt(matches[matches.length - 1], 10);
+  },
+
+  renderUnitsTable(container, units, tenants, leases) {
+    // Sort units numerically by the number portion
+    const sortedUnits = [...units].sort((a, b) => {
+      const numA = this.extractUnitNumber(a.unit_number);
+      const numB = this.extractUnitNumber(b.unit_number);
+      return numA - numB;
+    });
+
+    // Get tenant names for occupied units
+    const unitTenants = {};
+    leases.forEach(lease => {
+      if (lease.status === 'active') {
+        const tenant = tenants.find(t => t.id == lease.tenant);
+        if (tenant) {
+          unitTenants[lease.unit] = tenant.full_name || tenant.name || 'Unknown';
+        }
+      }
+    });
+
+    container.innerHTML = `
+      <div class="units-table-container">
+        <table class="units-table">
+          <thead>
+            <tr>
+              <th>Unit</th>
+              <th>Type</th>
+              <th>Rent</th>
+              <th>Tenant</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sortedUnits.map(unit => `
+              <tr class="unit-row" data-unit-id="${unit.id}">
+                <td><strong>${unit.unit_number || 'N/A'}</strong></td>
+                <td>${unit.unit_type || 'N/A'}</td>
+                <td>${parseFloat(unit.rent_amount || 0).toLocaleString()}</td>
+                <td>${unitTenants[unit.id] || '-'}</td>
+                <td><span class="status-badge status-${unit.status || 'vacant'}">${unit.status === 'occupied' ? 'Occupied' : 'Vacant'}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    // Attach click handlers
+    container.querySelectorAll('.unit-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const unitId = row.dataset.unitId;
+        const unit = sortedUnits.find(u => u.id == unitId);
+        if (unit) {
+          Modals.showUnitEditModal(unit);
+        }
+      });
+    });
+  },
+
+  // Units (Legacy - kept for compatibility)
   async loadUnits(container) {
     container.innerHTML = `
       ${this.renderContextSelector()}
@@ -461,7 +723,93 @@ const PageLoaders = {
     }
   },
 
-  // Tenants
+  // Property Tenants (Property Space - Tenants module)
+  async loadPropertyTenants(container) {
+    const property = AppState.getPropertyContext();
+
+    if (!property) {
+      this.loadProperties(container);
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="property-space-header">
+        <div class="property-space-info">
+          <h1 class="property-space-title">Tenants</h1>
+          <p class="property-space-subtitle">${property.name}</p>
+        </div>
+        <button class="action-button" id="create-tenant-btn">+ Register Tenant</button>
+      </div>
+      <div class="tenants-grid" id="tenants-grid"></div>
+    `;
+
+    document.getElementById('create-tenant-btn').addEventListener('click', () => {
+      Modals.showTenantModal(null, property.id);
+    });
+
+    const tenantsGrid = document.getElementById('tenants-grid');
+
+    try {
+      const [allUnits, allLeases, allTenants] = await Promise.all([
+        apiClient.getUnits(),
+        apiClient.getLeases(),
+        apiClient.getTenants()
+      ]);
+
+      // Filter tenants by property
+      const propertyUnits = allUnits.filter(u => u.property == property.id);
+      const propertyLeases = allLeases.filter(l => propertyUnits.some(u => u.id == l.unit));
+      const propertyTenantIds = propertyLeases.map(l => l.tenant);
+      const filteredTenants = allTenants.filter(t => propertyTenantIds.includes(t.id));
+
+      if (filteredTenants.length === 0) {
+        tenantsGrid.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">👥</div>
+            <h3 class="empty-state-title">No Tenants Yet</h3>
+            <p class="empty-state-text">Register your first tenant to this property to get started.</p>
+            <button class="action-button" onclick="Modals.showTenantModal(null, ${property.id})">+ Register Tenant</button>
+          </div>
+        `;
+        return;
+      }
+
+      tenantsGrid.innerHTML = filteredTenants.map(tenant => {
+        const tenantLease = propertyLeases.find(l => l.tenant == tenant.id);
+        const tenantUnit = tenantLease ? propertyUnits.find(u => u.id == tenantLease.unit) : null;
+        
+        return `
+          <div class="tenant-card" data-tenant-id="${tenant.id}">
+            <div class="tenant-card-header">
+              <div class="tenant-card-icon">👤</div>
+              <span class="tenant-card-badge status-${tenant.status || 'active'}">${tenant.status === 'active' ? 'Active' : 'Inactive'}</span>
+            </div>
+            <h3 class="tenant-card-title">${tenant.full_name || tenant.name || 'N/A'}</h3>
+            <p class="tenant-card-contact">${tenant.phone || 'N/A'}</p>
+            <div class="tenant-card-unit">
+              <span class="unit-label">Unit:</span>
+              <span class="unit-value">${tenantUnit ? tenantUnit.unit_number : 'Not assigned'}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Attach click handlers for tenant cards
+      container.querySelectorAll('.tenant-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const tenantId = card.dataset.tenantId;
+          const tenant = filteredTenants.find(t => t.id == tenantId);
+          if (tenant) {
+            Modals.showTenantModal(tenant, property.id);
+          }
+        });
+      });
+    } catch (error) {
+      tenantsGrid.innerHTML = `<p>Error loading tenants: ${error.message}</p>`;
+    }
+  },
+
+  // Tenants (Legacy - kept for compatibility)
   async loadTenants(container) {
     container.innerHTML = `
       ${this.renderContextSelector()}
@@ -856,25 +1204,33 @@ const PageLoaders = {
     const contentDiv = document.getElementById('page-content');
     contentDiv.innerHTML = '<p>Loading...</p>';
 
-    // Navigation guard: property-specific pages require a property context
-    const propertySpecificPages = ['units', 'landlords', 'tenants', 'leases', 'financials', 'maintenance', 'reports'];
-    if (propertySpecificPages.includes(pageName) && !AppState.getPropertyContext()) {
-      contentDiv.innerHTML = `
-        <div class="guard-message">
-          <h2 class="guard-title">Select a Property First</h2>
-          <p class="guard-text">Please select a property from the dropdown above to view this section.</p>
-          <button class="action-button" onclick="document.querySelector('[data-page=\'properties\']')?.click()">Go to Properties</button>
-        </div>
-      `;
+    // Handle back button action
+    if (pageName === 'back-to-properties') {
+      AppState.clearPropertyContext();
+      this.updateSidebarVisibility();
+      this.loadPage('properties');
+      return;
+    }
+
+    // Property space pages - require property context
+    const propertySpacePages = ['property-dashboard', 'property-units', 'property-tenants'];
+    if (propertySpacePages.includes(pageName) && !AppState.getPropertyContext()) {
+      this.loadProperties(contentDiv);
       return;
     }
 
     switch (pageName) {
-      case 'dashboard':
-        this.loadDashboard(contentDiv);
-        break;
       case 'properties':
         this.loadProperties(contentDiv);
+        break;
+      case 'property-dashboard':
+        this.loadPropertyDashboard(contentDiv);
+        break;
+      case 'property-units':
+        this.loadPropertyUnits(contentDiv);
+        break;
+      case 'property-tenants':
+        this.loadPropertyTenants(contentDiv);
         break;
       case 'units':
         this.loadUnits(contentDiv);

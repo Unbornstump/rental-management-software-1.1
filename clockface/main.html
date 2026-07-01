@@ -14,42 +14,39 @@
         <h2>Navigation</h2>
       </div>
       <nav class="sidebar-nav">
-        <button class="nav-button active" data-page="dashboard">
-          <span class="nav-icon">🏠</span>
-          Dashboard
-        </button>
-        <button class="nav-button" data-page="properties">
-          <span class="nav-icon">🏢</span>
-          Properties
-        </button>
-        <div class="property-nav-items" id="property-nav-items" style="display: none;">
-          <button class="nav-button" data-page="units">
-            <span class="nav-icon">🚪</span>
+        <!-- General App Navigation -->
+        <div id="global-nav">
+          <button class="nav-button active" data-page="properties">
+            <span class="nav-icon">🏢</span>
+            Properties
+          </button>
+        </div>
+        
+        <!-- Property Space Navigation -->
+        <div id="property-space-nav" style="display: none;">
+          <div class="property-context-header">
+            <div class="property-context-icon">🏢</div>
+            <div class="property-context-info">
+              <div class="property-context-name" id="property-context-name">Property Name</div>
+              <div class="property-context-label">Property Space</div>
+            </div>
+          </div>
+          <button class="nav-button back-to-properties-btn" data-action="back-to-properties">
+            <span class="nav-icon">←</span>
+            Back to Properties
+          </button>
+          <div class="nav-divider"></div>
+          <button class="nav-button active" data-page="property-dashboard">
+            <span class="nav-icon">�</span>
+            Dashboard
+          </button>
+          <button class="nav-button" data-page="property-units">
+            <span class="nav-icon">�</span>
             Units
           </button>
-          <button class="nav-button" data-page="landlords">
-            <span class="nav-icon">👤</span>
-            Landlords
-          </button>
-          <button class="nav-button" data-page="tenants">
-            <span class="nav-icon">👥</span>
+          <button class="nav-button" data-page="property-tenants">
+            <span class="nav-icon">�</span>
             Tenants
-          </button>
-          <button class="nav-button" data-page="leases">
-            <span class="nav-icon">📄</span>
-            Leases
-          </button>
-          <button class="nav-button" data-page="financials">
-            <span class="nav-icon">💰</span>
-            Financials
-          </button>
-          <button class="nav-button" data-page="maintenance">
-            <span class="nav-icon">🛠</span>
-            Maintenance
-          </button>
-          <button class="nav-button" data-page="reports">
-            <span class="nav-icon">📊</span>
-            Reports
           </button>
         </div>
       </nav>

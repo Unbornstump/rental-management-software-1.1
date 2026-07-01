@@ -84,7 +84,7 @@ const Modals = {
     modal.innerHTML = `
       <div class="modal">
         <div class="modal-header">
-          <h2>${isEdit ? 'Edit Unit' : 'Create Unit'}</h2>
+          <h2>${isEdit ? 'Edit Unit' : 'Add Unit'}</h2>
           <button class="modal-close">&times;</button>
         </div>
         <form class="modal-form" id="unit-form">
@@ -96,10 +96,10 @@ const Modals = {
             <label for="unit-type">Unit Type</label>
             <select id="unit-type" name="unit_type" required>
               <option value="">Select type</option>
-              <option value="studio" ${unit?.unit_type === 'studio' ? 'selected' : ''}>Studio</option>
-              <option value="1-bedroom" ${unit?.unit_type === '1-bedroom' ? 'selected' : ''}>1 Bedroom</option>
-              <option value="2-bedroom" ${unit?.unit_type === '2-bedroom' ? 'selected' : ''}>2 Bedroom</option>
-              <option value="3-bedroom" ${unit?.unit_type === '3-bedroom' ? 'selected' : ''}>3 Bedroom</option>
+              <option value="bedsitter" ${unit?.unit_type === 'bedsitter' ? 'selected' : ''}>Bedsitter</option>
+              <option value="1br" ${unit?.unit_type === '1br' ? 'selected' : ''}>1BR</option>
+              <option value="2br" ${unit?.unit_type === '2br' ? 'selected' : ''}>2BR</option>
+              <option value="shop" ${unit?.unit_type === 'shop' ? 'selected' : ''}>Shop</option>
             </select>
           </div>
           <div class="form-group">
@@ -114,7 +114,7 @@ const Modals = {
           </div>
           <div class="modal-footer">
             <button type="button" class="action-button cancel-btn">Cancel</button>
-            <button type="submit" class="action-button">${isEdit ? 'Update' : 'Create'}</button>
+            <button type="submit" class="action-button">${isEdit ? 'Update' : 'Add'}</button>
           </div>
         </form>
       </div>
@@ -156,9 +156,171 @@ const Modals = {
           await apiClient.createUnit(data);
         }
         modal.remove();
-        PageLoaders.loadPage('units');
+        
+        // Reload appropriate page based on context
+        const property = AppState.getPropertyContext();
+        if (property) {
+          PageLoaders.loadPage('property-units');
+        } else {
+          PageLoaders.loadPage('units');
+        }
       } catch (error) {
         alert('Error saving unit: ' + error.message);
+      }
+    });
+  },
+
+  // Bulk Unit Creation Modal
+  showBulkUnitModal(propertyId) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal bulk-unit-modal">
+        <div class="modal-header">
+          <h2>Bulk Create Units</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <form class="modal-form" id="bulk-unit-form">
+          <div class="form-group">
+            <label for="unit-prefix">Unit Prefix/Label</label>
+            <input type="text" id="unit-prefix" name="prefix" placeholder="e.g. A, B, Room, Shop" required>
+            <small class="form-hint">Units will be named: Prefix 1, Prefix 2, etc.</small>
+          </div>
+          <div class="form-group">
+            <label for="unit-count">Number of Units</label>
+            <input type="number" id="unit-count" name="count" min="1" max="100" value="10" required>
+          </div>
+          <div class="form-group">
+            <label for="unit-type">Unit Type</label>
+            <select id="unit-type" name="unit_type" required>
+              <option value="">Select type</option>
+              <option value="bedsitter">Bedsitter</option>
+              <option value="1br">1BR</option>
+              <option value="2br">2BR</option>
+              <option value="shop">Shop</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="rent-amount">Rent Amount (per month)</label>
+            <input type="number" id="rent-amount" name="rent_amount" min="0" required>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="action-button cancel-btn">Cancel</button>
+            <button type="submit" class="action-button">Create Units</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.querySelector('.cancel-btn').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+
+    modal.querySelector('#bulk-unit-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const prefix = formData.get('prefix').trim();
+      const count = parseInt(formData.get('count'));
+      const unitType = formData.get('unit_type');
+      const rentAmount = parseFloat(formData.get('rent_amount'));
+
+      // Generate unit numbers
+      const unitsToCreate = [];
+      for (let i = 1; i <= count; i++) {
+        unitsToCreate.push({
+          unit_number: `${prefix} ${i}`,
+          unit_type: unitType,
+          rent_amount: rentAmount,
+          property: propertyId,
+          status: 'vacant'
+        });
+      }
+
+      try {
+        // Create all units
+        await apiClient.bulkCreateUnits(unitsToCreate);
+        modal.remove();
+        
+        // Reload units page
+        PageLoaders.loadPage('property-units');
+      } catch (error) {
+        alert('Error creating units: ' + error.message);
+      }
+    });
+  },
+
+  // Unit Edit Modal (for individual unit editing)
+  showUnitEditModal(unit) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Edit Unit</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <form class="modal-form" id="unit-edit-form">
+          <div class="form-group">
+            <label for="unit-number">Unit Number</label>
+            <input type="text" id="unit-number" name="unit_number" value="${unit?.unit_number || ''}" required>
+          </div>
+          <div class="form-group">
+            <label for="unit-type">Unit Type</label>
+            <select id="unit-type" name="unit_type" required>
+              <option value="">Select type</option>
+              <option value="bedsitter" ${unit?.unit_type === 'bedsitter' ? 'selected' : ''}>Bedsitter</option>
+              <option value="1br" ${unit?.unit_type === '1br' ? 'selected' : ''}>1BR</option>
+              <option value="2br" ${unit?.unit_type === '2br' ? 'selected' : ''}>2BR</option>
+              <option value="shop" ${unit?.unit_type === 'shop' ? 'selected' : ''}>Shop</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="rent-amount">Rent Amount</label>
+            <input type="number" id="rent-amount" name="rent_amount" value="${unit?.rent_amount || ''}" required>
+          </div>
+          <div class="form-group">
+            <label for="unit-status">Status</label>
+            <select id="unit-status" name="status" required>
+              <option value="vacant" ${unit?.status === 'vacant' ? 'selected' : ''}>Vacant</option>
+              <option value="occupied" ${unit?.status === 'occupied' ? 'selected' : ''}>Occupied</option>
+            </select>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="action-button cancel-btn">Cancel</button>
+            <button type="submit" class="action-button">Update</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.querySelector('.cancel-btn').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+
+    modal.querySelector('#unit-edit-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const data = {
+        unit_number: formData.get('unit_number'),
+        unit_type: formData.get('unit_type'),
+        rent_amount: parseFloat(formData.get('rent_amount')),
+        status: formData.get('status')
+      };
+
+      try {
+        await apiClient.updateUnit(unit.id, data);
+        modal.remove();
+        PageLoaders.loadPage('property-units');
+      } catch (error) {
+        alert('Error updating unit: ' + error.message);
       }
     });
   },
@@ -232,40 +394,93 @@ const Modals = {
   },
 
   // Tenant Modal
-  showTenantModal(tenant = null) {
+  async showTenantModal(tenant = null, propertyId = null) {
     const isEdit = tenant !== null;
+    const property = propertyId ? { id: propertyId } : AppState.getPropertyContext();
+    
+    if (!property) {
+      alert('Please select a property first');
+      return;
+    }
+
+    // Fetch units for this property
+    let units = [];
+    try {
+      const allUnits = await apiClient.getUnits();
+      units = allUnits.filter(u => u.property == property.id);
+      // Sort units numerically by the last number in the unit name
+      units.sort((a, b) => {
+        const extractNumber = (str) => {
+          const matches = str.match(/\d+/g);
+          if (!matches || matches.length === 0) return 0;
+          return parseInt(matches[matches.length - 1], 10);
+        };
+        const numA = extractNumber(a.unit_number);
+        const numB = extractNumber(b.unit_number);
+        return numA - numB;
+      });
+    } catch (error) {
+      console.error('Error fetching units:', error);
+    }
+
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `
-      <div class="modal">
+      <div class="modal tenant-modal">
         <div class="modal-header">
-          <h2>${isEdit ? 'Edit Tenant' : 'Create Tenant'}</h2>
+          <h2>${isEdit ? 'Edit Tenant' : 'Register Tenant'}</h2>
           <button class="modal-close">&times;</button>
         </div>
         <form class="modal-form" id="tenant-form">
-          <div class="form-group">
-            <label for="tenant-name">Name</label>
-            <input type="text" id="tenant-name" name="name" value="${tenant?.name || ''}" required>
+          <div class="form-section">
+            <h3 class="form-section-title">Personal Information</h3>
+            <div class="form-group">
+              <label for="tenant-name">Full Name</label>
+              <input type="text" id="tenant-name" name="full_name" value="${tenant?.full_name || tenant?.name || ''}" required>
+            </div>
+            <div class="form-group">
+              <label for="tenant-phone">Phone</label>
+              <input type="tel" id="tenant-phone" name="phone" value="${tenant?.phone || ''}" required>
+            </div>
+            <div class="form-group">
+              <label for="tenant-email">Email</label>
+              <input type="email" id="tenant-email" name="email" value="${tenant?.email || ''}">
+            </div>
+            <div class="form-group">
+              <label for="tenant-national-id">National ID</label>
+              <input type="text" id="tenant-national-id" name="national_id" value="${tenant?.national_id || ''}">
+            </div>
+            <div class="form-group">
+              <label for="tenant-emergency-contact">Emergency Contact</label>
+              <input type="text" id="tenant-emergency-contact" name="emergency_contact" value="${tenant?.emergency_contact || ''}">
+            </div>
           </div>
-          <div class="form-group">
-            <label for="tenant-email">Email</label>
-            <input type="email" id="tenant-email" name="email" value="${tenant?.email || ''}" required>
+          
+          ${!isEdit ? `
+          <div class="form-section">
+            <h3 class="form-section-title">Assign Unit</h3>
+            <div class="form-group">
+              <label for="unit-search">Room Code</label>
+              <input type="text" id="unit-search" name="unit_search" placeholder="Type unit code (e.g., A 1)">
+              <small class="form-hint">Or select from the grid below</small>
+            </div>
+            <div class="unit-selector-grid" id="unit-selector-grid">
+              ${units.map(unit => `
+                <div class="unit-selector-tile ${unit.status === 'occupied' ? 'occupied' : ''}" 
+                     data-unit-id="${unit.id}" 
+                     data-unit-number="${unit.unit_number}">
+                  ${unit.unit_number}
+                </div>
+              `).join('')}
+            </div>
+            <input type="hidden" id="selected-unit-id" name="unit_id">
+            <div id="unit-error" class="form-error" style="display: none;">Please select a vacant unit</div>
           </div>
-          <div class="form-group">
-            <label for="tenant-phone">Phone</label>
-            <input type="tel" id="tenant-phone" name="phone" value="${tenant?.phone || ''}" required>
-          </div>
-          <div class="form-group">
-            <label for="tenant-id-number">ID Number</label>
-            <input type="text" id="tenant-id-number" name="id_number" value="${tenant?.id_number || ''}">
-          </div>
-          <div class="form-group">
-            <label for="tenant-address">Address</label>
-            <textarea id="tenant-address" name="address">${tenant?.address || ''}</textarea>
-          </div>
+          ` : ''}
+          
           <div class="modal-footer">
             <button type="button" class="action-button cancel-btn">Cancel</button>
-            <button type="submit" class="action-button">${isEdit ? 'Update' : 'Create'}</button>
+            <button type="submit" class="action-button">${isEdit ? 'Update' : 'Register'}</button>
           </div>
         </form>
       </div>
@@ -279,29 +494,133 @@ const Modals = {
       if (e.target === modal) modal.remove();
     });
 
-    modal.querySelector('#tenant-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      const data = {
-        name: formData.get('name'),
-        email: formData.get('email'),
-        phone: formData.get('phone'),
-        id_number: formData.get('id_number'),
-        address: formData.get('address')
-      };
+    // Unit selector logic (only for new tenant registration)
+    if (!isEdit) {
+      const unitSearch = modal.querySelector('#unit-search');
+      const unitSelectorGrid = modal.querySelector('#unit-selector-grid');
+      const selectedUnitIdInput = modal.querySelector('#selected-unit-id');
+      const unitError = modal.querySelector('#unit-error');
+      let selectedUnitId = null;
 
-      try {
-        if (isEdit) {
-          await apiClient.updateTenant(tenant.id, data);
-        } else {
-          await apiClient.createTenant(data);
+      // Sync: typing in search highlights matching unit
+      unitSearch.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const matchingTile = unitSelectorGrid.querySelector(`[data-unit-number="${searchTerm}"]`);
+        
+        // Clear previous selection
+        unitSelectorGrid.querySelectorAll('.unit-selector-tile').forEach(tile => {
+          tile.classList.remove('selected');
+        });
+        
+        if (matchingTile && !matchingTile.classList.contains('occupied')) {
+          matchingTile.classList.add('selected');
+          selectedUnitId = matchingTile.dataset.unitId;
+          selectedUnitIdInput.value = selectedUnitId;
+          unitError.style.display = 'none';
+        } else if (searchTerm && !matchingTile) {
+          // No match found
+          selectedUnitId = null;
+          selectedUnitIdInput.value = '';
         }
-        modal.remove();
-        PageLoaders.loadPage('tenants');
-      } catch (error) {
-        alert('Error saving tenant: ' + error.message);
-      }
-    });
+      });
+
+      // Sync: clicking tile populates search input
+      unitSelectorGrid.querySelectorAll('.unit-selector-tile').forEach(tile => {
+        tile.addEventListener('click', () => {
+          if (tile.classList.contains('occupied')) {
+            return; // Don't allow selecting occupied units
+          }
+          
+          // Clear previous selection
+          unitSelectorGrid.querySelectorAll('.unit-selector-tile').forEach(t => {
+            t.classList.remove('selected');
+          });
+          
+          // Select this tile
+          tile.classList.add('selected');
+          selectedUnitId = tile.dataset.unitId;
+          selectedUnitIdInput.value = selectedUnitId;
+          unitSearch.value = tile.dataset.unitNumber;
+          unitError.style.display = 'none';
+        });
+      });
+
+      // Form submission validation
+      modal.querySelector('#tenant-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Validate unit selection for new tenants
+        if (!isEdit && !selectedUnitId) {
+          unitError.style.display = 'block';
+          unitError.textContent = 'Please select a vacant unit';
+          return;
+        }
+
+        const formData = new FormData(e.target);
+        const data = {
+          full_name: formData.get('full_name'),
+          phone: formData.get('phone'),
+          email: formData.get('email'),
+          national_id: formData.get('national_id'),
+          emergency_contact: formData.get('emergency_contact'),
+          status: 'active'
+        };
+
+        try {
+          if (isEdit) {
+            await apiClient.updateTenant(tenant.id, data);
+          } else {
+            // Create tenant
+            const createdTenant = await apiClient.createTenant(data);
+            
+            // Update unit status to occupied
+            if (selectedUnitId) {
+              await apiClient.updateUnit(selectedUnitId, { status: 'occupied' });
+            }
+          }
+          modal.remove();
+          
+          // Reload appropriate page based on context
+          const currentProperty = AppState.getPropertyContext();
+          if (currentProperty) {
+            PageLoaders.loadPage('property-tenants');
+          } else {
+            PageLoaders.loadPage('tenants');
+          }
+        } catch (error) {
+          alert('Error saving tenant: ' + error.message);
+        }
+      });
+    } else {
+      // Edit mode - no unit selection needed
+      modal.querySelector('#tenant-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = {
+          full_name: formData.get('full_name'),
+          phone: formData.get('phone'),
+          email: formData.get('email'),
+          national_id: formData.get('national_id'),
+          emergency_contact: formData.get('emergency_contact'),
+          status: 'active'
+        };
+
+        try {
+          await apiClient.updateTenant(tenant.id, data);
+          modal.remove();
+          
+          // Reload appropriate page based on context
+          const currentProperty = AppState.getPropertyContext();
+          if (currentProperty) {
+            PageLoaders.loadPage('property-tenants');
+          } else {
+            PageLoaders.loadPage('tenants');
+          }
+        } catch (error) {
+          alert('Error saving tenant: ' + error.message);
+        }
+      });
+    }
   },
 
   // Lease Modal
