@@ -725,7 +725,7 @@ const PageLoaders = {
   },
 
   // Property Tenants (Property Space - Tenants module)
-  async loadPropertyTenants(container) {
+  async loadPropertyTenants(container, initialFilter = 'active') {
     const property = AppState.getPropertyContext();
 
     if (!property) {
@@ -742,8 +742,8 @@ const PageLoaders = {
         <button class="action-button" id="create-tenant-btn">+ Register Tenant</button>
       </div>
       <div class="tenant-filter-tabs">
-        <button class="filter-tab active" data-filter="active">Active Tenants</button>
-        <button class="filter-tab" data-filter="inactive">Inactive Tenants</button>
+        <button class="filter-tab ${initialFilter === 'active' ? 'active' : ''}" data-filter="active">Active Tenants</button>
+        <button class="filter-tab ${initialFilter === 'inactive' ? 'active' : ''}" data-filter="inactive">Inactive Tenants</button>
       </div>
       <div class="tenants-grid" id="tenants-grid"></div>
     `;
@@ -753,7 +753,7 @@ const PageLoaders = {
     });
 
     // Filter tab handling
-    let currentFilter = 'active';
+    let currentFilter = initialFilter;
     const filterTabs = container.querySelectorAll('.filter-tab');
     filterTabs.forEach(tab => {
       tab.addEventListener('click', () => {
@@ -783,8 +783,8 @@ const PageLoaders = {
         allTenantUnits
       };
 
-      // Initial render with active filter
-      this.renderTenantsGrid(container, property, 'active');
+      // Initial render with requested filter
+      this.renderTenantsGrid(container, property, initialFilter);
     } catch (error) {
       tenantsGrid.innerHTML = `<p>Error loading tenants: ${error.message}</p>`;
     }
@@ -1084,18 +1084,16 @@ const PageLoaders = {
 
     modal.querySelector('#delete-tenant-btn').addEventListener('click', async () => {
       const tenantName = tenant.full_name || tenant.name;
-      const confirmation = prompt(`To permanently delete ${tenantName} and all their history, type their name to confirm:`);
+      const confirmed = confirm(`Are you sure you want to permanently delete ${tenantName}? This will remove all their history and cannot be undone.`);
       
-      if (confirmation === tenantName) {
+      if (confirmed) {
         try {
           await this.deleteTenant(tenant.id);
           modal.remove();
-          this.loadPropertyTenants(document.getElementById('page-content'));
+          this.loadPropertyTenants(document.getElementById('page-content'), 'inactive');
         } catch (error) {
           alert('Error deleting tenant: ' + error.message);
         }
-      } else if (confirmation !== null) {
-        alert('Name did not match. Deletion cancelled.');
       }
     });
   },
@@ -1153,22 +1151,8 @@ const PageLoaders = {
 
   // Delete tenant logic (cascade delete)
   async deleteTenant(tenantId) {
-    // 1. Delete all leases for this tenant
-    const leases = await apiClient.getLeases();
-    const tenantLeases = leases.filter(l => l.tenant == tenantId);
-    for (const lease of tenantLeases) {
-      await apiClient.deleteLease(lease.id);
-    }
-
-    // 2. Delete all TenantUnit records
-    const tenantUnits = await apiClient.getTenantUnits();
-    const tenantUnitRecords = tenantUnits.filter(tu => tu.tenant == tenantId);
-    for (const tu of tenantUnitRecords) {
-      // Note: API doesn't have deleteTenantUnit, but we can update to deactivate
-      await apiClient.updateTenantUnit(tu.id, { is_active: false });
-    }
-
-    // 3. Delete tenant record
+    // Delete tenant directly and let backend FK cascade remove history.
+    // This avoids partial failures when pre-deleting related records in the UI.
     await apiClient.deleteTenant(tenantId);
   },
 
