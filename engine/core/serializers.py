@@ -115,6 +115,29 @@ class LeaseSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'date_created']
 
+    def validate(self, data):
+        from .models import Lease
+        
+        # Only check when the lease being saved will be active
+        status = data.get('status', getattr(self.instance, 'status', None))
+        unit = data.get('unit', getattr(self.instance, 'unit', None))
+
+        if status == Lease.ACTIVE and unit:
+            conflicting_lease = Lease.objects.filter(
+                unit=unit,
+                status=Lease.ACTIVE
+            ).exclude(
+                id=self.instance.id if self.instance else None
+            ).first()
+
+            if conflicting_lease:
+                raise serializers.ValidationError(
+                    f"Unit {unit.unit_number} already has an active lease (tenant: {conflicting_lease.tenant.full_name}). "
+                    f"Vacate the current tenant before assigning a new one."
+                )
+
+        return data
+
 
 class InvoiceSerializer(serializers.ModelSerializer):
     tenant_name = serializers.CharField(source='tenant.full_name', read_only=True)
