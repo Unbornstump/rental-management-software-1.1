@@ -834,7 +834,9 @@ const PageLoaders = {
 
     tenantsGrid.innerHTML = filteredTenants.map(tenant => {
       const tenantLease = activeLeases.find(l => l.tenant == tenant.id);
-      const tenantUnitRecord = propertyTenantUnits.find(tu => tu.tenant == tenant.id);
+      const tenantUnitRecords = propertyTenantUnits.filter(tu => tu.tenant == tenant.id);
+      const tenantUnitRecord = tenantUnitRecords.find(tu => tu.is_active)
+        || tenantUnitRecords.sort((a, b) => new Date(b.move_in_date) - new Date(a.move_in_date))[0];
       const hasLease = !!tenantLease;
       const isInactive = tenant.status === 'inactive';
       
@@ -1105,7 +1107,9 @@ const PageLoaders = {
     
     // Fetch vacant units
     const allUnits = await apiClient.getUnits();
-    const propertyUnits = allUnits.filter(u => u.property == property.id && u.status === 'vacant');
+    const propertyUnits = allUnits
+      .filter(u => u.property == property.id && u.status === 'vacant')
+      .sort((a, b) => this.extractUnitNumber(a.unit_number) - this.extractUnitNumber(b.unit_number));
     
     modal.innerHTML = `
       <div class="modal">

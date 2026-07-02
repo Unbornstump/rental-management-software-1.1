@@ -595,19 +595,7 @@ const Modals = {
             // Create tenant
             const createdTenant = await apiClient.createTenant(data);
             
-            // Create a TenantUnit record to link tenant to unit
             if (selectedUnitId) {
-              const today = new Date().toISOString().split('T')[0];
-              await apiClient.createTenantUnit({
-                tenant: createdTenant.id,
-                unit: selectedUnitId,
-                move_in_date: today,
-                is_active: true
-              });
-              
-              // Update unit status to occupied
-              await apiClient.updateUnit(selectedUnitId, { status: 'occupied' });
-              
               // Get unit details for lease modal
               const allUnits = await apiClient.getUnits();
               const unit = allUnits.find(u => u.id == selectedUnitId);
@@ -810,32 +798,29 @@ const Modals = {
         // Create lease
         const lease = await apiClient.createLease(leaseData);
         
-        // Create TenantUnit record
-        const todayDate = new Date().toISOString().split('T')[0];
-        await apiClient.createTenantUnit({
-          tenant: tenantId,
-          unit: unitId,
-          move_in_date: todayDate,
-          is_active: true
-        });
-        
         // Create deposit if amount > 0
         if (leaseData.deposit_amount > 0) {
           await apiClient.createDeposit({
             lease: lease.id,
             amount_paid: leaseData.deposit_amount,
-            date_paid: todayDate,
+            date_paid: todayStr,
             amount_refunded: 0
           });
         }
-        
-        // Update unit status to occupied
+
+        // Link tenant to their new unit
+        await apiClient.createTenantUnit({
+          tenant: tenantId,
+          unit: unitId,
+          move_in_date: todayStr,
+          is_active: true
+        });
+
+        // Mark the new unit as occupied
         await apiClient.updateUnit(unitId, { status: 'occupied' });
-        
-        // If re-leasing, set tenant status back to active
-        if (isReLease) {
-          await apiClient.updateTenant(tenantId, { status: 'active' });
-        }
+
+        // Ensure tenant is marked active again (relevant for re-leases)
+        await apiClient.updateTenant(tenantId, { status: 'active' });
         
         modal.remove();
         PageLoaders.loadPage('property-tenants');
