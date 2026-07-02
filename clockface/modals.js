@@ -560,32 +560,76 @@ const Modals = {
         const data = {
           full_name: formData.get('full_name'),
           phone: formData.get('phone'),
-          email: formData.get('email'),
-          national_id: formData.get('national_id'),
-          emergency_contact: formData.get('emergency_contact'),
+          email: formData.get('email') || undefined, // Send undefined instead of empty string
+          national_id: formData.get('national_id') || undefined,
+          emergency_contact: formData.get('emergency_contact') || undefined,
           status: 'active'
         };
+
+        // Validate required fields
+        if (!data.full_name || !data.full_name.trim()) {
+          alert('Please enter a full name');
+          return;
+        }
+        if (!data.phone || !data.phone.trim()) {
+          alert('Please enter a phone number');
+          return;
+        }
+
+        // Log the data being sent for debugging
+        console.log('Creating tenant with data:', data);
 
         try {
           if (isEdit) {
             await apiClient.updateTenant(tenant.id, data);
+            modal.remove();
+            
+            // Reload appropriate page based on context
+            const currentProperty = AppState.getPropertyContext();
+            if (currentProperty) {
+              PageLoaders.loadPage('property-tenants');
+            } else {
+              PageLoaders.loadPage('tenants');
+            }
           } else {
             // Create tenant
             const createdTenant = await apiClient.createTenant(data);
             
-            // Update unit status to occupied
+            // Create a TenantUnit record to link tenant to unit
             if (selectedUnitId) {
+              const today = new Date().toISOString().split('T')[0];
+              await apiClient.createTenantUnit({
+                tenant: createdTenant.id,
+                unit: selectedUnitId,
+                move_in_date: today,
+                is_active: true
+              });
+              
+              // Update unit status to occupied
               await apiClient.updateUnit(selectedUnitId, { status: 'occupied' });
+              
+              // Get unit details for lease modal
+              const allUnits = await apiClient.getUnits();
+              const unit = allUnits.find(u => u.id == selectedUnitId);
+              
+              // Close tenant modal and open lease agreement modal
+              modal.remove();
+              this.showLeaseAgreementModal(
+                createdTenant.id,
+                createdTenant.full_name,
+                selectedUnitId,
+                unit.unit_number,
+                unit.rent_amount
+              );
+            } else {
+              modal.remove();
+              const currentProperty = AppState.getPropertyContext();
+              if (currentProperty) {
+                PageLoaders.loadPage('property-tenants');
+              } else {
+                PageLoaders.loadPage('tenants');
+              }
             }
-          }
-          modal.remove();
-          
-          // Reload appropriate page based on context
-          const currentProperty = AppState.getPropertyContext();
-          if (currentProperty) {
-            PageLoaders.loadPage('property-tenants');
-          } else {
-            PageLoaders.loadPage('tenants');
           }
         } catch (error) {
           alert('Error saving tenant: ' + error.message);
@@ -621,6 +665,184 @@ const Modals = {
         }
       });
     }
+  },
+
+  // Lease Agreement Modal (for new tenant registration or re-leasing)
+  showLeaseAgreementModal(tenantId, tenantName, unitId, unitNumber, unitRentAmount, isReLease = false) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Calculate end date as today + 30 days
+    const endDate = new Date(today);
+    endDate.setDate(today.getDate() + 30);
+    const endDateStr = endDate.toISOString().split('T')[0];
+    
+    modal.innerHTML = `
+      <div class="modal lease-modal">
+        <div class="modal-header">
+          <h2>${isReLease ? 'Re-lease Agreement' : 'Lease Agreement'}</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <form class="modal-form" id="lease-form">
+          <div class="lease-summary">
+            <div class="lease-summary-item">
+              <span class="lease-summary-label">Tenant:</span>
+              <span class="lease-summary-value">${tenantName}</span>
+            </div>
+            <div class="lease-summary-item">
+              <span class="lease-summary-label">Unit:</span>
+              <span class="lease-summary-value">${unitNumber}</span>
+            </div>
+          </div>
+          
+          <div class="form-section">
+            <h3 class="form-section-title">Lease Terms</h3>
+            <div class="form-group">
+              <label for="lease-start-date">Move-in Date / Lease Start</label>
+              <input type="date" id="lease-start-date" name="start_date" value="${todayStr}" required>
+            </div>
+            <div class="form-group">
+              <label for="lease-end-date">Lease End Date</label>
+              <input type="date" id="lease-end-date" name="end_date" value="${endDateStr}" required>
+              <small class="form-hint">Auto-calculated as 30 days from move-in date. Edit for custom lease length.</small>
+            </div>
+            <div class="form-group">
+              <label for="lease-rent">Monthly Rent Amount</label>
+              <input type="number" id="lease-rent" name="rent_amount" value="${unitRentAmount}" min="0" required>
+            </div>
+            <div class="form-group">
+              <label for="lease-deposit">Deposit Amount</label>
+              <input type="number" id="lease-deposit" name="deposit_amount" min="0" value="0" required>
+            </div>
+          </div>
+          
+          <div class="modal-footer">
+            <button type="button" class="action-button cancel-btn">Cancel</button>
+            <button type="submit" class="action-button">Confirm Lease</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Track whether user has manually edited end date
+    let userEditedEndDate = false;
+
+    const startDateInput = modal.querySelector('#lease-start-date');
+    const endDateInput = modal.querySelector('#lease-end-date');
+
+    // Function to calculate end date from start date
+    const calculateEndDate = (startDate) => {
+      const start = new Date(startDate);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 30);
+      return end.toISOString().split('T')[0];
+    };
+
+    // When start date changes, auto-update end date if user hasn't manually edited it
+    startDateInput.addEventListener('change', (e) => {
+      if (!userEditedEndDate) {
+        endDateInput.value = calculateEndDate(e.target.value);
+      }
+    });
+
+    // When user manually edits end date, stop auto-updating
+    endDateInput.addEventListener('change', () => {
+      userEditedEndDate = true;
+    });
+
+    endDateInput.addEventListener('input', () => {
+      userEditedEndDate = true;
+    });
+
+    modal.querySelector('.modal-close').addEventListener('click', () => {
+      if (confirm('Warning: Closing this without confirming the lease means this tenant cannot be charged rent. You can create the lease later from the tenant\'s profile.')) {
+        modal.remove();
+        if (isReLease) {
+          PageLoaders.loadPage('property-tenants');
+        } else {
+          PageLoaders.loadPage('property-tenants');
+        }
+      }
+    });
+
+    modal.querySelector('.cancel-btn').addEventListener('click', () => {
+      if (confirm('Warning: Closing this without confirming the lease means this tenant cannot be charged rent. You can create the lease later from the tenant\'s profile.')) {
+        modal.remove();
+        if (isReLease) {
+          PageLoaders.loadPage('property-tenants');
+        } else {
+          PageLoaders.loadPage('property-tenants');
+        }
+      }
+    });
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        if (confirm('Warning: Closing this without confirming the lease means this tenant cannot be charged rent. You can create the lease later from the tenant\'s profile.')) {
+          modal.remove();
+          if (isReLease) {
+            PageLoaders.loadPage('property-tenants');
+          } else {
+            PageLoaders.loadPage('property-tenants');
+          }
+        }
+      }
+    });
+
+    modal.querySelector('#lease-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const leaseData = {
+        tenant: tenantId,
+        unit: unitId,
+        start_date: formData.get('start_date'),
+        end_date: formData.get('end_date'),
+        rent_amount: parseFloat(formData.get('rent_amount')),
+        deposit_amount: parseFloat(formData.get('deposit_amount')),
+        status: 'active'
+      };
+
+      try {
+        // Create lease
+        const lease = await apiClient.createLease(leaseData);
+        
+        // Create TenantUnit record
+        const todayDate = new Date().toISOString().split('T')[0];
+        await apiClient.createTenantUnit({
+          tenant: tenantId,
+          unit: unitId,
+          move_in_date: todayDate,
+          is_active: true
+        });
+        
+        // Create deposit if amount > 0
+        if (leaseData.deposit_amount > 0) {
+          await apiClient.createDeposit({
+            lease: lease.id,
+            amount_paid: leaseData.deposit_amount,
+            date_paid: todayDate,
+            amount_refunded: 0
+          });
+        }
+        
+        // Update unit status to occupied
+        await apiClient.updateUnit(unitId, { status: 'occupied' });
+        
+        // If re-leasing, set tenant status back to active
+        if (isReLease) {
+          await apiClient.updateTenant(tenantId, { status: 'active' });
+        }
+        
+        modal.remove();
+        PageLoaders.loadPage('property-tenants');
+      } catch (error) {
+        alert('Error creating lease: ' + error.message);
+      }
+    });
   },
 
   // Lease Modal

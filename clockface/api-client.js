@@ -88,6 +88,13 @@ class ApiClient {
     return response.data;
   }
 
+  async patch(path, data) {
+    const response = await axios.patch(`${this.baseURL}${path}`, data, {
+        headers: this.getHeaders()
+    });
+    return response.data;
+}
+
   async getProperties() {
     return this.get('/api/properties/');
   }
@@ -110,6 +117,14 @@ class ApiClient {
 
   async getTenantUnits() {
     return this.get('/api/tenant-units/');
+  }
+
+  async createTenantUnit(data) {
+    return this.post('/api/tenant-units/', data);
+  }
+
+  async updateTenantUnit(id, data) {
+    return this.patch(`/api/tenant-units/${id}/`, data);
   }
 
   async getLeases() {
@@ -159,7 +174,7 @@ class ApiClient {
   }
 
   async updateUnit(id, data) {
-    return this.put(`/api/units/${id}/`, data);
+    return this.patch(`/api/units/${id}/`, data);
   }
 
   async deleteUnit(id) {
@@ -185,7 +200,7 @@ class ApiClient {
   }
 
   async updateTenant(id, data) {
-    return this.put(`/api/tenants/${id}/`, data);
+    return this.patch(`/api/tenants/${id}/`, data);
   }
 
   async deleteTenant(id) {
@@ -198,11 +213,16 @@ class ApiClient {
   }
 
   async updateLease(id, data) {
-    return this.put(`/api/leases/${id}/`, data);
+    return this.patch(`/api/leases/${id}/`, data);
   }
 
   async deleteLease(id) {
     return this.delete(`/api/leases/${id}/`);
+  }
+
+  // CRUD methods for Deposits
+  async createDeposit(data) {
+    return this.post('/api/deposits/', data);
   }
 }
 

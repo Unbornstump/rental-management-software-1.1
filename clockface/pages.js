@@ -111,17 +111,18 @@ const PageLoaders = {
       const filteredLeases = leases.filter(l => filteredUnits.some(u => u.id == l.unit));
       const activeLeases = filteredLeases.filter(l => l.status === 'active');
       
-      // Calculate occupancy
-      const occupiedUnitsCount = filteredUnits.filter(u => u.status === 'occupied').length;
-      const vacantUnits = filteredUnits.filter(u => u.status === 'vacant').length;
+      // Calculate occupancy based on active leases (not unit status field)
+      const occupiedUnitIds = activeLeases.map(l => l.unit);
+      const occupiedUnitsCount = new Set(occupiedUnitIds).size; // Count unique units with active leases
+      const vacantUnits = filteredUnits.length - occupiedUnitsCount;
       const occupancyRate = filteredUnits.length > 0 ? ((occupiedUnitsCount / filteredUnits.length) * 100).toFixed(0) : 0;
       
       // Calculate rent stats for current month
       const currentMonth = new Date().getMonth() + 1;
       const currentYear = new Date().getFullYear();
       
-      // Total rent expected = sum of rent amounts from all occupied units
-      const occupiedUnits = filteredUnits.filter(u => u.status === 'occupied');
+      // Total rent expected = sum of rent amounts from units with active leases
+      const occupiedUnits = filteredUnits.filter(u => occupiedUnitIds.includes(u.id));
       const totalRentExpected = occupiedUnits.reduce((sum, unit) => sum + (parseFloat(unit.rent_amount) || 0), 0);
       
       const propertyLeaseIds = filteredLeases.map(l => l.id);
@@ -740,6 +741,10 @@ const PageLoaders = {
         </div>
         <button class="action-button" id="create-tenant-btn">+ Register Tenant</button>
       </div>
+      <div class="tenant-filter-tabs">
+        <button class="filter-tab active" data-filter="active">Active Tenants</button>
+        <button class="filter-tab" data-filter="inactive">Inactive Tenants</button>
+      </div>
       <div class="tenants-grid" id="tenants-grid"></div>
     `;
 
@@ -747,66 +752,424 @@ const PageLoaders = {
       Modals.showTenantModal(null, property.id);
     });
 
+    // Filter tab handling
+    let currentFilter = 'active';
+    const filterTabs = container.querySelectorAll('.filter-tab');
+    filterTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        filterTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFilter = tab.dataset.filter;
+        this.renderTenantsGrid(container, property, currentFilter);
+      });
+    });
+
     const tenantsGrid = document.getElementById('tenants-grid');
 
     try {
-      const [allUnits, allLeases, allTenants] = await Promise.all([
+      const [allUnits, allLeases, allTenants, allTenantUnits] = await Promise.all([
         apiClient.getUnits(),
         apiClient.getLeases(),
-        apiClient.getTenants()
+        apiClient.getTenants(),
+        apiClient.getTenantUnits()
       ]);
 
-      // Filter tenants by property
-      const propertyUnits = allUnits.filter(u => u.property == property.id);
-      const propertyLeases = allLeases.filter(l => propertyUnits.some(u => u.id == l.unit));
-      const propertyTenantIds = propertyLeases.map(l => l.tenant);
-      const filteredTenants = allTenants.filter(t => propertyTenantIds.includes(t.id));
+      // Store data for filtering
+      container.tenantData = {
+        property,
+        allUnits,
+        allLeases,
+        allTenants,
+        allTenantUnits
+      };
 
-      if (filteredTenants.length === 0) {
-        tenantsGrid.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">👥</div>
-            <h3 class="empty-state-title">No Tenants Yet</h3>
-            <p class="empty-state-text">Register your first tenant to this property to get started.</p>
-            <button class="action-button" onclick="Modals.showTenantModal(null, ${property.id})">+ Register Tenant</button>
-          </div>
-        `;
-        return;
-      }
-
-      tenantsGrid.innerHTML = filteredTenants.map(tenant => {
-        const tenantLease = propertyLeases.find(l => l.tenant == tenant.id);
-        const tenantUnit = tenantLease ? propertyUnits.find(u => u.id == tenantLease.unit) : null;
-        
-        return `
-          <div class="tenant-card" data-tenant-id="${tenant.id}">
-            <div class="tenant-card-header">
-              <div class="tenant-card-icon">👤</div>
-              <span class="tenant-card-badge status-${tenant.status || 'active'}">${tenant.status === 'active' ? 'Active' : 'Inactive'}</span>
-            </div>
-            <h3 class="tenant-card-title">${tenant.full_name || tenant.name || 'N/A'}</h3>
-            <p class="tenant-card-contact">${tenant.phone || 'N/A'}</p>
-            <div class="tenant-card-unit">
-              <span class="unit-label">Unit:</span>
-              <span class="unit-value">${tenantUnit ? tenantUnit.unit_number : 'Not assigned'}</span>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      // Attach click handlers for tenant cards
-      container.querySelectorAll('.tenant-card').forEach(card => {
-        card.addEventListener('click', () => {
-          const tenantId = card.dataset.tenantId;
-          const tenant = filteredTenants.find(t => t.id == tenantId);
-          if (tenant) {
-            Modals.showTenantModal(tenant, property.id);
-          }
-        });
-      });
+      // Initial render with active filter
+      this.renderTenantsGrid(container, property, 'active');
     } catch (error) {
       tenantsGrid.innerHTML = `<p>Error loading tenants: ${error.message}</p>`;
     }
+  },
+
+  // Render tenants grid based on filter
+  renderTenantsGrid(container, property, filter) {
+    const data = container.tenantData;
+    if (!data) return;
+
+    const { allUnits, allLeases, allTenants, allTenantUnits } = data;
+    const tenantsGrid = container.querySelector('#tenants-grid');
+
+    // Filter tenants by property
+    const propertyUnits = allUnits.filter(u => u.property == property.id);
+    const propertyLeases = allLeases.filter(l => propertyUnits.some(u => u.id == l.unit));
+    const activeLeases = propertyLeases.filter(l => l.status === 'active');
+    const propertyTenantUnits = allTenantUnits.filter(tu => propertyUnits.some(u => u.id == tu.unit));
+
+    // Get all tenants who have ever been in this property
+    const allPropertyTenantIds = [...new Set([...propertyLeases.map(l => l.tenant), ...propertyTenantUnits.map(tu => tu.tenant)])];
+    const allPropertyTenants = allTenants.filter(t => allPropertyTenantIds.includes(t.id));
+
+    // Filter by tenant status
+    const filteredTenants = allPropertyTenants.filter(t => {
+      if (filter === 'active') {
+        return t.status === 'active';
+      } else {
+        return t.status === 'inactive';
+      }
+    });
+
+    if (filteredTenants.length === 0) {
+      const emptyMessage = filter === 'active' 
+        ? 'No active tenants. Register your first tenant to get started.'
+        : 'No inactive tenants. Tenants appear here after vacating.';
+      tenantsGrid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">👥</div>
+          <h3 class="empty-state-title">${filter === 'active' ? 'No Active Tenants' : 'No Inactive Tenants'}</h3>
+          <p class="empty-state-text">${emptyMessage}</p>
+          ${filter === 'active' ? `<button class="action-button" onclick="Modals.showTenantModal(null, ${property.id})">+ Register Tenant</button>` : ''}
+        </div>
+      `;
+      return;
+    }
+
+    tenantsGrid.innerHTML = filteredTenants.map(tenant => {
+      const tenantLease = activeLeases.find(l => l.tenant == tenant.id);
+      const tenantUnitRecord = propertyTenantUnits.find(tu => tu.tenant == tenant.id);
+      const hasLease = !!tenantLease;
+      const isInactive = tenant.status === 'inactive';
+      
+      let unitNumber = 'Not assigned';
+      let unitId = null;
+      let moveOutDate = null;
+
+      if (tenantUnitRecord) {
+        const unit = propertyUnits.find(u => u.id == tenantUnitRecord.unit);
+        if (unit) {
+          unitNumber = unit.unit_number;
+          unitId = unit.id;
+          if (!tenantUnitRecord.is_active && tenantUnitRecord.move_out_date) {
+            moveOutDate = tenantUnitRecord.move_out_date;
+          }
+        }
+      } else if (tenantLease) {
+        const unit = propertyUnits.find(u => u.id == tenantLease.unit);
+        if (unit) {
+          unitNumber = unit.unit_number;
+          unitId = unit.id;
+        }
+      }
+      
+      return `
+        <div class="tenant-card ${!hasLease ? 'no-lease' : ''} ${isInactive ? 'inactive' : ''}" 
+             data-tenant-id="${tenant.id}" 
+             data-has-lease="${hasLease}" 
+             data-unit-id="${unitId || ''}" 
+             data-unit-number="${unitNumber}"
+             data-move-out-date="${moveOutDate || ''}"
+             data-is-inactive="${isInactive}">
+          <div class="tenant-card-header">
+            <div class="tenant-card-icon">👤</div>
+            <span class="tenant-card-badge ${isInactive ? 'status-inactive' : (hasLease ? 'status-active' : 'status-no-lease')}">${isInactive ? 'Inactive' : (hasLease ? 'Active' : 'No Lease')}</span>
+          </div>
+          <h3 class="tenant-card-title">${tenant.full_name || tenant.name || 'N/A'}</h3>
+          <p class="tenant-card-contact">${tenant.phone || 'N/A'}</p>
+          <div class="tenant-card-unit">
+            <span class="unit-label">Unit:</span>
+            <span class="unit-value">${unitNumber}</span>
+          </div>
+          ${isInactive && moveOutDate ? `
+            <div class="tenant-card-move-out">
+              <span class="move-out-label">Moved out:</span>
+              <span class="move-out-value">${new Date(moveOutDate).toLocaleDateString()}</span>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+
+    // Attach click handlers for tenant cards
+    container.querySelectorAll('.tenant-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const tenantId = parseInt(card.dataset.tenantId);
+        const hasLease = card.dataset.hasLease === 'true';
+        const unitId = card.dataset.unitId ? parseInt(card.dataset.unitId) : null;
+        const unitNumber = card.dataset.unitNumber;
+        const isInactive = card.dataset.isInactive === 'true';
+        const tenant = filteredTenants.find(t => t.id == tenantId);
+        
+        if (!tenant) return;
+        
+        if (isInactive) {
+          // Show inactive tenant options (Re-lease or Delete)
+          this.showInactiveTenantModal(tenant, unitId, unitNumber, property);
+        } else if (!hasLease) {
+          // Show options for tenants without lease
+          this.showTenantOptionsModal(tenant, unitId, unitNumber, property);
+        } else {
+          // Show tenant detail modal with vacate option
+          this.showTenantDetailModal(tenant, unitNumber, property);
+        }
+      });
+    });
+  },
+
+  // Tenant Options Modal (for tenants without lease)
+  showTenantOptionsModal(tenant, unitId, unitNumber, property) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Tenant Options</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="tenant-info-summary">
+            <h3>${tenant.full_name || tenant.name}</h3>
+            <p>Unit: ${unitNumber}</p>
+            <p class="warning-text">This tenant has no active lease and cannot be charged rent.</p>
+          </div>
+          <div class="action-buttons">
+            <button class="action-button primary-btn" id="create-lease-btn">Create Lease</button>
+            <button class="action-button danger-btn" id="remove-tenant-btn">Remove Tenant</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+
+    modal.querySelector('#create-lease-btn').addEventListener('click', () => {
+      modal.remove();
+      // Get unit rent amount
+      apiClient.getUnits().then(units => {
+        const unit = units.find(u => u.id == unitId);
+        if (unit) {
+          Modals.showLeaseAgreementModal(tenant.id, tenant.full_name, unitId, unitNumber, unit.rent_amount);
+        }
+      });
+    });
+
+    modal.querySelector('#remove-tenant-btn').addEventListener('click', async () => {
+      if (confirm(`Are you sure you want to remove ${tenant.full_name} from unit ${unitNumber}? This will vacate the unit and deactivate the tenant.`)) {
+        try {
+          await this.vacateTenant(tenant.id, unitId);
+          modal.remove();
+          this.loadPropertyTenants(document.getElementById('page-content'));
+        } catch (error) {
+          alert('Error removing tenant: ' + error.message);
+        }
+      }
+    });
+  },
+
+  // Tenant Detail Modal (for tenants with lease)
+  showTenantDetailModal(tenant, unitNumber, property) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Tenant Details</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="tenant-info-summary">
+            <h3>${tenant.full_name || tenant.name}</h3>
+            <p><strong>Phone:</strong> ${tenant.phone || 'N/A'}</p>
+            <p><strong>Email:</strong> ${tenant.email || 'N/A'}</p>
+            <p><strong>Unit:</strong> ${unitNumber}</p>
+            <p><strong>Status:</strong> ${tenant.status === 'active' ? 'Active' : 'Inactive'}</p>
+          </div>
+          <div class="action-buttons">
+            <button class="action-button danger-btn" id="vacate-tenant-btn">Vacate Tenant</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+
+    modal.querySelector('#vacate-tenant-btn').addEventListener('click', async () => {
+      if (confirm(`Are you sure you want to vacate ${tenant.full_name} from unit ${unitNumber}? This will mark the unit as vacant and terminate their lease.`)) {
+        try {
+          await this.vacateTenant(tenant.id, null, unitNumber);
+          modal.remove();
+          this.loadPropertyTenants(document.getElementById('page-content'));
+        } catch (error) {
+          alert('Error vacating tenant: ' + error.message);
+        }
+      }
+    });
+  },
+
+  // Vacate tenant logic
+  async vacateTenant(tenantId, unitId, unitNumber) {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // 1. Deactivate TenantUnit record
+    const tenantUnits = await apiClient.getTenantUnits();
+    const tenantUnitRecord = tenantUnits.find(tu => tu.tenant == tenantId && tu.is_active);
+    if (tenantUnitRecord) {
+      await apiClient.updateTenantUnit(tenantUnitRecord.id, {
+        is_active: false,
+        move_out_date: today
+      });
+      unitId = tenantUnitRecord.unit; // Get unit ID from record if not provided
+    }
+
+    // 2. Terminate lease if exists
+    const leases = await apiClient.getLeases();
+    const activeLease = leases.find(l => l.tenant == tenantId && l.status === 'active');
+    if (activeLease) {
+      await apiClient.updateLease(activeLease.id, { status: 'terminated' });
+    }
+
+    // 3. Update unit status to vacant
+    if (unitId) {
+      await apiClient.updateUnit(unitId, { status: 'vacant' });
+    }
+
+    // 4. Set tenant status to inactive
+    await apiClient.updateTenant(tenantId, { status: 'inactive' });
+  },
+
+  // Inactive Tenant Modal (Re-lease or Delete)
+  showInactiveTenantModal(tenant, unitId, unitNumber, property) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Inactive Tenant</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="tenant-info-summary">
+            <h3>${tenant.full_name || tenant.name}</h3>
+            <p><strong>Phone:</strong> ${tenant.phone || 'N/A'}</p>
+            <p><strong>Last Unit:</strong> ${unitNumber || 'N/A'}</p>
+            <p><strong>Status:</strong> Inactive</p>
+          </div>
+          <div class="action-buttons">
+            <button class="action-button primary-btn" id="re-lease-btn">Re-lease</button>
+            <button class="action-button danger-btn" id="delete-tenant-btn">Delete Tenant</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+
+    modal.querySelector('#re-lease-btn').addEventListener('click', () => {
+      modal.remove();
+      // Show unit selector for re-leasing
+      this.showReLeaseUnitSelector(tenant, property);
+    });
+
+    modal.querySelector('#delete-tenant-btn').addEventListener('click', async () => {
+      const tenantName = tenant.full_name || tenant.name;
+      const confirmation = prompt(`To permanently delete ${tenantName} and all their history, type their name to confirm:`);
+      
+      if (confirmation === tenantName) {
+        try {
+          await this.deleteTenant(tenant.id);
+          modal.remove();
+          this.loadPropertyTenants(document.getElementById('page-content'));
+        } catch (error) {
+          alert('Error deleting tenant: ' + error.message);
+        }
+      } else if (confirmation !== null) {
+        alert('Name did not match. Deletion cancelled.');
+      }
+    });
+  },
+
+  // Re-lease Unit Selector
+  async showReLeaseUnitSelector(tenant, property) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    
+    // Fetch vacant units
+    const allUnits = await apiClient.getUnits();
+    const propertyUnits = allUnits.filter(u => u.property == property.id && u.status === 'vacant');
+    
+    modal.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Select Unit for Re-lease</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="tenant-info-summary">
+            <h3>${tenant.full_name || tenant.name}</h3>
+            <p>Select a vacant unit to assign this tenant:</p>
+          </div>
+          <div class="unit-selector-grid" id="re-lease-unit-grid">
+            ${propertyUnits.map(unit => `
+              <div class="unit-selector-tile" data-unit-id="${unit.id}" data-unit-number="${unit.unit_number}" data-rent="${unit.rent_amount}">
+                ${unit.unit_number}
+              </div>
+            `).join('')}
+          </div>
+          ${propertyUnits.length === 0 ? '<p class="no-units-msg">No vacant units available.</p>' : ''}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+
+    modal.querySelectorAll('.unit-selector-tile').forEach(tile => {
+      tile.addEventListener('click', () => {
+        const unitId = parseInt(tile.dataset.unitId);
+        const unitNumber = tile.dataset.unitNumber;
+        const rentAmount = parseFloat(tile.dataset.rent);
+        modal.remove();
+        // Open lease agreement modal with isReLease flag
+        Modals.showLeaseAgreementModal(tenant.id, tenant.full_name, unitId, unitNumber, rentAmount, true);
+      });
+    });
+  },
+
+  // Delete tenant logic (cascade delete)
+  async deleteTenant(tenantId) {
+    // 1. Delete all leases for this tenant
+    const leases = await apiClient.getLeases();
+    const tenantLeases = leases.filter(l => l.tenant == tenantId);
+    for (const lease of tenantLeases) {
+      await apiClient.deleteLease(lease.id);
+    }
+
+    // 2. Delete all TenantUnit records
+    const tenantUnits = await apiClient.getTenantUnits();
+    const tenantUnitRecords = tenantUnits.filter(tu => tu.tenant == tenantId);
+    for (const tu of tenantUnitRecords) {
+      // Note: API doesn't have deleteTenantUnit, but we can update to deactivate
+      await apiClient.updateTenantUnit(tu.id, { is_active: false });
+    }
+
+    // 3. Delete tenant record
+    await apiClient.deleteTenant(tenantId);
   },
 
   // Tenants (Legacy - kept for compatibility)

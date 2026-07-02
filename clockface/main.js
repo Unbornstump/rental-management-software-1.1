@@ -2,6 +2,10 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+if (process.env.NODE_ENV === 'development') {
+  require('electron-reload')(__dirname);
+}
+
 let homepageWindow;
 let loginWindow;
 let mainWindow;
@@ -14,7 +18,7 @@ function createHomepageWindow() {
       nodeIntegration: true,
       contextIsolation: false
     },
-    title: 'RMS - Rental Management System'
+    title: 'Rental Management System'
   });
 
   homepageWindow.loadFile('homepage.html');
@@ -33,7 +37,7 @@ function createLoginWindow() {
       contextIsolation: false
     },
     resizable: false,
-    title: 'RMS Login',
+    title: 'Login',
     parent: homepageWindow,
     modal: true
   });

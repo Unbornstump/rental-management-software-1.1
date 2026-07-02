@@ -1327,3 +1327,159 @@
   color: #dc2626;
   font-weight: 500;
 }
+
+/* Lease Modal */
+.lease-modal {
+  max-width: 550px;
+}
+
+.lease-summary {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.lease-summary-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.lease-summary-item:last-child {
+  margin-bottom: 0;
+}
+
+.lease-summary-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.lease-summary-value {
+  font-size: 14px;
+  color: #111827;
+  font-weight: 600;
+}
+
+/* Tenant Card Badges */
+.tenant-card-badge.status-active {
+  background-color: #ecfdf5;
+  color: #059669;
+}
+
+.tenant-card-badge.status-no-lease {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.tenant-card-badge.status-inactive {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.tenant-card.no-lease {
+  border: 2px solid #fcd34d;
+}
+
+.tenant-card.inactive {
+  border: 2px solid #d1d5db;
+  opacity: 0.8;
+}
+
+/* Tenant Filter Tabs */
+.tenant-filter-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 12px;
+}
+
+.filter-tab {
+  padding: 8px 16px;
+  background-color: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-tab:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.filter-tab.active {
+  background-color: #2f80ed;
+  color: white;
+}
+
+/* Tenant Card Move Out */
+.tenant-card-move-out {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 12px;
+}
+
+.move-out-label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.move-out-value {
+  color: #111827;
+  font-weight: 600;
+}
+
+/* Tenant Info Summary */
+.tenant-info-summary {
+  padding: 16px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.tenant-info-summary h3 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  color: #111827;
+}
+
+.tenant-info-summary p {
+  margin: 8px 0;
+  color: #374151;
+  font-size: 14px;
+}
+
+.warning-text {
+  color: #d97706;
+  font-weight: 500;
+  margin-top: 12px !important;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  flex-direction: column;
+}
+
+.primary-btn {
+  background-color: #2f80ed;
+}
+
+.danger-btn {
+  background-color: #dc2626;
+}
+
+.danger-btn:hover {
+  background-color: #b91c1c;
+}
