@@ -87,7 +87,6 @@ const PageLoaders = {
           <h3 class="panel-title">Recent Activity</h3>
           <div class="activity-list" id="activity-list">
             <div class="activity-item">
-              <span class="activity-icon">✔</span>
               <span class="activity-text">Entered property space</span>
               <span class="activity-time">Just now</span>
             </div>
@@ -143,7 +142,6 @@ const PageLoaders = {
       statsGrid.innerHTML = `
         <div class="stat-card">
           <div class="stat-card-header">
-            <div class="stat-card-icon green">🚪</div>
             <div class="stat-card-title">Total Units</div>
           </div>
           <div class="stat-card-value">${filteredUnits.length}</div>
@@ -151,7 +149,6 @@ const PageLoaders = {
         </div>
         <div class="stat-card">
           <div class="stat-card-header">
-            <div class="stat-card-icon blue">📊</div>
             <div class="stat-card-title">Occupancy Rate</div>
           </div>
           <div class="stat-card-value">${occupancyRate}%</div>
@@ -159,7 +156,6 @@ const PageLoaders = {
         </div>
         <div class="stat-card">
           <div class="stat-card-header">
-            <div class="stat-card-icon orange">👥</div>
             <div class="stat-card-title">Active Tenants</div>
           </div>
           <div class="stat-card-value">${activeTenants}</div>
@@ -167,7 +163,6 @@ const PageLoaders = {
         </div>
         <div class="stat-card">
           <div class="stat-card-header">
-            <div class="stat-card-icon purple">💰</div>
             <div class="stat-card-title">Rent Expected</div>
           </div>
           <div class="stat-card-value">${totalRentExpected.toLocaleString()}</div>
@@ -175,7 +170,6 @@ const PageLoaders = {
         </div>
         <div class="stat-card">
           <div class="stat-card-header">
-            <div class="stat-card-icon green">✅</div>
             <div class="stat-card-title">Rent Collected</div>
           </div>
           <div class="stat-card-value">${totalRentCollected.toLocaleString()}</div>
@@ -183,7 +177,6 @@ const PageLoaders = {
         </div>
         <div class="stat-card">
           <div class="stat-card-header">
-            <div class="stat-card-icon red">⚠️</div>
             <div class="stat-card-title">Outstanding</div>
           </div>
           <div class="stat-card-value">${outstandingRent.toLocaleString()}</div>
