@@ -74,6 +74,31 @@
   text-align: center;
 }
 
+#property-space-nav {
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.property-space-nav-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.back-to-properties-btn {
+  margin-top: auto;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 12px;
+  color: #6b7280;
+}
+
+.back-to-properties-btn:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
 /* Content Area */
 .content-area {
   flex: 1;
@@ -880,23 +905,6 @@
   font-weight: 500;
 }
 
-.back-to-properties-btn {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.back-to-properties-btn:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.5);
-  color: white;
-}
-
-.back-to-properties-btn.active {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
 /* Units Grid */
 .units-grid {
   display: grid;
@@ -1172,6 +1180,74 @@
   color: white;
 }
 
+/* Units Overview + Table */
+.units-overview-panel {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.units-overview-grid {
+  max-height: none;
+  margin-top: 0;
+}
+
+.unit-overview-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 56px;
+  padding: 10px 8px;
+  cursor: pointer;
+}
+
+.unit-overview-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.unit-overview-dot.occupied {
+  background-color: #10b981;
+}
+
+.unit-overview-dot.vacant {
+  background-color: #f59e0b;
+}
+
+.unit-overview-label {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.units-overview-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.units-overview-legend .legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.units-table-section {
+  margin-top: 4px;
+}
+
+.units-table-section .panel-title {
+  margin-bottom: 12px;
+}
+
 /* Units Table */
 .units-table-container {
   background: white;
@@ -1300,6 +1376,26 @@
   border-color: #2f80ed;
   background-color: #2f80ed;
   color: white;
+}
+
+.delete-units-modal .unit-selector-grid {
+  max-height: 320px;
+}
+
+.delete-units-modal .unit-selector-tile.selected-for-delete {
+  border-color: #dc2626;
+  background-color: #dc2626;
+  color: white;
+}
+
+.delete-units-modal .unit-selector-tile.selected-for-delete:hover {
+  border-color: #b91c1c;
+  background-color: #b91c1c;
+}
+
+.delete-units-modal .action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .unit-selector-tile.occupied {

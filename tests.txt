@@ -1,6 +1,0 @@
-validation time(model.serializer):
-    if self.instance:
-        proceed with what is being done
-    else:
-        know this is a duplicate and dont allow
-    

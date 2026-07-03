@@ -253,6 +253,108 @@ const Modals = {
     });
   },
 
+  async showDeleteUnitsModal(propertyId) {
+    const extractUnitNumber = (unitNumber) => {
+      if (!unitNumber) return 0;
+      const matches = unitNumber.match(/\d+/g);
+      if (!matches || matches.length === 0) return 0;
+      return parseInt(matches[matches.length - 1], 10);
+    };
+
+    let vacantUnits = [];
+    try {
+      const [allUnits, allLeases] = await Promise.all([
+        apiClient.getUnits(),
+        apiClient.getLeases()
+      ]);
+      const occupiedUnitIds = new Set(
+        allLeases.filter(l => l.status === 'active').map(l => l.unit)
+      );
+      vacantUnits = allUnits
+        .filter(u => u.property == propertyId && u.status === 'vacant' && !occupiedUnitIds.has(u.id))
+        .sort((a, b) => extractUnitNumber(a.unit_number) - extractUnitNumber(b.unit_number));
+    } catch (error) {
+      alert('Error loading units: ' + error.message);
+      return;
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal bulk-unit-modal delete-units-modal">
+        <div class="modal-header">
+          <h2>Delete Units</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-form">
+          <p class="form-hint">Select vacant units to delete. Click a tile to select or deselect.</p>
+          <div class="unit-selector-grid" id="delete-units-grid">
+            ${vacantUnits.map(unit => `
+              <div class="unit-selector-tile"
+                   data-unit-id="${unit.id}"
+                   data-unit-number="${unit.unit_number}">
+                ${unit.unit_number}
+              </div>
+            `).join('')}
+          </div>
+          ${vacantUnits.length === 0 ? '<p class="no-units-msg">No vacant units available to delete.</p>' : ''}
+          <div class="modal-footer">
+            <button type="button" class="action-button cancel-btn">Cancel</button>
+            <button type="button" class="action-button danger-btn" id="confirm-delete-units-btn" disabled>
+              Delete Selected (0)
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const deleteBtn = modal.querySelector('#confirm-delete-units-btn');
+    const grid = modal.querySelector('#delete-units-grid');
+
+    const updateDeleteButton = () => {
+      const selectedCount = grid.querySelectorAll('.unit-selector-tile.selected-for-delete').length;
+      deleteBtn.textContent = `Delete Selected (${selectedCount})`;
+      deleteBtn.disabled = selectedCount === 0;
+    };
+
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.querySelector('.cancel-btn').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+
+    grid.querySelectorAll('.unit-selector-tile').forEach(tile => {
+      tile.addEventListener('click', () => {
+        tile.classList.toggle('selected-for-delete');
+        updateDeleteButton();
+      });
+    });
+
+    deleteBtn.addEventListener('click', async () => {
+      const selectedTiles = [...grid.querySelectorAll('.unit-selector-tile.selected-for-delete')];
+      const selectedCount = selectedTiles.length;
+      if (selectedCount === 0) return;
+
+      const unitLabels = selectedTiles.map(tile => tile.dataset.unitNumber).join(', ');
+      const confirmed = confirm(
+        `Are you sure you want to permanently delete ${selectedCount} unit${selectedCount === 1 ? '' : 's'}?\n\n${unitLabels}`
+      );
+      if (!confirmed) return;
+
+      try {
+        await Promise.all(
+          selectedTiles.map(tile => apiClient.deleteUnit(tile.dataset.unitId))
+        );
+        modal.remove();
+        PageLoaders.loadPage('property-units');
+      } catch (error) {
+        alert('Error deleting units: ' + error.message);
+      }
+    });
+  },
+
   // Unit Edit Modal (for individual unit editing)
   showUnitEditModal(unit) {
     const modal = document.createElement('div');

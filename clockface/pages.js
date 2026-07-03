@@ -56,12 +56,24 @@ const PageLoaders = {
 
     if (property) {
       globalNav.style.display = 'none';
-      propertySpaceNav.style.display = 'block';
+      propertySpaceNav.style.display = 'flex';
       propertyContextName.textContent = property.name;
     } else {
       globalNav.style.display = 'block';
       propertySpaceNav.style.display = 'none';
     }
+  },
+
+  renderPropertySpaceHeader(title, propertyName, actionsHtml = '') {
+    return `
+      <div class="property-space-header">
+        <div class="property-space-info">
+          <h1 class="property-space-title">${title}</h1>
+          <p class="property-space-subtitle">${propertyName}</p>
+        </div>
+        ${actionsHtml}
+      </div>
+    `;
   },
 
   // Property Dashboard (Property Space Dashboard - shown when property is selected)
@@ -74,6 +86,7 @@ const PageLoaders = {
     }
 
     container.innerHTML = `
+      ${this.renderPropertySpaceHeader('Dashboard', property.name)}
       <div class="stats-grid" id="dashboard-stats"></div>
       <div class="dashboard-grid">
         <div class="quick-actions-panel">
@@ -388,36 +401,13 @@ const PageLoaders = {
       return;
     }
 
-    // Get saved view preference or default to grid
-    const savedView = localStorage.getItem('unitsViewPreference') || 'grid';
-
     container.innerHTML = `
-      <div class="property-space-header">
-        <div class="property-space-info">
-          <h1 class="property-space-title">Units</h1>
-          <p class="property-space-subtitle">${property.name}</p>
-        </div>
+      ${this.renderPropertySpaceHeader('Units', property.name, `
         <div class="header-actions">
           <button class="action-button" id="create-unit-btn">+ Bulk Create</button>
-          <div class="view-toggle">
-            <button class="view-toggle-btn ${savedView === 'grid' ? 'active' : ''}" data-view="grid" title="Grid View">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                <rect x="2" y="2" width="7" height="7" rx="1"/>
-                <rect x="11" y="2" width="7" height="7" rx="1"/>
-                <rect x="2" y="11" width="7" height="7" rx="1"/>
-                <rect x="11" y="11" width="7" height="7" rx="1"/>
-              </svg>
-            </button>
-            <button class="view-toggle-btn ${savedView === 'table' ? 'active' : ''}" data-view="table" title="Table View">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                <rect x="2" y="3" width="16" height="3" rx="1"/>
-                <rect x="2" y="8" width="16" height="3" rx="1"/>
-                <rect x="2" y="13" width="16" height="3" rx="1"/>
-              </svg>
-            </button>
-          </div>
+          <button class="action-button" id="delete-units-btn">Delete Units</button>
         </div>
-      </div>
+      `)}
       <div id="units-container"></div>
     `;
 
@@ -425,22 +415,14 @@ const PageLoaders = {
       Modals.showBulkUnitModal(property.id);
     });
 
-    // Handle view toggle
-    container.querySelectorAll('.view-toggle-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const view = btn.dataset.view;
-        localStorage.setItem('unitsViewPreference', view);
-        container.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.renderUnits(container, property, view);
-      });
+    document.getElementById('delete-units-btn').addEventListener('click', () => {
+      Modals.showDeleteUnitsModal(property.id);
     });
 
-    // Initial render
-    this.renderUnits(container, property, savedView);
+    this.renderUnits(container, property);
   },
 
-  async renderUnits(container, property, view) {
+  async renderUnits(container, property) {
     const unitsContainer = document.getElementById('units-container');
 
     try {
@@ -473,41 +455,44 @@ const PageLoaders = {
         return;
       }
 
-      if (view === 'grid') {
-        this.renderUnitsGrid(unitsContainer, unitsWithOccupancy);
-      } else {
-        this.renderUnitsTable(unitsContainer, unitsWithOccupancy, tenants, leases);
-      }
+      const sortedUnits = [...unitsWithOccupancy].sort((a, b) => {
+        return this.extractUnitNumber(a.unit_number) - this.extractUnitNumber(b.unit_number);
+      });
+
+      this.renderUnitsOverview(unitsContainer, sortedUnits);
+      this.renderUnitsTable(unitsContainer, sortedUnits, tenants, leases);
     } catch (error) {
       unitsContainer.innerHTML = `<p>Error loading units: ${error.message}</p>`;
     }
   },
 
-  renderUnitsGrid(container, units) {
-    // Sort units numerically by the number portion
-    const sortedUnits = [...units].sort((a, b) => {
-      const numA = this.extractUnitNumber(a.unit_number);
-      const numB = this.extractUnitNumber(b.unit_number);
-      return numA - numB;
-    });
-
-    container.innerHTML = `<div class="units-grid compact-grid">${sortedUnits.map(unit => `
-      <div class="unit-card compact" data-unit-id="${unit.id}">
-        <div class="unit-card-status status-${unit.isOccupied ? 'occupied' : 'vacant'}"></div>
-        <div class="unit-card-content">
-          <div class="unit-card-number">${unit.unit_number || 'N/A'}</div>
-          <div class="unit-card-badge ${unit.isOccupied ? 'occupied' : 'vacant'}">${unit.isOccupied ? 'Occupied' : 'Vacant'}</div>
-          <div class="unit-card-type">${unit.unit_type || 'N/A'}</div>
-          <div class="unit-card-rent">${parseFloat(unit.rent_amount || 0).toLocaleString()}</div>
-        </div>
+  renderUnitsOverview(container, units) {
+    const overview = document.createElement('div');
+    overview.className = 'units-overview-panel';
+    overview.innerHTML = `
+      <h3 class="panel-title">Unit Overview</h3>
+      <div class="unit-selector-grid units-overview-grid">
+        ${units.map(unit => `
+          <div class="unit-selector-tile unit-overview-tile"
+               data-unit-id="${unit.id}"
+               title="${unit.isOccupied ? 'Occupied' : 'Vacant'}">
+            <span class="unit-overview-dot ${unit.isOccupied ? 'occupied' : 'vacant'}"></span>
+            <span class="unit-overview-label">${unit.unit_number || 'N/A'}</span>
+          </div>
+        `).join('')}
       </div>
-    `).join('')}</div>`;
+      <div class="units-overview-legend">
+        <span class="legend-item"><span class="unit-overview-dot occupied"></span> Occupied</span>
+        <span class="legend-item"><span class="unit-overview-dot vacant"></span> Vacant</span>
+      </div>
+    `;
 
-    // Attach click handlers
-    container.querySelectorAll('.unit-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const unitId = card.dataset.unitId;
-        const unit = sortedUnits.find(u => u.id == unitId);
+    container.appendChild(overview);
+
+    overview.querySelectorAll('.unit-overview-tile').forEach(tile => {
+      tile.addEventListener('click', () => {
+        const unitId = tile.dataset.unitId;
+        const unit = units.find(u => u.id == unitId);
         if (unit) {
           Modals.showUnitEditModal(unit);
         }
@@ -526,13 +511,6 @@ const PageLoaders = {
   },
 
   renderUnitsTable(container, units, tenants, leases) {
-    // Sort units numerically by the number portion
-    const sortedUnits = [...units].sort((a, b) => {
-      const numA = this.extractUnitNumber(a.unit_number);
-      const numB = this.extractUnitNumber(b.unit_number);
-      return numA - numB;
-    });
-
     // Get tenant names for occupied units
     const unitTenants = {};
     leases.forEach(lease => {
@@ -544,7 +522,10 @@ const PageLoaders = {
       }
     });
 
-    container.innerHTML = `
+    const tableSection = document.createElement('div');
+    tableSection.className = 'units-table-section';
+    tableSection.innerHTML = `
+      <h3 class="panel-title">Unit Details</h3>
       <div class="units-table-container">
         <table class="units-table">
           <thead>
@@ -557,13 +538,17 @@ const PageLoaders = {
             </tr>
           </thead>
           <tbody>
-            ${sortedUnits.map(unit => `
+            ${units.map(unit => `
               <tr class="unit-row" data-unit-id="${unit.id}">
                 <td><strong>${unit.unit_number || 'N/A'}</strong></td>
                 <td>${unit.unit_type || 'N/A'}</td>
                 <td>${parseFloat(unit.rent_amount || 0).toLocaleString()}</td>
                 <td>${unitTenants[unit.id] || '-'}</td>
-                <td><span class="status-badge status-${unit.status || 'vacant'}">${unit.status === 'occupied' ? 'Occupied' : 'Vacant'}</span></td>
+                <td>
+                  <span class="status-badge status-${unit.isOccupied ? 'occupied' : 'vacant'}">
+                    ${unit.isOccupied ? 'Occupied' : 'Vacant'}
+                  </span>
+                </td>
               </tr>
             `).join('')}
           </tbody>
@@ -571,11 +556,12 @@ const PageLoaders = {
       </div>
     `;
 
-    // Attach click handlers
-    container.querySelectorAll('.unit-row').forEach(row => {
+    container.appendChild(tableSection);
+
+    tableSection.querySelectorAll('.unit-row').forEach(row => {
       row.addEventListener('click', () => {
         const unitId = row.dataset.unitId;
-        const unit = sortedUnits.find(u => u.id == unitId);
+        const unit = units.find(u => u.id == unitId);
         if (unit) {
           Modals.showUnitEditModal(unit);
         }
@@ -727,13 +713,9 @@ const PageLoaders = {
     }
 
     container.innerHTML = `
-      <div class="property-space-header">
-        <div class="property-space-info">
-          <h1 class="property-space-title">Tenants</h1>
-          <p class="property-space-subtitle">${property.name}</p>
-        </div>
+      ${this.renderPropertySpaceHeader('Tenants', property.name, `
         <button class="action-button" id="create-tenant-btn">+ Register Tenant</button>
-      </div>
+      `)}
       <div class="tenant-filter-tabs">
         <button class="filter-tab ${initialFilter === 'active' ? 'active' : ''}" data-filter="active">Active Tenants</button>
         <button class="filter-tab ${initialFilter === 'inactive' ? 'active' : ''}" data-filter="inactive">Inactive Tenants</button>

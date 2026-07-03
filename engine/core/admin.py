@@ -50,7 +50,7 @@ class TenantAdmin(admin.ModelAdmin):
     list_display = ('full_name', 'phone', 'status', 'date_added')
     list_filter = ('status',)
     search_fields = ('full_name', 'phone')
-
+ 
 @admin.register(TenantUnit)
 class TenantUnitAdmin(admin.ModelAdmin):
     list_display = ('tenant', 'unit', 'move_in_date', 'move_out_date', 'is_active')
