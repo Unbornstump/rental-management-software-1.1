@@ -107,5 +107,26 @@ const SharedComponents = {
     const matches = unitNumber.match(/\d+/g);
     if (!matches || matches.length === 0) return 0;
     return parseInt(matches[matches.length - 1], 10);
-  }
+  },
+
+  escapeHtml(text) {
+    return String(text ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  },
+
+  showToast(message, durationMs = 4000) {
+    let toast = document.querySelector('.app-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.className = 'app-toast';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.add('visible');
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => toast.classList.remove('visible'), durationMs);
+  },
 };

@@ -1047,5 +1047,116 @@ const Modals = {
         alert('Error saving lease: ' + error.message);
       }
     });
-  }
+  },
+
+  showDeletePropertyModal(property, stats = {}, onSuccess) {
+    const name = property.name || '';
+    const esc = (t) => SharedComponents.escapeHtml(t);
+    const { unitCount = 0, tenantCount = 0, activeTenants = 0 } = stats;
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay delete-property-overlay';
+
+    const closeModal = () => modal.remove();
+
+    const renderWarningStep = () => {
+      const activeWarning = activeTenants > 0
+        ? `<p class="delete-active-warning">⚠ This property has ${activeTenants} active tenant${activeTenants !== 1 ? 's' : ''}. Their lease and payment records will also be deleted.</p>`
+        : '';
+
+      modal.innerHTML = `
+        <div class="modal delete-property-modal">
+          <div class="modal-header">
+            <h2>Delete "${esc(name)}"</h2>
+            <button type="button" class="modal-close" aria-label="Close">&times;</button>
+          </div>
+          <div class="delete-modal-body">
+            <div class="delete-modal-icon">🔒</div>
+            <div class="delete-property-summary">
+              <strong>${esc(name)}</strong>
+              <span>${esc(property.property_type || 'N/A')} — ${esc(property.location || 'N/A')}</span>
+              <span>${unitCount} unit${unitCount !== 1 ? 's' : ''} · ${tenantCount} tenant${tenantCount !== 1 ? 's' : ''}</span>
+            </div>
+            <div class="delete-warning-box">
+              <div class="delete-warning-title">⚠ Read this before continuing</div>
+              <p>This will permanently delete the property "${esc(name)}" and all of its associated data including:</p>
+              <ul>
+                <li>All ${unitCount} unit${unitCount !== 1 ? 's' : ''}</li>
+                <li>All tenant records</li>
+                <li>All lease records</li>
+                <li>All payment history</li>
+              </ul>
+              <p><strong>This action cannot be undone.</strong></p>
+              ${activeWarning}
+            </div>
+            <button type="button" class="action-button delete-continue-btn">I understand, continue</button>
+          </div>
+        </div>
+      `;
+
+      modal.querySelector('.modal-close').addEventListener('click', closeModal);
+      modal.querySelector('.delete-continue-btn').addEventListener('click', renderConfirmStep);
+    };
+
+    const renderConfirmStep = () => {
+      modal.innerHTML = `
+        <div class="modal delete-property-modal">
+          <div class="modal-header">
+            <h2>Delete "${esc(name)}"</h2>
+            <button type="button" class="modal-close" aria-label="Close">&times;</button>
+          </div>
+          <div class="delete-modal-body">
+            <p class="delete-confirm-instructions">To confirm, type the property name exactly as shown below:</p>
+            <div class="delete-confirm-name">${esc(name)}</div>
+            <input type="text" class="delete-confirm-input" id="delete-confirm-input" autocomplete="off" spellcheck="false">
+            <p class="delete-error-msg hidden" id="delete-error-msg">Something went wrong. Please try again.</p>
+            <button type="button" class="action-button delete-confirm-btn" id="delete-confirm-btn" disabled>Delete this property</button>
+          </div>
+        </div>
+      `;
+
+      const input = modal.querySelector('#delete-confirm-input');
+      const confirmBtn = modal.querySelector('#delete-confirm-btn');
+      const errorMsg = modal.querySelector('#delete-error-msg');
+
+      const updateButtonState = () => {
+        const matches = input.value.trim().toLowerCase() === name.trim().toLowerCase();
+        confirmBtn.disabled = !matches;
+        confirmBtn.classList.toggle('active', matches);
+      };
+
+      input.addEventListener('input', updateButtonState);
+      input.focus();
+
+      modal.querySelector('.modal-close').addEventListener('click', closeModal);
+
+      confirmBtn.addEventListener('click', async () => {
+        if (confirmBtn.disabled) return;
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Deleting...';
+        errorMsg.classList.add('hidden');
+
+        try {
+          await apiClient.deleteProperty(property.id);
+          closeModal();
+          if (typeof onSuccess === 'function') {
+            onSuccess(property);
+          }
+          SharedComponents.showToast(`${name} has been permanently deleted`);
+        } catch (error) {
+          errorMsg.classList.remove('hidden');
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = 'Delete this property';
+          updateButtonState();
+        }
+      });
+    };
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    document.body.appendChild(modal);
+    renderWarningStep();
+  },
 };

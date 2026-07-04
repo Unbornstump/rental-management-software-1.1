@@ -1,5 +1,8 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
+from rest_framework.response import Response
 from django.contrib.auth import get_user_model
+from django.db import transaction
+from financials.models import RentPayment
 from .models import (
     Property, Unit, Landlord, LandlordProperty, Commission, LandlordPayout,
     Tenant, TenantUnit, Lease, Invoice, Payment, PenaltyRule, Reminder,
@@ -34,6 +37,37 @@ class PropertyViewSet(viewsets.ModelViewSet):
     queryset = Property.objects.all().order_by('-date_added')
     serializer_class = PropertySerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    @transaction.atomic
+    def destroy(self, request, *args, **kwargs):
+        property_obj = self.get_object()
+        unit_ids = list(property_obj.units.values_list('id', flat=True))
+
+        tenant_ids = set()
+        if unit_ids:
+            tenant_ids.update(
+                Lease.objects.filter(unit_id__in=unit_ids).values_list('tenant_id', flat=True)
+            )
+            tenant_ids.update(
+                TenantUnit.objects.filter(unit_id__in=unit_ids).values_list('tenant_id', flat=True)
+            )
+            tenant_ids.update(
+                RentPayment.objects.filter(unit_id__in=unit_ids).values_list('tenant_id', flat=True)
+            )
+
+        property_obj.delete()
+
+        for tenant_id in tenant_ids:
+            still_linked = (
+                Lease.objects.filter(tenant_id=tenant_id).exists()
+                or TenantUnit.objects.filter(tenant_id=tenant_id).exists()
+                or RentPayment.objects.filter(tenant_id=tenant_id).exists()
+                or Invoice.objects.filter(tenant_id=tenant_id).exists()
+            )
+            if not still_linked:
+                Tenant.objects.filter(id=tenant_id).delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class UnitViewSet(viewsets.ModelViewSet):

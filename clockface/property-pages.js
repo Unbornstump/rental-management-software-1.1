@@ -2,6 +2,8 @@
 // Handles property dashboard and property list pages
 
 const PropertyPages = {
+  openPropertyMenu: null,
+
   MONTHS: ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'],
 
@@ -348,6 +350,85 @@ const PropertyPages = {
   },
 
   // Properties (General App View - the "lobby" to pick a property)
+  closePropertyMenu() {
+    if (this.openPropertyMenu) {
+      this.openPropertyMenu.remove();
+      this.openPropertyMenu = null;
+    }
+    document.removeEventListener('click', this._handleMenuOutsideClick);
+  },
+
+  _handleMenuOutsideClick(e) {
+    if (!PropertyPages.openPropertyMenu) return;
+    if (PropertyPages.openPropertyMenu.contains(e.target)) return;
+    if (e.target.closest('.property-gear-btn')) return;
+    PropertyPages.closePropertyMenu();
+  },
+
+  setupPropertyCardMenus(container, propertyStats) {
+    this._propertyStatsMap = {};
+    propertyStats.forEach(p => { this._propertyStatsMap[p.id] = p; });
+
+    container.querySelectorAll('.property-gear-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const propId = btn.dataset.propertyId;
+        const prop = this._propertyStatsMap[propId] || AppState.getPropertyById(propId);
+        if (!prop) return;
+
+        if (this.openPropertyMenu && this.openPropertyMenu.parentElement === btn.parentElement) {
+          this.closePropertyMenu();
+          return;
+        }
+        this.closePropertyMenu();
+
+        const menu = document.createElement('div');
+        menu.className = 'property-card-menu';
+        menu.innerHTML = `
+          <button type="button" class="property-menu-item" data-action="edit">Edit Property</button>
+          <div class="property-menu-divider"></div>
+          <button type="button" class="property-menu-item danger" data-action="delete">Delete Property</button>
+        `;
+
+        menu.querySelector('[data-action="edit"]').addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          this.closePropertyMenu();
+          Modals.showPropertyModal(prop);
+        });
+
+        menu.querySelector('[data-action="delete"]').addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          this.closePropertyMenu();
+          Modals.showDeletePropertyModal(prop, {
+            unitCount: prop.unitCount,
+            tenantCount: prop.tenantCount,
+            activeTenants: prop.activeTenants,
+          }, () => this.onPropertyDeleted(container, prop.id));
+        });
+
+        btn.parentElement.appendChild(menu);
+        this.openPropertyMenu = menu;
+
+        setTimeout(() => {
+          document.addEventListener('click', this._handleMenuOutsideClick);
+        }, 0);
+      });
+    });
+  },
+
+  onPropertyDeleted(container, propertyId) {
+    if (AppState.getPropertyContext()?.id == propertyId) {
+      AppState.clearPropertyContext();
+      SharedComponents.updateSidebarVisibility();
+    }
+    AppState.setAllProperties(AppState.getAllProperties().filter(p => p.id != propertyId));
+    const card = container.querySelector(`.property-card[data-property-id="${propertyId}"]`);
+    if (card) card.remove();
+    if (!container.querySelector('.property-card[data-property-id]')) {
+      this.loadProperties(container);
+    }
+  },
+
   async loadProperties(container) {
     container.innerHTML = `
       <div class="property-list-header">
@@ -359,10 +440,10 @@ const PropertyPages = {
     const propertiesGrid = document.getElementById('properties-grid');
 
     try {
-      const [properties, units, tenants] = await Promise.all([
+      const [properties, units, leases] = await Promise.all([
         apiClient.getProperties(),
         apiClient.getUnits(),
-        apiClient.getTenants()
+        apiClient.getLeases(),
       ]);
 
       AppState.setAllProperties(properties);
@@ -381,31 +462,39 @@ const PropertyPages = {
 
       const propertyStats = properties.map(prop => {
         const propUnits = units.filter(u => u.property == prop.id);
-        const propLeases = tenants.filter(t => propUnits.some(u => u.id == t.unit));
+        const propUnitIds = new Set(propUnits.map(u => u.id));
+        const propLeases = leases.filter(l => propUnitIds.has(l.unit));
+        const tenantIds = new Set(propLeases.map(l => l.tenant));
         return {
           ...prop,
           unitCount: propUnits.length,
-          tenantCount: propLeases.length
+          tenantCount: tenantIds.size,
+          activeTenants: propLeases.filter(l => l.status === 'active').length,
         };
       });
 
       let gridHTML = propertyStats.map(prop => `
-        <div class="property-card clickable" data-property-id="${prop.id}">
-          <div class="property-card-header">
-            <div class="property-card-icon">🏢</div>
-            <span class="property-card-badge">Active</span>
+        <div class="property-card" data-property-id="${prop.id}">
+          <div class="property-card-main clickable">
+            <div class="property-card-header">
+              <div class="property-card-icon">🏢</div>
+              <span class="property-card-badge">Active</span>
+            </div>
+            <h3 class="property-card-title">${SharedComponents.escapeHtml(prop.name) || 'N/A'}</h3>
+            <p class="property-card-location">${SharedComponents.escapeHtml(prop.property_type) || 'N/A'} — ${SharedComponents.escapeHtml(prop.location) || 'N/A'}</p>
+            <div class="property-card-stats">
+              <div class="property-card-stat">
+                <span class="stat-value">${prop.unitCount}</span>
+                <span class="stat-label">Units</span>
+              </div>
+              <div class="property-card-stat">
+                <span class="stat-value">${prop.tenantCount}</span>
+                <span class="stat-label">Tenants</span>
+              </div>
+            </div>
           </div>
-          <h3 class="property-card-title">${prop.name || 'N/A'}</h3>
-          <p class="property-card-location">${prop.property_type || 'N/A'} — ${prop.location || 'N/A'}</p>
-          <div class="property-card-stats">
-            <div class="property-card-stat">
-              <span class="stat-value">${prop.unitCount}</span>
-              <span class="stat-label">Units</span>
-            </div>
-            <div class="property-card-stat">
-              <span class="stat-value">${prop.tenantCount}</span>
-              <span class="stat-label">Tenants</span>
-            </div>
+          <div class="property-card-footer">
+            <button type="button" class="property-gear-btn" data-property-id="${prop.id}" aria-label="Property settings">⚙</button>
           </div>
         </div>
       `).join('');
@@ -419,8 +508,9 @@ const PropertyPages = {
 
       propertiesGrid.innerHTML = gridHTML;
 
-      container.querySelectorAll('.property-card.clickable').forEach(card => {
-        card.addEventListener('click', () => {
+      container.querySelectorAll('.property-card-main.clickable').forEach(main => {
+        main.addEventListener('click', () => {
+          const card = main.closest('.property-card');
           const propertyId = card.dataset.propertyId;
           const property = AppState.getPropertyById(propertyId);
           if (property) {
@@ -430,6 +520,8 @@ const PropertyPages = {
           }
         });
       });
+
+      this.setupPropertyCardMenus(container, propertyStats);
 
       const addCard = container.querySelector('.add-property-card');
       if (addCard) {
