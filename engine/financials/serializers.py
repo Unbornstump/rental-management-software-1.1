@@ -13,6 +13,10 @@ class RentPaymentSerializer(serializers.ModelSerializer):
     unit_number = serializers.CharField(source='unit.unit_number', read_only=True)
     property_name = serializers.CharField(source='unit.property.name', read_only=True)
     recorded_by_name = serializers.CharField(source='recorded_by.username', read_only=True)
+    tenant = serializers.PrimaryKeyRelatedField(read_only=True)
+    unit = serializers.PrimaryKeyRelatedField(read_only=True)
+    lease = serializers.PrimaryKeyRelatedField(read_only=True)
+    recorded_by = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = RentPayment
@@ -23,7 +27,7 @@ class RentPaymentSerializer(serializers.ModelSerializer):
             'reference_number', 'status', 'notes', 'recorded_by', 'recorded_by_name',
             'created_at', 'updated_at', 'is_late', 'days_overdue',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'is_late', 'days_overdue']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'is_late', 'days_overdue', 'tenant', 'unit', 'lease', 'recorded_by']
 
     def validate(self, data):
         amount_paid = data.get('amount_paid', 0)
@@ -94,7 +98,7 @@ class PaymentStreakSerializer(serializers.ModelSerializer):
 class TenantPaymentDashboardSerializer(serializers.Serializer):
     tenant_id = serializers.IntegerField()
     tenant_name = serializers.CharField()
-    phone = serializers.CharField()
+    phone = serializers.CharField(allow_blank=True, required=False)
     unit_number = serializers.CharField()
     unit_type = serializers.CharField(required=False, allow_blank=True)
     property_name = serializers.CharField()

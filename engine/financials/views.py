@@ -413,7 +413,7 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
 
         payment_history = RentPayment.objects.filter(
             tenant=tenant
-        ).order_by('-billing_year', '-billing_month')[:12]
+        ).select_related('unit', 'recorded_by').order_by('-billing_year', '-billing_month')[:12]
 
         amount_expected = current_payment.amount_expected if current_payment else active_lease.rent_amount
         amount_paid = current_payment.amount_paid if current_payment else Decimal('0.00')
@@ -460,7 +460,7 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
             'last_payment_amount': last_payment.amount_paid if last_payment else None,
             'last_payment_method': last_payment.payment_method if last_payment else None,
             'payment_streak': payment_streak.current_streak,
-            'payment_history': RentPaymentSerializer(payment_history, many=True).data
+            'payment_history': payment_history,
         }
 
         serializer = TenantPaymentDashboardSerializer(data)
