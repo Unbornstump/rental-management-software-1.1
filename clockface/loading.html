@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RMS Loading</title>
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="loading.css">
+</head>
+<body>
+  <div class="loading-container">
+    <h1 class="loading-title">RMS</h1>
+    <p class="loading-subtitle">Loading your workspace...</p>
+    
+    <div class="progress-container">
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progress-bar"></div>
+      </div>
+      <div class="progress-info">
+        <span class="progress-percentage" id="progress-percentage">0%</span>
+        <span class="progress-stage" id="progress-stage">Initializing...</span>
+      </div>
+    </div>
+
+    <!-- Error State (hidden by default) -->
+    <div class="error-state" id="error-state" style="display: none;">
+      <div class="error-icon">✕</div>
+      <h2 class="error-title">Something went wrong</h2>
+      <p class="error-message">We couldn't load your workspace. Please try again.</p>
+      <div class="error-actions">
+        <button class="action-button" id="try-again-btn">Try Again</button>
+        <button class="cancel-btn" id="log-out-btn">Log Out</button>
+      </div>
+    </div>
+  </div>
+  <script src="api-client.js"></script>
+  <script src="loading.js"></script>
+</body>
+</html>

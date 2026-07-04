@@ -9,63 +9,103 @@
 </head>
 <body>
   <div class="homepage-container">
-    <header class="homepage-header">
-      <h1 class="homepage-title">Rental System</h1>
-      <p class="homepage-subtitle">Your complete solution for property management</p>
-    </header>
+    <!-- Settings Gear Icon -->
+    <button class="settings-gear-btn" id="settings-gear" aria-label="Settings">⚙</button>
 
-    <main class="homepage-content">
-      <section class="homepage-section">
-        <h2>Welcome to RMS</h2>
-        <p class="homepage-description">
-          RMS is a comprehensive platform designed to streamline property management tasks. 
-          Track properties, units, tenants, leases, payments, and maintenance requests all in one place.
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-left">
+          <h1 class="hero-title">RMS</h1>
+          <h2 class="hero-subtitle">Rental Management System</h2>
+          <p class="hero-description" data-typewriter-text="Everything you need to manage&#10;your properties — units, tenants,&#10;leases, and payments — in one place."></p>
+          <button class="hero-cta" id="get-started-btn">Get Started <span class="arrow">→</span></button>
+        </div>
+        <div class="hero-right">
+          <svg class="hero-illustration" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+            <!-- Building outline -->
+            <rect x="150" y="50" width="100" height="200" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+            <rect x="160" y="60" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
+            <rect x="190" y="60" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
+            <rect x="220" y="60" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
+            <rect x="160" y="90" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
+            <rect x="190" y="90" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
+            <rect x="220" y="90" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
+            <rect x="160" y="120" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
+            <rect x="190" y="120" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
+            <rect x="220" y="120" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
+            <rect x="160" y="150" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
+            <rect x="190" y="150" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
+            <rect x="220" y="150" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
+            <rect x="160" y="180" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
+            <rect x="190" y="180" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
+            <rect x="220" y="180" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
+            <rect x="175" y="210" width="50" height="40" fill="rgba(255,255,255,0.15)"/>
+            
+            <!-- Stacked property cards -->
+            <rect x="50" y="180" width="80" height="60" rx="4" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+            <rect x="60" y="190" width="60" height="8" rx="2" fill="rgba(255,255,255,0.3)"/>
+            <rect x="60" y="205" width="40" height="6" rx="2" fill="rgba(255,255,255,0.2)"/>
+            
+            <rect x="270" y="160" width="80" height="60" rx="4" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+            <rect x="280" y="170" width="60" height="8" rx="2" fill="rgba(255,255,255,0.3)"/>
+            <rect x="280" y="185" width="40" height="6" rx="2" fill="rgba(255,255,255,0.2)"/>
+            
+            <!-- Floor plan grid -->
+            <rect x="80" y="80" width="50" height="50" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <line x1="105" y1="80" x2="105" y2="130" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <line x1="80" y1="105" x2="130" y2="105" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            
+            <rect x="270" y="80" width="50" height="50" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <line x1="295" y1="80" x2="295" y2="130" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <line x1="270" y1="105" x2="320" y2="105" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feature Cards -->
+    <section class="features-section">
+      <div class="feature-card">
+        <div class="feature-icon">🏢</div>
+        <h3 class="feature-title">Properties & Units</h3>
+        <p class="feature-description">
+          Manage properties, units, tenants and leases in one place.
         </p>
-      </section>
+      </div>
 
-      <section class="homepage-features">
-        <div class="feature-card">
-          <h3>Property Management</h3>
-          <p>Manage multiple properties with ease. Track units, tenants, and leases across your entire portfolio.</p>
-          <button class="action-button feature-button" id="enter-property-management">
-            Enter Property Management
-          </button>
-        </div>
+      <div class="feature-card">
+        <div class="feature-icon">💰</div>
+        <h3 class="feature-title">Rent & Payments</h3>
+        <p class="feature-description">
+          Track rent collection, receipts, arrears and credit balances.
+        </p>
+      </div>
 
-        <div class="feature-card">
-          <h3>Financial Tracking</h3>
-          <p>Monitor payments, invoices, and expenses. Generate reports to keep your finances organized.</p>
-        </div>
-
-        <div class="feature-card">
-          <h3>Maintenance Requests</h3>
-          <p>Track and manage maintenance requests efficiently. Keep your properties in top condition.</p>
-        </div>
-      </section>
-
-      <section class="homepage-section">
-        <h2>App Settings</h2>
-        <div class="settings-grid">
-          <div class="setting-item">
-            <label for="backend-url">Backend URL</label>
-            <input type="text" id="backend-url" class="setting-input" placeholder="http://localhost:8000">
-          </div>
-          <div class="setting-item">
-            <label for="theme">Theme</label>
-            <select id="theme" class="setting-select">
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-          </div>
-          <button class="action-button" id="save-settings">Save Settings</button>
-        </div>
-      </section>
-
-      <footer class="homepage-footer">
-        <p>&copy; 2026 Rental Management System. All rights reserved.</p>
-      </footer>
-    </main>
+      <div class="feature-card">
+        <div class="feature-icon">🔧</div>
+        <h3 class="feature-title">Maintenance</h3>
+        <p class="feature-description">
+          Log and resolve unit maintenance requests.
+        </p>
+        <span class="coming-soon-badge">Coming soon</span>
+      </div>
+    </section>
   </div>
+
+  <!-- Settings Popover -->
+  <div class="settings-popover-overlay" id="settings-modal">
+    <div class="settings-popover" id="settings-popover">
+      <div class="settings-popover-row">
+        <span class="settings-popover-label">Theme</span>
+        <div class="theme-toggle" id="theme-toggle">
+          <button type="button" class="theme-toggle-btn" data-theme="light">Light</button>
+          <button type="button" class="theme-toggle-btn" data-theme="dark">Dark</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="homepage.js"></script>
 </body>
 </html>

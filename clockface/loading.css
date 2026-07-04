@@ -1,0 +1,157 @@
+/* Loading Page Styles */
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  background: linear-gradient(180deg, #667eea 0%, #4a3f8c 50%, #3d3266 100%);
+  text-align: center;
+}
+
+.loading-title {
+  font-size: 64px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: white;
+  letter-spacing: -1px;
+}
+
+.loading-subtitle {
+  font-size: 18px;
+  font-weight: 300;
+  margin-bottom: 48px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.progress-container {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.progress-bar-track {
+  width: 100%;
+  height: 8px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+  border-radius: 4px;
+  transition: width 0.4s ease-out;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.progress-percentage {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  min-width: 50px;
+  text-align: right;
+}
+
+.progress-stage {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: left;
+  flex: 1;
+}
+
+/* Error State */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 400px;
+  margin-top: 40px;
+}
+
+.error-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.error-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: white;
+}
+
+.error-message {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 32px;
+  line-height: 1.5;
+}
+
+.error-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.error-actions .action-button {
+  background-color: white;
+  color: #667eea;
+  border: none;
+}
+
+.error-actions .action-button:hover {
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
+.error-actions .cancel-btn {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.error-actions .cancel-btn:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Fade out animation for loading completion */
+.loading-container.fade-out {
+  opacity: 0;
+  transition: opacity 0.3s ease-out;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .loading-title {
+    font-size: 48px;
+  }
+
+  .loading-subtitle {
+    font-size: 16px;
+  }
+
+  .progress-container {
+    max-width: 300px;
+  }
+
+  .error-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .error-actions .action-button,
+  .error-actions .cancel-btn {
+    width: 100%;
+  }
+}

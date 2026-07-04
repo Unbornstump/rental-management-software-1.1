@@ -1,58 +1,219 @@
 /* Login Page Styles */
 
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
 .login-container {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
-  padding: 20px;
+  width: 100%;
+  height: 100%;
+  padding: 32px 28px;
+  background: #f5f7fa;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.login-card {
+  background: white;
+  border-radius: 12px;
+  padding: 36px 40px;
+  width: 380px;
+  max-width: 100%;
+  flex-shrink: 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  text-align: center;
 }
 
 .login-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 20px;
-  text-align: center;
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 6px;
+  color: #667eea;
+  letter-spacing: -1px;
+}
+
+.login-subtitle {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.3;
+  margin-bottom: 18px;
+  color: #999;
+}
+
+.login-divider {
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 0 auto 20px auto;
+  width: 100%;
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
-  max-width: 300px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .login-input {
   background-color: white;
   border: 1px solid #cdd4e0;
-  border-radius: 4px;
-  padding: 8px;
-  font-size: 13px;
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-size: 14px;
   font-family: inherit;
+  width: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .login-input:focus {
-  outline: 2px solid rgba(47, 128, 237, 0.35);
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2), 0 0 12px rgba(102, 126, 234, 0.15);
+}
+
+.login-input.error {
+  border-color: #ef4444;
+}
+
+.login-input.error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper .login-input {
+  padding-right: 48px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.password-toggle:hover {
+  color: #333;
+}
+
+.field-error {
+  font-size: 12px;
+  color: #ef4444;
+  display: block;
+}
+
+.field-error:empty {
+  display: none;
+}
+
+.login-error {
+  font-size: 14px;
+  color: #ef4444;
+  text-align: center;
+  padding: 10px 16px;
+  background-color: #fef2f2;
+  border-radius: 6px;
+  border: 1px solid #fecaca;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.login-error:not(:empty) {
+  display: flex;
+}
+
+.login-error::before {
+  content: '⚠';
+  font-size: 16px;
 }
 
 .login-button {
-  background-color: #2f80ed;
+  background-color: #667eea;
   color: white;
-  border: 1px solid #2f80ed;
+  border: none;
   border-radius: 6px;
-  padding: 10px 14px;
-  min-height: 38px;
-  font-size: 13px;
+  padding: 12px 20px;
+  min-height: 46px;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
   font-family: inherit;
+  transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+  margin-top: 4px;
+  width: 100%;
 }
 
 .login-button:hover {
-  background-color: #2868c4;
+  background-color: #5568d3;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.login-button:active {
+  transform: scale(0.98);
 }
 
 .login-button:focus {
-  outline: 2px solid rgba(47, 128, 237, 0.35);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.4);
+}
+
+.login-button:disabled {
+  background-color: #a0aec0;
+  cursor: not-allowed;
+}
+
+.forgot-password {
+  display: block;
+  margin-top: 14px;
+  font-size: 13px;
+  color: #667eea;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.forgot-password:hover {
+  color: #5568d3;
+  text-decoration: underline;
+}
+
+/* Shake animation for login error */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-8px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(8px);
+  }
+}
+
+.login-card.shake {
+  animation: shake 0.5s ease-in-out;
 }

@@ -21,6 +21,7 @@ function createHomepageWindow() {
     title: 'Rental Management System'
   });
 
+  homepageWindow.maximize();
   homepageWindow.loadFile('homepage.html');
   
   homepageWindow.on('closed', () => {
@@ -29,23 +30,46 @@ function createHomepageWindow() {
 }
 
 function createLoginWindow() {
+  const LOGIN_WIDTH = 500;
+  const LOGIN_HEIGHT = 740;
+
+  // Standalone window — parent/modal child windows on Windows ignore
+  // BrowserWindow width/height and size to native dialog defaults instead.
   loginWindow = new BrowserWindow({
-    width: 380,
-    height: 220,
+    width: LOGIN_WIDTH,
+    height: LOGIN_HEIGHT,
+    minWidth: LOGIN_WIDTH,
+    minHeight: LOGIN_HEIGHT,
+    maxWidth: LOGIN_WIDTH,
+    maxHeight: LOGIN_HEIGHT,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
     },
     resizable: false,
-    title: 'Login',
-    parent: homepageWindow,
-    modal: true
+    center: true,
+    show: false,
+    autoHideMenuBar: true,
+    alwaysOnTop: true,
+    title: 'Login'
   });
 
+  loginWindow.maximize();
+  loginWindow.setMenuBarVisibility(false);
   loginWindow.loadFile('login.html');
-  
+
+  loginWindow.once('ready-to-show', () => {
+    loginWindow.show();
+    if (homepageWindow) {
+      homepageWindow.setEnabled(false);
+    }
+  });
+
   loginWindow.on('closed', () => {
     loginWindow = null;
+    if (homepageWindow) {
+      homepageWindow.setEnabled(true);
+    }
   });
 }
 
@@ -60,6 +84,7 @@ function createMainWindow(token) {
     title: 'RMS Dashboard'
   });
 
+  mainWindow.maximize();
   mainWindow.loadFile('main.html');
   
   mainWindow.on('closed', () => {
@@ -93,9 +118,10 @@ app.on('window-all-closed', () => {
 
 // IPC handlers
 ipcMain.on('open-login-window', () => {
-  if (!loginWindow) {
-    createLoginWindow();
+  if (loginWindow) {
+    loginWindow.close();
   }
+  createLoginWindow();
 });
 
 ipcMain.on('login-success', (event, token) => {
