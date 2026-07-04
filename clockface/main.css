@@ -1,4 +1,24 @@
-/* Main Dashboard Styles */
+/* Main Dashboard Styles — White & Black Theme */
+
+:root {
+  --color-bg: #FAFAFA;
+  --color-surface: #FFFFFF;
+  --color-text: #1A1A1A;
+  --color-text-secondary: #6B6B6B;
+  --color-text-muted: #A0A0A0;
+  --color-border: #E5E5E5;
+  --color-primary: #1A1A1A;
+  --color-primary-hover: #333333;
+  --color-status-paid: #16A34A;
+  --color-status-unpaid: #DC2626;
+  --color-status-partial: #D97706;
+  --color-status-overpaid: #2563EB;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
 
 .main-container {
   display: flex;
@@ -71,10 +91,11 @@
 
 .nav-button {
   background-color: transparent;
-  color: #4b5563;
+  color: #6B6B6B;
   border: none;
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-left: 3px solid transparent;
+  border-radius: 0 8px 8px 0;
+  padding: 10px 12px 10px 9px;
   min-height: 44px;
   text-align: left;
   cursor: pointer;
@@ -87,18 +108,19 @@
 }
 
 .nav-button:hover {
-  background-color: #f3f4f6;
-  color: #111827;
+  background-color: #F5F5F5;
+  color: #1A1A1A;
 }
 
 .nav-button.active {
-  background-color: #eff6ff;
-  color: #2563eb;
-  font-weight: 500;
+  background-color: transparent;
+  color: #1A1A1A;
+  font-weight: 600;
+  border-left-color: #1A1A1A;
 }
 
 .nav-button:focus {
-  outline: 2px solid rgba(37, 99, 235, 0.35);
+  outline: 2px solid rgba(26, 26, 26, 0.25);
 }
 
 .nav-icon {
@@ -122,14 +144,14 @@
 
 .back-to-properties-btn {
   margin-top: auto;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border);
   padding-top: 12px;
-  color: #6b7280;
+  color: #6B6B6B;
 }
 
 .back-to-properties-btn:hover {
-  background-color: #f3f4f6;
-  color: #111827;
+  background-color: #F5F5F5;
+  color: #1A1A1A;
 }
 
 /* Content Area */
@@ -189,8 +211,8 @@
 }
 
 .stat-card-icon.blue {
-  background-color: #eff6ff;
-  color: #2563eb;
+  background-color: #F5F5F5;
+  color: #1A1A1A;
 }
 
 .stat-card-icon.green {
@@ -204,8 +226,8 @@
 }
 
 .stat-card-icon.purple {
-  background-color: #f5f3ff;
-  color: #7c3aed;
+  background-color: #F5F5F5;
+  color: #1A1A1A;
 }
 
 .stat-card-icon.red {
@@ -441,7 +463,7 @@
 .property-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
-  border-color: #2563eb;
+  border-color: #1A1A1A;
 }
 
 .property-card-header {
@@ -837,9 +859,9 @@
 }
 
 .tab-button.active {
-  background-color: #2f80ed;
+  background-color: #1A1A1A;
   color: white;
-  border-color: #2f80ed;
+  border-color: #1A1A1A;
 }
 
 .tab-button:focus {
@@ -871,7 +893,7 @@
 .report-card p {
   font-size: 24px;
   font-weight: 700;
-  color: #2f80ed;
+  color: #1A1A1A;
 }
 
 /* Maintenance Items */
@@ -1135,7 +1157,7 @@
   outline: 2px solid rgba(47, 128, 237, 0.35);
 }
 
-/* Property Context Header */
+/* Property Context Header - Purple Accent (Brand Anchor) */
 .property-context-header {
   display: flex;
   align-items: center;
@@ -1199,7 +1221,7 @@
 .unit-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
-  border-color: #2563eb;
+  border-color: #1A1A1A;
 }
 
 .unit-card.compact {
@@ -1348,7 +1370,7 @@
 .tenant-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
-  border-color: #2563eb;
+  border-color: #1A1A1A;
 }
 
 .tenant-card-header {
@@ -1445,7 +1467,7 @@
 }
 
 .view-toggle-btn.active {
-  background-color: #2f80ed;
+  background-color: #1A1A1A;
   color: white;
 }
 
@@ -1637,19 +1659,19 @@
 }
 
 .unit-selector-tile:hover:not(.occupied):not(.selected):not(.selected-for-delete) {
-  border-color: #2563eb;
-  background-color: #eff6ff;
+  border-color: #1A1A1A;
+  background-color: #F5F5F5;
 }
 
 .unit-selector-tile.selected {
-  border-color: #2563eb;
-  background-color: #2563eb;
+  border-color: #1A1A1A;
+  background-color: #1A1A1A;
   color: white;
 }
 
 .unit-selector-tile.selected:hover {
-  border-color: #1d4ed8;
-  background-color: #1d4ed8;
+  border-color: #333333;
+  background-color: #333333;
   color: white;
 }
 
@@ -1736,18 +1758,18 @@
 
 /* Tenant Card Badges */
 .tenant-card-badge.status-active {
-  background-color: #ecfdf5;
-  color: #059669;
+  background-color: #1A1A1A;
+  color: #FFFFFF;
 }
 
 .tenant-card-badge.status-no-lease {
   background-color: #fef3c7;
-  color: #d97706;
+  color: #D97706;
 }
 
 .tenant-card-badge.status-inactive {
-  background-color: #f3f4f6;
-  color: #6b7280;
+  background-color: #F5F5F5;
+  color: #6B6B6B;
 }
 
 .tenant-card.no-lease {
@@ -1786,7 +1808,7 @@
 }
 
 .filter-tab.active {
-  background-color: #2f80ed;
+  background-color: #1A1A1A;
   color: white;
 }
 
@@ -1819,7 +1841,7 @@
 
 .tenants-search-input:focus {
   outline: none;
-  border-color: #2563eb;
+  border-color: #1A1A1A;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
@@ -1854,7 +1876,7 @@
 }
 
 .filter-pill.active {
-  color: #2563eb;
+  color: #1A1A1A;
 }
 
 .filter-pill.active::after {
@@ -1865,7 +1887,7 @@
   transform: translateX(-50%);
   width: 20px;
   height: 2px;
-  background-color: #2563eb;
+  background-color: #1A1A1A;
   border-radius: 1px;
 }
 
@@ -1997,7 +2019,7 @@
 
 /* Clear Search Link */
 .clear-search-link {
-  color: #2563eb;
+  color: #1A1A1A;
   text-decoration: none;
   font-weight: 500;
 }
@@ -2060,7 +2082,7 @@
 }
 
 .primary-btn {
-  background-color: #2f80ed;
+  background-color: #1A1A1A;
 }
 
 .danger-btn {
@@ -2074,9 +2096,9 @@
 /* Financials Tabs */
 .financials-tab {
   padding: 8px 16px;
-  background-color: #e8eef5;
-  color: #333;
-  border: 1px solid #cdd4e0;
+  background-color: #FFFFFF;
+  color: #1A1A1A;
+  border: 1px solid #E5E5E5;
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
@@ -2085,23 +2107,26 @@
 }
 
 .financials-tab:hover {
-  background-color: #d7dbe7;
+  background-color: #F5F5F5;
+  border-color: #1A1A1A;
 }
 
 .financials-tab.active {
-  background-color: #2f80ed;
+  background-color: #1A1A1A;
   color: white;
-  border-color: #2f80ed;
+  border-color: #1A1A1A;
 }
 
 .secondary-btn {
-  background-color: #e8eef5;
-  color: #333;
-  border: 1px solid #cdd4e0;
+  background-color: #FFFFFF;
+  color: #1A1A1A;
+  border: 1px solid #E5E5E5;
 }
 
 .secondary-btn:hover {
-  background-color: #d7dbe7;
+  background-color: #1A1A1A;
+  color: #FFFFFF;
+  border-color: #1A1A1A;
 }
 
 /* Billing Cycle Selector */
@@ -2168,12 +2193,12 @@
   display: inline-block;
 }
 
-.metric-dot.paid { background-color: #10b981; }
-.metric-dot.unpaid { background-color: #ef4444; }
-.metric-dot.partial { background-color: #f59e0b; }
+.metric-dot.paid { background-color: #16A34A; }
+.metric-dot.unpaid { background-color: #DC2626; }
+.metric-dot.partial { background-color: #D97706; }
 
 .metric-card.metric-rate .metric-card-value {
-  color: #2f80ed;
+  color: #1A1A1A;
 }
 
 /* Payment Filter Tabs */
@@ -2203,8 +2228,8 @@
 }
 
 .payment-grid-tile.clickable:hover {
-  border-color: #2f80ed;
-  background-color: #eff6ff;
+  border-color: #1A1A1A;
+  background-color: #F5F5F5;
 }
 
 .payment-grid-tile.vacant-tile {
@@ -2269,17 +2294,17 @@
 .status-badge.status-paid,
 .status-badge.status-overpaid {
   background-color: #ecfdf5;
-  color: #059669;
+  color: #16A34A;
 }
 
 .status-badge.status-unpaid {
   background-color: #fef2f2;
-  color: #dc2626;
+  color: #DC2626;
 }
 
 .status-badge.status-partial {
   background-color: #fffbeb;
-  color: #d97706;
+  color: #D97706;
 }
 
 .late-badge {
@@ -2511,7 +2536,7 @@ body.panel-open::before {
 .back-link {
   background: none;
   border: none;
-  color: #2f80ed;
+  color: #1A1A1A;
   font-size: 14px;
   cursor: pointer;
   padding: 0;
@@ -2626,7 +2651,7 @@ body.panel-open::before {
 .link-btn {
   background: none;
   border: none;
-  color: #2f80ed;
+  color: #1A1A1A;
   font-size: 12px;
   cursor: pointer;
   padding: 4px 0;
@@ -2664,9 +2689,9 @@ body.panel-open::before {
   text-transform: capitalize;
 }
 
-.feedback-paid .feedback-status { color: #059669; }
-.feedback-partial .feedback-status { color: #d97706; }
-.feedback-overpaid .feedback-status { color: #2563eb; }
+.feedback-paid .feedback-status { color: #16A34A; }
+.feedback-partial .feedback-status { color: #D97706; }
+.feedback-overpaid .feedback-status { color: #2563EB; }
 
 .feedback-result p {
   margin: 6px 0;
@@ -2717,7 +2742,7 @@ body.panel-open::before {
 
 .credit-note {
   font-size: 11px;
-  color: #059669;
+  color: #16A34A;
 }
 
 .tenant-history-section {
@@ -2740,7 +2765,7 @@ body.panel-open::before {
 }
 
 .sortable-th:hover {
-  color: #2f80ed;
+  color: #1A1A1A;
 }
 
 /* Payment breakdown (cumulative) */
@@ -2794,8 +2819,8 @@ body.panel-open::before {
   color: #374151;
 }
 
-.breakdown-total-row.owed strong { color: #dc2626; }
-.breakdown-total-row.surplus strong { color: #2563eb; }
+.breakdown-total-row.owed strong { color: #DC2626; }
+.breakdown-total-row.surplus strong { color: #2563EB; }
 
 /* Receipt preview card */
 .receipt-preview-card {
@@ -2880,12 +2905,12 @@ body.panel-open::before {
   font-style: italic;
 }
 
-.rate-red { color: #dc2626; }
-.rate-amber { color: #d97706; }
-.rate-green { color: #059669; }
+.rate-red { color: #DC2626; }
+.rate-amber { color: #D97706; }
+.rate-green { color: #16A34A; }
 
 .subtitle-positive {
-  color: #059669;
+  color: #16A34A;
   font-weight: 500;
 }
 
@@ -2899,7 +2924,7 @@ body.panel-open::before {
 
 .mini-occupancy-fill {
   height: 100%;
-  background: #10b981;
+  background: #16A34A;
   border-radius: 3px;
   transition: width 0.3s ease;
 }
@@ -2921,7 +2946,7 @@ body.panel-open::before {
 }
 
 .collection-glance.clickable:hover {
-  border-color: #2f80ed;
+  border-color: #1A1A1A;
   box-shadow: 0 2px 8px rgba(47, 128, 237, 0.1);
 }
 
@@ -2941,9 +2966,9 @@ body.panel-open::before {
   font-weight: 600;
 }
 
-.collection-rate-badge.bar-red { background: #fef2f2; color: #dc2626; }
-.collection-rate-badge.bar-amber { background: #fffbeb; color: #d97706; }
-.collection-rate-badge.bar-green { background: #ecfdf5; color: #059669; }
+.collection-rate-badge.bar-red { background: #fef2f2; color: #DC2626; }
+.collection-rate-badge.bar-amber { background: #fffbeb; color: #D97706; }
+.collection-rate-badge.bar-green { background: #ecfdf5; color: #16A34A; }
 
 .collection-progress-track {
   height: 12px;
@@ -2959,9 +2984,9 @@ body.panel-open::before {
   transition: width 0.4s ease;
 }
 
-.collection-progress-fill.bar-red { background: #ef4444; }
-.collection-progress-fill.bar-amber { background: #f59e0b; }
-.collection-progress-fill.bar-green { background: #10b981; }
+.collection-progress-fill.bar-red { background: #DC2626; }
+.collection-progress-fill.bar-amber { background: #D97706; }
+.collection-progress-fill.bar-green { background: #16A34A; }
 
 .collection-glance-footer {
   display: flex;
@@ -3010,9 +3035,9 @@ body.panel-open::before {
   margin-bottom: 12px;
 }
 
-.banner-success { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
-.banner-danger { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-.banner-info { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.banner-success { background: #ecfdf5; color: #16A34A; border: 1px solid #a7f3d0; }
+.banner-danger { background: #fef2f2; color: #DC2626; border: 1px solid #fecaca; }
+.banner-info { background: #eff6ff; color: #2563EB; border: 1px solid #bfdbfe; }
 
 .payment-status-list {
   display: flex;
@@ -3079,9 +3104,9 @@ body.panel-open::before {
   opacity: 0.85;
 }
 
-.alert-red { background: #fef2f2; border-color: #dc2626; color: #991b1b; }
-.alert-amber { background: #fffbeb; border-color: #d97706; color: #92400e; }
-.alert-blue { background: #eff6ff; border-color: #2563eb; color: #1e40af; }
+.alert-red { background: #fef2f2; border-color: #DC2626; color: #991b1b; }
+.alert-amber { background: #fffbeb; border-color: #D97706; color: #92400e; }
+.alert-blue { background: #eff6ff; border-color: #2563EB; color: #1e40af; }
 
 .dashboard-snapshot-panel {
   margin-top: 20px;

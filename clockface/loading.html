@@ -9,31 +9,30 @@
 </head>
 <body>
   <div class="loading-container">
-    <h1 class="loading-title">RMS</h1>
-    <p class="loading-subtitle">Loading your workspace...</p>
-    
-    <div class="progress-container">
-      <div class="progress-bar-track">
-        <div class="progress-bar-fill" id="progress-bar"></div>
-      </div>
-      <div class="progress-info">
-        <span class="progress-percentage" id="progress-percentage">0%</span>
-        <span class="progress-stage" id="progress-stage">Initializing...</span>
+    <div class="loading-content">
+      <h1 class="loading-title">RMS</h1>
+      <p class="loading-subtitle">Loading your workspace...</p>
+      <div class="progress-container">
+        <div class="progress-row">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progress-bar"></div>
+          </div>
+          <span class="progress-percentage" id="progress-percentage">0%</span>
+        </div>
+        <p class="progress-stage" id="progress-stage">Initializing...</p>
       </div>
     </div>
-
-    <!-- Error State (hidden by default) -->
-    <div class="error-state" id="error-state" style="display: none;">
+    <div class="error-state" id="error-state">
       <div class="error-icon">✕</div>
-      <h2 class="error-title">Something went wrong</h2>
-      <p class="error-message">We couldn't load your workspace. Please try again.</p>
+      <h2 class="error-title">Could not load your workspace</h2>
+      <p class="error-message">Please try again.</p>
       <div class="error-actions">
-        <button class="action-button" id="try-again-btn">Try Again</button>
-        <button class="cancel-btn" id="log-out-btn">Log Out</button>
+        <button class="action-button" id="loading-retry-btn">Retry</button>
+        <button class="cancel-btn" id="loading-logout-btn">Log Out</button>
       </div>
     </div>
   </div>
   <script src="api-client.js"></script>
-  <script src="loading.js"></script>
+  <script src="workspace-loading.js"></script>
 </body>
 </html>

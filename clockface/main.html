@@ -6,8 +6,33 @@
   <title>RMS Dashboard</title>
   <link rel="stylesheet" href="base.css">
   <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="loading.css">
 </head>
 <body>
+  <div id="workspace-loading-overlay">
+    <div class="loading-content">
+      <h1 class="loading-title">RMS</h1>
+      <p class="loading-subtitle">Loading your workspace...</p>
+      <div class="progress-container">
+        <div class="progress-row">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progress-bar"></div>
+          </div>
+          <span class="progress-percentage" id="progress-percentage">0%</span>
+        </div>
+        <p class="progress-stage" id="progress-stage">Initializing...</p>
+      </div>
+    </div>
+    <div class="error-state">
+      <div class="error-icon">✕</div>
+      <h2 class="error-title">Could not load your workspace</h2>
+      <p class="error-message">Please try again.</p>
+      <div class="error-actions">
+        <button class="action-button" id="loading-retry-btn">Retry</button>
+        <button class="cancel-btn" id="loading-logout-btn">Log Out</button>
+      </div>
+    </div>
+  </div>
   <div class="main-container no-sidebar">
     <aside class="sidebar" aria-hidden="true">
       <nav class="sidebar-nav">
@@ -60,6 +85,7 @@
   <script src="tenants-pages.js"></script>
   <script src="financials-pages.js"></script>
   <script src="pages.js"></script>
+  <script src="workspace-loading.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

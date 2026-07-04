@@ -1,120 +1,114 @@
 const { ipcRenderer } = require('electron');
 
-// Loading stages configuration
 const loadingStages = [
   { percentage: 20, label: 'Authenticated' },
   { percentage: 40, label: 'Setting up your workspace...' },
   { percentage: 70, label: 'Loading your properties...' },
   { percentage: 90, label: 'Almost there...' },
-  { percentage: 100, label: 'Welcome' }
+  { percentage: 100, label: 'Welcome' },
 ];
 
-let currentStage = 0;
-let isLoading = true;
+let failedStage = 0;
+let isRunning = false;
+let authToken = null;
 
-// Start loading process when page loads
-document.addEventListener('DOMContentLoaded', () => {
+ipcRenderer.on('auth-token', (event, token) => {
+  authToken = token;
+  apiClient.token = token;
   startLoading();
 });
 
-// Setup error state buttons
-document.getElementById('try-again-btn').addEventListener('click', () => {
+document.getElementById('loading-retry-btn').addEventListener('click', () => {
   hideError();
   startLoading();
 });
 
-document.getElementById('log-out-btn').addEventListener('click', () => {
-  ipcRenderer.send('logout-request');
+document.getElementById('loading-logout-btn').addEventListener('click', () => {
+  ipcRenderer.send('logout');
 });
 
+function waitForPaint() {
+  return new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  });
+}
+
 async function startLoading() {
-  isLoading = true;
-  currentStage = 0;
+  if (isRunning) return;
+  isRunning = true;
+  hideError();
   updateProgress(0, 'Initializing...');
-  
+
+  const startFrom = failedStage > 0 ? failedStage : 1;
+
   try {
-    // Stage 1: Login accepted (20%)
-    await simulateStage(1, 'Authenticated');
-    
-    // Stage 2: Session established (40%)
-    await simulateStage(2, 'Setting up your workspace...');
-    
-    // Stage 3: Fetching properties (70%) - Real API call
-    await simulateStage(3, 'Loading your properties...');
-    await fetchProperties();
-    
-    // Stage 4: Data ready (90%)
-    await simulateStage(4, 'Almost there...');
-    
-    // Stage 5: Render complete (100%)
-    await simulateStage(5, 'Welcome');
-    
-    // Loading complete - wait 300ms then transition
-    setTimeout(() => {
-      completeLoading();
-    }, 300);
-    
+    if (startFrom <= 1) {
+      await runStage(1, async () => {
+        await waitForPaint();
+      });
+    }
+
+    if (startFrom <= 2) {
+      await runStage(2, async () => {
+        await waitForPaint();
+      });
+    }
+
+    if (startFrom <= 3) {
+      await runStage(3, async () => {
+        await apiClient.getProperties();
+      });
+    }
+
+    if (startFrom <= 4) {
+      await runStage(4, async () => {
+        await waitForPaint();
+      });
+    }
+
+    if (startFrom <= 5) {
+      await runStage(5, async () => {
+        await waitForPaint();
+      });
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 300));
+    completeLoading();
   } catch (error) {
+    console.error('Loading failed:', error);
     showError();
+  } finally {
+    isRunning = false;
   }
 }
 
-async function simulateStage(stageIndex, label) {
+async function runStage(stageIndex, fn) {
   const stage = loadingStages[stageIndex - 1];
-  currentStage = stageIndex;
-  updateProgress(stage.percentage, label);
-  
-  // Small delay to allow UI to update
-  await new Promise(resolve => setTimeout(resolve, 100));
-}
-
-async function fetchProperties() {
-  // Real API call to fetch properties
-  try {
-    await apiClient.getProperties();
-  } catch (error) {
-    console.error('Error fetching properties:', error);
-    // Don't throw here - let the loading continue even if fetch fails
-    // The error will be handled when trying to load the actual app
-  }
+  failedStage = stageIndex;
+  updateProgress(stage.percentage, stage.label);
+  await fn();
 }
 
 function updateProgress(percentage, label) {
-  const progressBar = document.getElementById('progress-bar');
-  const progressPercentage = document.getElementById('progress-percentage');
-  const progressStage = document.getElementById('progress-stage');
-  
-  progressBar.style.width = `${percentage}%`;
-  progressPercentage.textContent = `${percentage}%`;
-  progressStage.textContent = label;
+  document.getElementById('progress-bar').style.width = `${percentage}%`;
+  document.getElementById('progress-percentage').textContent = `${percentage}%`;
+  document.getElementById('progress-stage').textContent = label;
 }
 
 function showError() {
-  isLoading = false;
-  const progressContainer = document.querySelector('.progress-container');
-  const errorState = document.getElementById('error-state');
-  
-  progressContainer.style.display = 'none';
-  errorState.style.display = 'flex';
+  document.querySelector('.loading-content').style.display = 'none';
+  document.getElementById('error-state').style.display = 'flex';
 }
 
 function hideError() {
-  const progressContainer = document.querySelector('.progress-container');
-  const errorState = document.getElementById('error-state');
-  
-  progressContainer.style.display = 'block';
-  errorState.style.display = 'none';
+  document.querySelector('.loading-content').style.display = 'flex';
+  document.getElementById('error-state').style.display = 'none';
 }
 
 function completeLoading() {
-  isLoading = false;
   const loadingContainer = document.querySelector('.loading-container');
-  
-  // Fade out loading screen
   loadingContainer.classList.add('fade-out');
-  
-  // Notify main process to show main app
   setTimeout(() => {
-    ipcRenderer.send('loading-complete');
+    ipcRenderer.send('loading-complete', authToken);
   }, 300);
 }
