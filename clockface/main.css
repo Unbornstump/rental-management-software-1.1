@@ -1367,14 +1367,20 @@
   transition: all 0.2s ease;
 }
 
-.unit-selector-tile:hover:not(.occupied) {
-  border-color: #2f80ed;
-  background-color: #f0f7ff;
+.unit-selector-tile:hover:not(.occupied):not(.selected):not(.selected-for-delete) {
+  border-color: #2563eb;
+  background-color: #eff6ff;
 }
 
 .unit-selector-tile.selected {
-  border-color: #2f80ed;
-  background-color: #2f80ed;
+  border-color: #2563eb;
+  background-color: #2563eb;
+  color: white;
+}
+
+.unit-selector-tile.selected:hover {
+  border-color: #1d4ed8;
+  background-color: #1d4ed8;
   color: white;
 }
 

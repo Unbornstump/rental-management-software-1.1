@@ -224,6 +224,82 @@ class ApiClient {
   async createDeposit(data) {
     return this.post('/api/deposits/', data);
   }
+
+  // Financials - Rent Payments
+  async getRentPayments(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/api/financials/rent-payments/?${queryString}`);
+  }
+
+  async createRentPayment(data) {
+    return this.post('/api/financials/rent-payments/', data);
+  }
+
+  async updateRentPayment(id, data) {
+    return this.patch(`/api/financials/rent-payments/${id}/`, data);
+  }
+
+  async deleteRentPayment(id) {
+    return this.delete(`/api/financials/rent-payments/${id}/`);
+  }
+
+  async recordRentPayment(id, data) {
+    return this.post(`/api/financials/rent-payments/${id}/record_payment/`, data);
+  }
+
+  async getTenantDashboard(tenantId) {
+    return this.get(`/api/financials/rent-payments/tenant_dashboard/?tenant_id=${tenantId}`);
+  }
+
+  async getBulkRentDashboard(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/api/financials/rent-payments/bulk_dashboard/?${queryString}`);
+  }
+
+  async generateBillingCycle(data) {
+    return this.post('/api/financials/rent-payments/generate_billing_cycle/', data);
+  }
+
+  // Financials - Credit Ledgers
+  async getCreditLedgers() {
+    return this.get('/api/financials/credit-ledgers/');
+  }
+
+  async createCreditLedger(data) {
+    return this.post('/api/financials/credit-ledgers/', data);
+  }
+
+  async updateCreditLedger(id, data) {
+    return this.patch(`/api/financials/credit-ledgers/${id}/`, data);
+  }
+
+  // Financials - Arrears Records
+  async getArrearsRecords() {
+    return this.get('/api/financials/arrears-records/');
+  }
+
+  async createArrearsRecord(data) {
+    return this.post('/api/financials/arrears-records/', data);
+  }
+
+  async updateArrearsRecord(id, data) {
+    return this.patch(`/api/financials/arrears-records/${id}/`, data);
+  }
+
+  // Financials - Payment Audit Logs
+  async getAuditLogs(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/api/financials/audit-logs/?${queryString}`);
+  }
+
+  // Financials - Payment Streaks
+  async getPaymentStreaks() {
+    return this.get('/api/financials/payment-streaks/');
+  }
+
+  async updatePaymentStreak(id, data) {
+    return this.patch(`/api/financials/payment-streaks/${id}/`, data);
+  }
 }
 
 const apiClient = new ApiClient();

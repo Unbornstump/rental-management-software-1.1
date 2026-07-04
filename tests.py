@@ -1,6 +1,3 @@
-numbers= []
+from django.utils.crypto import get_random_string
 
-for num in range(1,101):
-    numbers.append(num)
-
-print(numbers)
+print(get_random_string(50))
