@@ -10,7 +10,12 @@
 <body>
   <div class="homepage-container">
     <!-- Settings Gear Icon -->
-    <button class="settings-gear-btn" id="settings-gear" aria-label="Settings">⚙</button>
+    <button class="settings-gear-btn" id="settings-gear" aria-label="Settings">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
 
     <!-- Hero Section -->
     <section class="hero-section">
@@ -18,77 +23,134 @@
         <div class="hero-left">
           <h1 class="hero-title">RMS</h1>
           <h2 class="hero-subtitle">Rental Management System</h2>
-          <p class="hero-description" data-typewriter-text="Everything you need to manage&#10;your properties — units, tenants,&#10;leases, and payments — in one place."></p>
+          <p class="hero-description" data-typewriter-text="Manage your properties&#10;with precision."></p>
           <button class="hero-cta" id="get-started-btn">Get Started <span class="arrow">→</span></button>
         </div>
         <div class="hero-right">
-          <svg class="hero-illustration" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
-            <!-- Building outline -->
-            <rect x="150" y="50" width="100" height="200" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
-            <rect x="160" y="60" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
-            <rect x="190" y="60" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
-            <rect x="220" y="60" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
-            <rect x="160" y="90" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
-            <rect x="190" y="90" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
-            <rect x="220" y="90" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
-            <rect x="160" y="120" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
-            <rect x="190" y="120" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
-            <rect x="220" y="120" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
-            <rect x="160" y="150" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
-            <rect x="190" y="150" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
-            <rect x="220" y="150" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
-            <rect x="160" y="180" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
-            <rect x="190" y="180" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
-            <rect x="220" y="180" width="20" height="20" fill="rgba(255,255,255,0.2)"/>
-            <rect x="175" y="210" width="50" height="40" fill="rgba(255,255,255,0.15)"/>
-            
-            <!-- Stacked property cards -->
-            <rect x="50" y="180" width="80" height="60" rx="4" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-            <rect x="60" y="190" width="60" height="8" rx="2" fill="rgba(255,255,255,0.3)"/>
-            <rect x="60" y="205" width="40" height="6" rx="2" fill="rgba(255,255,255,0.2)"/>
-            
-            <rect x="270" y="160" width="80" height="60" rx="4" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-            <rect x="280" y="170" width="60" height="8" rx="2" fill="rgba(255,255,255,0.3)"/>
-            <rect x="280" y="185" width="40" height="6" rx="2" fill="rgba(255,255,255,0.2)"/>
-            
-            <!-- Floor plan grid -->
-            <rect x="80" y="80" width="50" height="50" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
-            <line x1="105" y1="80" x2="105" y2="130" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
-            <line x1="80" y1="105" x2="130" y2="105" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
-            
-            <rect x="270" y="80" width="50" height="50" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
-            <line x1="295" y1="80" x2="295" y2="130" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
-            <line x1="270" y1="105" x2="320" y2="105" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <svg class="hero-illustration floor-plan" viewBox="0 0 480 360" xmlns="http://www.w3.org/2000/svg">
+            <!-- Outer walls -->
+            <rect x="40" y="30" width="400" height="300" fill="none" stroke="#1a1a1a" stroke-width="1.5"/>
+            <!-- Interior walls -->
+            <line x1="40" y1="130" x2="440" y2="130" stroke="#1a1a1a" stroke-width="1"/>
+            <line x1="40" y1="220" x2="300" y2="220" stroke="#1a1a1a" stroke-width="1"/>
+            <line x1="200" y1="30" x2="200" y2="130" stroke="#1a1a1a" stroke-width="1"/>
+            <line x1="300" y1="130" x2="300" y2="330" stroke="#1a1a1a" stroke-width="1"/>
+            <line x1="380" y1="130" x2="380" y2="330" stroke="#1a1a1a" stroke-width="1"/>
+            <!-- Bedroom -->
+            <rect x="42" y="32" width="156" height="96" fill="none" stroke="none"/>
+            <text x="120" y="85" text-anchor="middle" fill="#bbb" font-size="11" font-family="Segoe UI, sans-serif" letter-spacing="1">BEDROOM</text>
+            <!-- Living Room -->
+            <text x="250" y="85" text-anchor="middle" fill="#bbb" font-size="11" font-family="Segoe UI, sans-serif" letter-spacing="1">LIVING ROOM</text>
+            <!-- Kitchen -->
+            <text x="410" y="85" text-anchor="middle" fill="#bbb" font-size="11" font-family="Segoe UI, sans-serif" letter-spacing="1">KITCHEN</text>
+            <!-- Bathroom -->
+            <text x="120" y="180" text-anchor="middle" fill="#bbb" font-size="11" font-family="Segoe UI, sans-serif" letter-spacing="1">BATHROOM</text>
+            <!-- Dining -->
+            <text x="250" y="180" text-anchor="middle" fill="#bbb" font-size="11" font-family="Segoe UI, sans-serif" letter-spacing="1">DINING</text>
+            <!-- Hallway -->
+            <text x="340" y="180" text-anchor="middle" fill="#bbb" font-size="11" font-family="Segoe UI, sans-serif" letter-spacing="1">HALL</text>
+            <!-- Master Bedroom -->
+            <text x="170" y="280" text-anchor="middle" fill="#bbb" font-size="11" font-family="Segoe UI, sans-serif" letter-spacing="1">MASTER BEDROOM</text>
+            <!-- Office -->
+            <text x="410" y="280" text-anchor="middle" fill="#bbb" font-size="11" font-family="Segoe UI, sans-serif" letter-spacing="1">OFFICE</text>
+            <!-- Door arcs -->
+            <path d="M 200 130 A 18 18 0 0 1 218 148" fill="none" stroke="#1a1a1a" stroke-width="0.75"/>
+            <path d="M 300 148 A 18 18 0 0 1 282 130" fill="none" stroke="#1a1a1a" stroke-width="0.75"/>
+            <path d="M 380 220 A 18 18 0 0 1 362 238" fill="none" stroke="#1a1a1a" stroke-width="0.75"/>
+            <path d="M 40 238 A 18 18 0 0 1 58 220" fill="none" stroke="#1a1a1a" stroke-width="0.75"/>
+            <!-- Window marks -->
+            <line x1="80" y1="30" x2="120" y2="30" stroke="#999" stroke-width="2"/>
+            <line x1="240" y1="30" x2="280" y2="30" stroke="#999" stroke-width="2"/>
+            <line x1="400" y1="30" x2="430" y2="30" stroke="#999" stroke-width="2"/>
+            <line x1="40" y1="60" x2="40" y2="100" stroke="#999" stroke-width="2"/>
+            <line x1="440" y1="250" x2="440" y2="290" stroke="#999" stroke-width="2"/>
+            <!-- Dimension lines -->
+            <line x1="40" y1="345" x2="440" y2="345" stroke="#ccc" stroke-width="0.5"/>
+            <line x1="40" y1="340" x2="40" y2="350" stroke="#ccc" stroke-width="0.5"/>
+            <line x1="440" y1="340" x2="440" y2="350" stroke="#ccc" stroke-width="0.5"/>
+            <text x="240" y="358" text-anchor="middle" fill="#ccc" font-size="9" font-family="Segoe UI, sans-serif">12.4 m</text>
+            <!-- Compass -->
+            <circle cx="420" cy="310" r="14" fill="none" stroke="#ccc" stroke-width="0.75"/>
+            <text x="420" y="314" text-anchor="middle" fill="#ccc" font-size="9" font-family="Segoe UI, sans-serif">N</text>
           </svg>
         </div>
       </div>
     </section>
 
-    <!-- Feature Cards -->
+    <!-- Skeleton Workspace Preview -->
+    <section class="skeleton-section">
+      <p class="skeleton-label">Your workspace, ready to go</p>
+      <div class="skeleton-preview-wrapper">
+        <div class="skeleton-preview">
+          <div class="skeleton-header">
+            <div class="skeleton-bar skeleton-bar-title"></div>
+            <div class="skeleton-bar skeleton-bar-btn"></div>
+          </div>
+          <div class="skeleton-grid">
+            <div class="skeleton-card">
+              <div class="skeleton-card-top">
+                <div class="skeleton-bar skeleton-bar-sm"></div>
+                <div class="skeleton-bar skeleton-bar-badge"></div>
+              </div>
+              <div class="skeleton-bar skeleton-bar-md"></div>
+              <div class="skeleton-bar skeleton-bar-lg"></div>
+              <div class="skeleton-bar skeleton-bar-md"></div>
+              <div class="skeleton-stats">
+                <div class="skeleton-stat">
+                  <div class="skeleton-bar skeleton-bar-stat"></div>
+                  <span class="skeleton-stat-label">Units</span>
+                </div>
+                <div class="skeleton-stat">
+                  <div class="skeleton-bar skeleton-bar-stat"></div>
+                  <span class="skeleton-stat-label">Tenants</span>
+                </div>
+              </div>
+            </div>
+            <div class="skeleton-card">
+              <div class="skeleton-card-top">
+                <div class="skeleton-bar skeleton-bar-sm"></div>
+                <div class="skeleton-bar skeleton-bar-badge"></div>
+              </div>
+              <div class="skeleton-bar skeleton-bar-md"></div>
+              <div class="skeleton-bar skeleton-bar-lg"></div>
+              <div class="skeleton-bar skeleton-bar-md"></div>
+              <div class="skeleton-stats">
+                <div class="skeleton-stat">
+                  <div class="skeleton-bar skeleton-bar-stat"></div>
+                  <span class="skeleton-stat-label">Units</span>
+                </div>
+                <div class="skeleton-stat">
+                  <div class="skeleton-bar skeleton-bar-stat"></div>
+                  <span class="skeleton-stat-label">Tenants</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="skeleton-overlay">
+          <svg class="skeleton-lock-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <span>Log in to access your workspace</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feature Strip -->
     <section class="features-section">
-      <div class="feature-card">
-        <div class="feature-icon">🏢</div>
-        <h3 class="feature-title">Properties & Units</h3>
-        <p class="feature-description">
-          Manage properties, units, tenants and leases in one place.
-        </p>
+      <div class="feature-item">
+        <span class="feature-icon">🏢</span>
+        <span class="feature-label">Properties &amp; Units</span>
       </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">💰</div>
-        <h3 class="feature-title">Rent & Payments</h3>
-        <p class="feature-description">
-          Track rent collection, receipts, arrears and credit balances.
-        </p>
+      <div class="feature-item">
+        <span class="feature-icon">💰</span>
+        <span class="feature-label">Rent &amp; Payments</span>
       </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">🔧</div>
-        <h3 class="feature-title">Maintenance</h3>
-        <p class="feature-description">
-          Log and resolve unit maintenance requests.
-        </p>
-        <span class="coming-soon-badge">Coming soon</span>
+      <div class="feature-item">
+        <span class="feature-icon">🔧</span>
+        <span class="feature-label">Maintenance</span>
+        <span class="coming-soon-label">Coming soon</span>
       </div>
     </section>
   </div>

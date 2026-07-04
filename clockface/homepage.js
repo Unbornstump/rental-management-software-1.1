@@ -140,24 +140,24 @@ function setupTypewriterEffect() {
 }
 
 function setupFeatureCardAnimations() {
-  const featureCards = document.querySelectorAll('.feature-card');
-  if (featureCards.length === 0) return;
+  const featureItems = document.querySelectorAll('.feature-item');
+  if (featureItems.length === 0) return;
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       if (!entry.isIntersecting) return;
 
-      const cardIndex = Array.from(featureCards).indexOf(entry.target);
+      const itemIndex = Array.from(featureItems).indexOf(entry.target);
       setTimeout(() => {
         entry.target.classList.add('visible');
-      }, cardIndex * 120);
+      }, itemIndex * 120);
       observer.unobserve(entry.target);
     });
   }, {
     threshold: 0.1
   });
 
-  featureCards.forEach((card) => {
-    observer.observe(card);
+  featureItems.forEach((item) => {
+    observer.observe(item);
   });
 }

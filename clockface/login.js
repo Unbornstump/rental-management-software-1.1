@@ -4,13 +4,13 @@ const { ipcRenderer } = require('electron');
 document.getElementById('password-toggle').addEventListener('click', () => {
   const passwordInput = document.getElementById('password');
   const toggle = document.getElementById('password-toggle');
-  
+
   if (passwordInput.type === 'password') {
     passwordInput.type = 'text';
-    toggle.textContent = '🙈';
+    toggle.classList.add('visible');
   } else {
     passwordInput.type = 'password';
-    toggle.textContent = '👁';
+    toggle.classList.remove('visible');
   }
 });
 

@@ -54,7 +54,6 @@ function createLoginWindow() {
     title: 'Login'
   });
 
-  loginWindow.maximize();
   loginWindow.setMenuBarVisibility(false);
   loginWindow.loadFile('login.html');
 
