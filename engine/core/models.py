@@ -4,19 +4,27 @@ from django.db import models
 
 
 class CustomUser(AbstractUser):
-    SUPER_ADMIN = 'super_admin'
-    PROPERTY_MANAGER = 'property_manager'
+    MANAGER = 'manager'
     ACCOUNTANT = 'accountant'
+    PROPERTY_OFFICER = 'property_officer'
     CARETAKER = 'caretaker'
 
     ROLE_CHOICES = [
-        (SUPER_ADMIN, 'Super Admin'),
-        (PROPERTY_MANAGER, 'Property Manager'),
+        (MANAGER, 'Manager'),
         (ACCOUNTANT, 'Accountant'),
+        (PROPERTY_OFFICER, 'Property Officer'),
         (CARETAKER, 'Caretaker'),
     ]
 
-    role = models.CharField(max_length=32, choices=ROLE_CHOICES, default=PROPERTY_MANAGER)
+    role = models.CharField(max_length=32, choices=ROLE_CHOICES, default=MANAGER)
+    must_change_password = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='created_staff'
+    )
 
     def __str__(self):
         return f"{self.username} ({self.role})"
@@ -199,8 +207,6 @@ class Lease(models.Model):
 
     def __str__(self):
         return f"Lease: {self.tenant.full_name} - {self.unit}"
-
-
 class Invoice(models.Model):
     UNPAID = 'unpaid'
     PARTIAL = 'partial'
@@ -318,7 +324,7 @@ class Expense(models.Model):
     date = models.DateField()
     description = models.TextField(blank=True)
     added_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
-
+  
     def __str__(self):
         return f"Expense {self.category} - {self.amount}"
 
@@ -417,3 +423,56 @@ class MaintenanceAssignment(models.Model):
 
     def __str__(self):
         return f"Assignment {self.request.id}"
+
+
+class AuditLog(models.Model):
+    """Append-only audit log of all system actions."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='audit_logs'
+    )
+    action = models.CharField(max_length=255)
+    target_model = models.CharField(max_length=64)
+    target_id = models.IntegerField(null=True, blank=True)
+    details = models.JSONField(default=dict, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['user', '-timestamp']),
+            models.Index(fields=['action', '-timestamp']),
+            models.Index(fields=['-timestamp']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username if self.user else 'System'} - {self.action} - {self.timestamp}"
+
+
+class SystemSettings(models.Model):
+    """System-wide settings for the RMS installation."""
+    company_name = models.CharField(max_length=255, default='Rental Management System')
+    company_logo = models.FileField(upload_to='logos/', null=True, blank=True)
+    contact_phone = models.CharField(max_length=50, blank=True)
+    address = models.TextField(blank=True)
+    rent_due_day = models.IntegerField(default=1)
+    currency = models.CharField(max_length=10, default='KES')
+    grace_period_days = models.IntegerField(default=5)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = 'System Settings'
+
+    def __str__(self):
+        return f"System Settings - {self.company_name}"
+
+    def save(self, *args, **kwargs):
+        """Ensure only one SystemSettings instance exists."""
+        if not self.pk and SystemSettings.objects.exists():
+            self.pk = SystemSettings.objects.first().pk
+        super().save(*args, **kwargs)

@@ -3,6 +3,9 @@
 
 const AppState = {
   authToken: null,
+  userRole: null, // 'manager', 'accountant', 'property_officer', 'caretaker'
+  username: null,
+  mustChangePassword: false,
   currentProperty: null, // null = all properties, object = specific property
   allProperties: [],
   currentPage: null, // Track current page for sidebar visibility
@@ -13,6 +16,34 @@ const AppState = {
 
   getAuthToken() {
     return this.authToken;
+  },
+
+  setUserRole(role) {
+    this.userRole = role;
+  },
+
+  getUserRole() {
+    return this.userRole;
+  },
+
+  setUsername(username) {
+    this.username = username;
+  },
+
+  getUsername() {
+    return this.username;
+  },
+
+  setMustChangePassword(must) {
+    this.mustChangePassword = must;
+  },
+
+  getMustChangePassword() {
+    return this.mustChangePassword;
+  },
+
+  isManager() {
+    return this.userRole === 'manager';
   },
 
   setPropertyContext(property) {
@@ -65,6 +96,17 @@ const AppState = {
   },
 
   clearPageParams() {
+    this.pageParams = null;
+  },
+
+  clearAll() {
+    this.authToken = null;
+    this.userRole = null;
+    this.username = null;
+    this.mustChangePassword = false;
+    this.currentProperty = null;
+    this.allProperties = [];
+    this.currentPage = null;
     this.pageParams = null;
   }
 };

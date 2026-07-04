@@ -4,7 +4,7 @@ from .models import (
     Property, Unit, Landlord, LandlordProperty, Commission, LandlordPayout,
     Tenant, TenantUnit, Lease, Invoice, Payment, PenaltyRule, Reminder,
     Expense, Deposit, MessageTemplate, MessageLog,
-    MaintenanceRequest, MaintenanceAssignment,
+    MaintenanceRequest, MaintenanceAssignment, AuditLog, SystemSettings,
 )
 
 User = get_user_model()
@@ -213,3 +213,20 @@ class MaintenanceAssignmentSerializer(serializers.ModelSerializer):
         model = MaintenanceAssignment
         fields = ['id', 'request', 'assigned_to', 'assigned_date', 'resolved_date', 'cost', 'notes']
         read_only_fields = ['id', 'assigned_date']
+
+
+class AuditLogSerializer(serializers.ModelSerializer):
+    user_username = serializers.CharField(source='user.username', read_only=True)
+    user_role = serializers.CharField(source='user.role', read_only=True)
+
+    class Meta:
+        model = AuditLog
+        fields = ['id', 'user', 'user_username', 'user_role', 'action', 'target_model', 'target_id', 'details', 'ip_address', 'timestamp']
+        read_only_fields = ['id', 'timestamp']
+
+
+class SystemSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SystemSettings
+        fields = ['id', 'company_name', 'company_logo', 'contact_phone', 'address', 'rent_due_day', 'currency', 'grace_period_days', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']

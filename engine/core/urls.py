@@ -8,6 +8,7 @@ from .views import (
     PenaltyRuleViewSet, ReminderViewSet, ExpenseViewSet,
     DepositViewSet, MessageTemplateViewSet, MessageLogViewSet,
     MaintenanceRequestViewSet, MaintenanceAssignmentViewSet,
+    AuditLogViewSet, SystemSettingsViewSet,
 )
 
 router = DefaultRouter()
@@ -31,6 +32,8 @@ router.register(r'message-templates', MessageTemplateViewSet)
 router.register(r'message-logs', MessageLogViewSet)
 router.register(r'maintenance-requests', MaintenanceRequestViewSet)
 router.register(r'maintenance-assignments', MaintenanceAssignmentViewSet)
+router.register(r'audit-logs', AuditLogViewSet, basename='auditlog')
+router.register(r'system-settings', SystemSettingsViewSet, basename='systemsettings')
 
 urlpatterns = [
     path('', include(router.urls)),

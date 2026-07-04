@@ -1,0 +1,308 @@
+/* Admin Pages Styles */
+
+.admin-page {
+  padding: 2rem;
+}
+
+.admin-nav-header {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 0.75rem 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.permissions-table {
+  margin-top: 2rem;
+}
+
+.permissions-table .check {
+  color: var(--success-color);
+  font-weight: 600;
+  text-align: center;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.role-manager {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.role-accountant {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.role-property_officer {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+.role-caretaker {
+  background-color: #f3e5f5;
+  color: #6a1b9a;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.filter-input {
+  flex: 1;
+  min-width: 150px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(0, 150, 136, 0.1);
+}
+
+.settings-form {
+  max-width: 600px;
+  margin-top: 2rem;
+}
+
+.settings-form fieldset {
+  border: none;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  background-color: var(--background-secondary);
+  border-radius: 6px;
+}
+
+.settings-form legend {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(0, 150, 136, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.form-actions button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-button {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.action-button:hover {
+  background-color: var(--primary-dark);
+}
+
+.action-button.secondary {
+  background-color: var(--background-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.action-button.secondary:hover {
+  background-color: var(--background-tertiary);
+}
+
+.cancel-btn {
+  background-color: var(--background-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.cancel-btn:hover {
+  background-color: var(--background-tertiary);
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-card {
+  background-color: white;
+  border-radius: 8px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.modal-card h2 {
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+}
+
+.table-container {
+  overflow-x: auto;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+}
+
+.data-table thead {
+  background-color: var(--background-secondary);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.data-table th {
+  padding: 1rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.data-table td {
+  padding: 1rem 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tr.loading td,
+.data-table tr.empty td {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+}
+
+.data-table tr.error td {
+  text-align: center;
+  padding: 2rem;
+  color: var(--error-color);
+}
+
+.data-table .actions {
+  text-align: right;
+}
+
+.action-link {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-left: 1rem;
+  padding: 0;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.action-link:hover {
+  color: var(--primary-dark);
+}
+
+.action-link.danger {
+  color: var(--error-color);
+}
+
+.action-link.danger:hover {
+  color: #c62828;
+}
+
+@media (max-width: 768px) {
+  .admin-page {
+    padding: 1rem;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+  }
+
+  .filter-input {
+    min-width: 100%;
+  }
+
+  .data-table {
+    font-size: 0.85rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .modal-card {
+    width: 95%;
+    padding: 1.5rem;
+  }
+
+  .settings-form fieldset {
+    padding: 1rem;
+  }
+}

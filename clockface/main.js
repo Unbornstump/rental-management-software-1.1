@@ -72,7 +72,7 @@ function createLoginWindow() {
   });
 }
 
-function createMainWindow(token) {
+function createMainWindow(token, role, username, mustChangePassword) {
   mainWindow = new BrowserWindow({
     width: 980,
     height: 660,
@@ -93,9 +93,14 @@ function createMainWindow(token) {
     }
   });
 
-  // Send token to main window
+  // Send token and user info to main window
   mainWindow.webContents.on('did-finish-load', () => {
-    mainWindow.webContents.send('auth-token', token);
+    mainWindow.webContents.send('auth-token', { 
+      token, 
+      role, 
+      username, 
+      mustChangePassword 
+    });
   });
 }
 
@@ -123,14 +128,19 @@ ipcMain.on('open-login-window', () => {
   createLoginWindow();
 });
 
-ipcMain.on('login-success', (event, token) => {
+ipcMain.on('login-success', (event, authData) => {
   if (loginWindow) {
     loginWindow.close();
   }
   if (homepageWindow) {
     homepageWindow.close();
   }
-  createMainWindow(token);
+  createMainWindow(
+    authData.token, 
+    authData.role, 
+    authData.username, 
+    authData.mustChangePassword
+  );
 });
 
 ipcMain.on('logout', () => {

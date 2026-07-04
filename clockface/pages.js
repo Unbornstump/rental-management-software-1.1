@@ -510,6 +510,18 @@ const PageLoaders = {
       case 'reports':
         this.loadReports(contentDiv);
         break;
+      case 'admin-staff':
+        AdminPages.loadStaffManagement();
+        break;
+      case 'admin-roles':
+        AdminPages.loadRolesPermissions();
+        break;
+      case 'admin-audit':
+        AdminPages.loadAuditLog();
+        break;
+      case 'admin-settings':
+        AdminPages.loadSystemSettings();
+        break;
       default:
         contentDiv.innerHTML = '<p>Page not found</p>';
     }

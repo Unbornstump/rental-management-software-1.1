@@ -6,6 +6,7 @@
   <title>RMS Dashboard</title>
   <link rel="stylesheet" href="base.css">
   <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="admin.css">
   <link rel="stylesheet" href="loading.css">
 </head>
 <body>
@@ -66,8 +67,31 @@
               Financials
             </button>
           </div>
+          <div class="nav-divider"></div>
           <button class="nav-button back-to-properties-btn" data-action="back-to-properties">
             ← Back to Properties
+          </button>
+        </div>
+
+        <!-- Admin Navigation (Manager Only) -->
+        <div id="admin-nav" style="display: none;">
+          <div class="nav-divider"></div>
+          <div class="admin-nav-header">Admin</div>
+          <button class="nav-button" data-page="admin-staff">
+            Staff Management
+          </button>
+          <button class="nav-button" data-page="admin-roles">
+            Roles & Permissions
+          </button>
+          <button class="nav-button" data-page="admin-audit">
+            Audit Log
+          </button>
+          <button class="nav-button" data-page="admin-settings">
+            System Settings
+          </button>
+          <div class="nav-divider"></div>
+          <button class="nav-button logout-btn" data-action="logout">
+            Logout
           </button>
         </div>
       </nav>
@@ -84,6 +108,7 @@
   <script src="units-pages.js"></script>
   <script src="tenants-pages.js"></script>
   <script src="financials-pages.js"></script>
+  <script src="admin-pages.js"></script>
   <script src="pages.js"></script>
   <script src="workspace-loading.js"></script>
   <script src="renderer.js"></script>

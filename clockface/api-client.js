@@ -49,6 +49,7 @@ class ApiClient {
       password
     });
     this.token = response.data.access;
+    this.user = response.data.user;
     return response.data;
   }
 
@@ -95,6 +96,64 @@ class ApiClient {
     return response.data;
 }
 
+  // User & Auth endpoints
+  async changePassword(newPassword, oldPassword = null) {
+    const payload = { new_password: newPassword };
+    if (oldPassword) payload.current_password = oldPassword;
+    return this.post('/api/auth/change-password/', payload);
+  }
+
+  async getMe() {
+    return this.get('/api/auth/me/');
+  }
+
+  // Staff management endpoints (manager only) - via thegate
+  async getStaff() {
+    return this.get('/api/admin/staff/');
+  }
+
+  async createStaff(username, fullName, role) {
+    const nameParts = fullName.split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ') || '';
+    
+    return this.post('/api/admin/staff/', {
+      username,
+      first_name: firstName,
+      last_name: lastName,
+      role
+    });
+  }
+
+  async updateStaffRole(staffId, role) {
+    return this.patch(`/api/admin/staff/${staffId}/`, { role });
+  }
+
+  async resetStaffPassword(staffId) {
+    return this.post(`/api/admin/staff/${staffId}/reset-password/`, {});
+  }
+
+  async deactivateStaff(staffId) {
+    return this.delete(`/api/admin/staff/${staffId}/`);
+  }
+
+  // Audit log endpoints (manager only) - via thegate
+  async getAuditLog(filters = {}) {
+    const params = new URLSearchParams(filters).toString();
+    const path = params ? `/api/admin/audit-log/?${params}` : '/api/admin/audit-log/';
+    return this.get(path);
+  }
+
+  // System settings endpoints (manager only) - via thegate
+  async getSystemSettings() {
+    return this.get('/api/admin/settings/');
+  }
+
+  async updateSystemSettings(settings) {
+    return this.patch('/api/admin/settings/', settings);
+  }
+
+  // Original endpoints
   async getProperties() {
     return this.get('/api/properties/');
   }
