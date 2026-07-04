@@ -125,6 +125,12 @@ class TenantPaymentDashboardSerializer(serializers.Serializer):
 
     credit_balance = serializers.DecimalField(max_digits=12, decimal_places=2)
     months_credit = serializers.DecimalField(max_digits=10, decimal_places=2)
+    credit_full_months = serializers.IntegerField(required=False)
+    credit_days = serializers.IntegerField(required=False)
+    daily_rate = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    property_address = serializers.CharField(required=False, allow_blank=True)
+    recorded_by_name = serializers.CharField(required=False, allow_blank=True)
+    receipt_number = serializers.CharField(required=False, allow_blank=True)
 
     months_in_arrears = serializers.IntegerField()
     total_outstanding = serializers.DecimalField(max_digits=12, decimal_places=2)

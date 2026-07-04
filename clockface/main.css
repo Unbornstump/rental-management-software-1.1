@@ -2006,3 +2006,256 @@ body.panel-open::before {
   font-size: 14px;
 }
 
+.hidden {
+  display: none !important;
+}
+
+/* Tenant Payment Detail Page */
+.tenant-detail-page {
+  max-width: 1100px;
+}
+
+.tenant-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.back-link {
+  background: none;
+  border: none;
+  color: #2f80ed;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+.tenant-detail-title {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tenant-detail-title h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.tenant-detail-subtitle {
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.tenant-info-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.info-strip-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.info-strip-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+
+.info-strip-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+}
+
+.tenant-payment-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .tenant-payment-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.record-payment-card,
+.payment-feedback-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.record-payment-card h3,
+.tenant-history-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.amount-input-row {
+  display: flex;
+  align-items: center;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.currency-prefix {
+  padding: 8px 12px;
+  background: #f3f4f6;
+  font-size: 14px;
+  color: #374151;
+  border-right: 1px solid #d1d5db;
+}
+
+.amount-input-row input {
+  flex: 1;
+  border: none;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #2f80ed;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-top: 4px;
+  font-family: inherit;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+.full-width-btn {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.payment-feedback-card .feedback-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: #9ca3af;
+  font-size: 14px;
+  text-align: center;
+}
+
+.feedback-result {
+  padding: 8px 0;
+}
+
+.feedback-status {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-transform: capitalize;
+}
+
+.feedback-paid .feedback-status { color: #059669; }
+.feedback-partial .feedback-status { color: #d97706; }
+.feedback-overpaid .feedback-status { color: #2563eb; }
+
+.feedback-result p {
+  margin: 6px 0;
+  font-size: 14px;
+  color: #374151;
+}
+
+.credit-formula {
+  font-size: 12px !important;
+  color: #6b7280 !important;
+}
+
+.credit-arrears-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 14px 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.summary-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 20px;
+  border-right: 1px solid #e5e7eb;
+}
+
+.summary-pill:last-child {
+  border-right: none;
+}
+
+.pill-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.pill-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.credit-note {
+  font-size: 11px;
+  color: #059669;
+}
+
+.tenant-history-section {
+  margin-top: 8px;
+}
+
+.empty-history {
+  color: #6b7280;
+  font-size: 14px;
+  padding: 20px;
+  text-align: center;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable-th:hover {
+  color: #2f80ed;
+}
+
+

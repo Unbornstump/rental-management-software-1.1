@@ -43,6 +43,20 @@ const AppState = {
 
   getPropertyById(id) {
     return this.allProperties.find(p => p.id == id);
+  },
+
+  pageParams: null,
+
+  setPageParams(params) {
+    this.pageParams = params || null;
+  },
+
+  getPageParams() {
+    return this.pageParams || {};
+  },
+
+  clearPageParams() {
+    this.pageParams = null;
   }
 };
 

@@ -425,6 +425,11 @@ const PageLoaders = {
   },
 
   // Main page loader
+  navigate(pageName, params = {}) {
+    AppState.setPageParams(params);
+    this.loadPage(pageName);
+  },
+
   loadPage(pageName) {
     const contentDiv = document.getElementById('page-content');
     contentDiv.innerHTML = '<p>Loading...</p>';
@@ -432,13 +437,14 @@ const PageLoaders = {
     // Handle back button action
     if (pageName === 'back-to-properties') {
       AppState.clearPropertyContext();
+      AppState.clearPageParams();
       this.updateSidebarVisibility();
       this.loadPage('properties');
       return;
     }
 
     // Property space pages - require property context
-    const propertySpacePages = ['property-dashboard', 'property-units', 'property-tenants', 'financials'];
+    const propertySpacePages = ['property-dashboard', 'property-units', 'property-tenants', 'financials', 'financials-tenant-detail'];
     if (propertySpacePages.includes(pageName) && !AppState.getPropertyContext()) {
       this.loadProperties(contentDiv);
       return;
@@ -470,7 +476,10 @@ const PageLoaders = {
         this.loadLeases(contentDiv);
         break;
       case 'financials':
-        FinancialsPages.loadFinancials(contentDiv);
+        FinancialsPages.loadFinancials(contentDiv, AppState.getPageParams());
+        break;
+      case 'financials-tenant-detail':
+        FinancialsPages.loadTenantDetail(contentDiv, AppState.getPageParams());
         break;
       case 'maintenance':
         this.loadMaintenance(contentDiv);

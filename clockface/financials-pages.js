@@ -39,7 +39,7 @@ const FinancialsPages = {
     return options;
   },
 
-  async loadFinancials(container) {
+  async loadFinancials(container, params = {}) {
     const property = AppState.getPropertyContext();
     if (!property) {
       container.innerHTML = '<p>Please select a property to view financials.</p>';
@@ -49,8 +49,8 @@ const FinancialsPages = {
     const today = new Date();
     container.financialsState = {
       property,
-      month: today.getMonth() + 1,
-      year: today.getFullYear(),
+      month: params.month || params.billingMonth || today.getMonth() + 1,
+      year: params.year || params.billingYear || today.getFullYear(),
       filter: 'all',
       gridData: null
     };
@@ -244,147 +244,391 @@ const FinancialsPages = {
       tile.addEventListener('click', () => {
         const tenantId = tile.dataset.tenantId;
         if (tenantId) {
-          this.showPaymentPanel(container, parseInt(tenantId));
+          this.navigateToTenantDetail(parseInt(tenantId), state.month, state.year);
         }
       });
     });
   },
 
-  async showPaymentPanel(container, tenantId) {
-    const state = container.financialsState;
-    let panel = document.getElementById('payment-side-panel');
+  navigateToTenantDetail(tenantId, billingMonth, billingYear) {
+    PageLoaders.navigate('financials-tenant-detail', {
+      tenantId,
+      billingMonth,
+      billingYear
+    });
+  },
 
-    if (!panel) {
-      panel = document.createElement('div');
-      panel.id = 'payment-side-panel';
-      panel.className = 'payment-side-panel';
-      document.body.appendChild(panel);
+  navigateBackToFinancials(billingMonth, billingYear) {
+    PageLoaders.navigate('financials', {
+      month: billingMonth,
+      year: billingYear
+    });
+  },
+
+  formatDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  },
+
+  computeSurplusBreakdown(amountPaid, amountExpected, monthlyRent) {
+    const paid = parseFloat(amountPaid || 0);
+    const expected = parseFloat(amountExpected || 0);
+    const rent = parseFloat(monthlyRent || 0);
+    const surplus = Math.max(paid - expected, 0);
+    if (surplus <= 0 || rent <= 0) {
+      return { surplus: 0, fullMonths: 0, remainingDays: 0, dailyRate: 0 };
+    }
+    const fullMonths = Math.floor(surplus / rent);
+    const remainder = surplus % rent;
+    const dailyRate = rent / 30;
+    const remainingDays = Math.floor(remainder / dailyRate);
+    return { surplus, fullMonths, remainingDays, dailyRate };
+  },
+
+  async loadTenantDetail(container, params = {}) {
+    const property = AppState.getPropertyContext();
+    const tenantId = params.tenantId;
+    const billingMonth = parseInt(params.billingMonth) || new Date().getMonth() + 1;
+    const billingYear = parseInt(params.billingYear) || new Date().getFullYear();
+
+    if (!property || !tenantId) {
+      container.innerHTML = '<p>Invalid tenant or property context.</p>';
+      return;
     }
 
-    panel.innerHTML = '<div class="panel-loading">Loading...</div>';
-    panel.classList.add('open');
-    document.body.classList.add('panel-open');
-
-    const closePanel = () => {
-      panel.classList.remove('open');
-      document.body.classList.remove('panel-open');
+    container.tenantDetailState = {
+      tenantId,
+      billingMonth,
+      billingYear,
+      property,
+      lastPayment: null,
+      dashboard: null
     };
+
+    container.innerHTML = '<p class="loading-text">Loading tenant financials...</p>';
 
     try {
       const data = await apiClient.getTenantDashboard(tenantId, {
-        month: state.month,
-        year: state.year
+        month: billingMonth,
+        year: billingYear
       });
-
-      panel.innerHTML = `
-        <div class="panel-header">
-          <h2>${data.tenant_name}</h2>
-          <button class="panel-close" id="panel-close">&times;</button>
-        </div>
-        <div class="panel-body">
-          <div class="panel-section panel-tenant-info">
-            <p><strong>Phone:</strong> ${data.phone || 'N/A'}</p>
-            <p><strong>Unit:</strong> ${data.unit_number}${data.unit_type ? ` (${data.unit_type})` : ''}</p>
-            <p><strong>Lease:</strong> ${new Date(data.lease_start).toLocaleDateString()} → ${new Date(data.lease_end).toLocaleDateString()}</p>
-            <p><strong>Monthly Rent:</strong> ${this.formatKES(data.rent_amount)}</p>
-          </div>
-
-          <div class="panel-section">
-            <h3>Current Month Payment</h3>
-            <div class="panel-status-row">
-              <span class="status-badge status-${data.current_month_status}">${data.current_month_status}</span>
-              ${data.payment_streak >= 3 ? '<span class="streak-badge">🔥 ' + data.payment_streak + ' month streak</span>' : ''}
-            </div>
-            <p><strong>Paid:</strong> ${this.formatKES(data.current_month_paid)} / ${this.formatKES(data.current_month_expected)}</p>
-            ${parseFloat(data.amount_owed || 0) > 0 ? `<p class="amount-owed"><strong>Still owed:</strong> ${this.formatKES(data.amount_owed)}</p>` : ''}
-            ${data.payment_date ? `<p><strong>Payment date:</strong> ${new Date(data.payment_date).toLocaleDateString()}</p>` : ''}
-            ${data.payment_method ? `<p><strong>Method:</strong> ${this.formatMethod(data.payment_method)}</p>` : ''}
-            ${data.reference_number ? `<p><strong>Reference:</strong> ${data.reference_number}</p>` : ''}
-            ${data.notes ? `<p><strong>Notes:</strong> ${data.notes}</p>` : ''}
-            ${data.is_late ? `<p class="late-notice">Payment recorded ${data.days_overdue} days after due date</p>` : ''}
-            ${data.is_overdue && !data.payment_date ? `<p class="late-notice">${data.days_overdue} days overdue</p>` : ''}
-          </div>
-
-          ${parseFloat(data.credit_balance || 0) > 0 ? `
-            <div class="panel-section panel-credit">
-              <p>💳 ${this.formatKES(data.credit_balance)} in credit (carried forward)</p>
-            </div>
-          ` : ''}
-
-          ${data.months_in_arrears >= 2 ? `
-            <div class="panel-section panel-arrears">
-              <p>⚠️ ${data.months_in_arrears} months unpaid — ${this.formatKES(data.total_outstanding)} outstanding</p>
-              <button class="action-button secondary-btn" id="arrears-notice-btn">Generate Arrears Notice</button>
-            </div>
-          ` : ''}
-
-          <div class="panel-actions">
-            <button class="action-button primary-btn" id="mark-paid-btn">Mark as Paid</button>
-            <button class="action-button" id="partial-pay-btn">Record Partial Payment</button>
-            <button class="action-button secondary-btn" id="add-note-btn">Add Note</button>
-            <button class="action-button secondary-btn" id="view-history-btn">View Full History</button>
-          </div>
-
-          <div id="panel-form-area" class="panel-form-area hidden"></div>
-
-          <div id="panel-history-area" class="panel-history-area hidden">
-            <h4>Payment History</h4>
-            <table class="data-table compact-table">
-              <thead>
-                <tr><th>Month</th><th>Expected</th><th>Paid</th><th>Status</th><th>Date</th></tr>
-              </thead>
-              <tbody>
-                ${data.payment_history.map(p => `
-                  <tr>
-                    <td>${this.MONTHS[p.billing_month - 1]} ${p.billing_year}</td>
-                    <td>${this.formatKES(p.amount_expected)}</td>
-                    <td>${this.formatKES(p.amount_paid)}</td>
-                    <td><span class="status-badge status-${p.status}">${p.status}</span></td>
-                    <td>${p.payment_date ? new Date(p.payment_date).toLocaleDateString() : '-'}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
-
-      panel.querySelector('#panel-close').addEventListener('click', closePanel);
-
-      panel.querySelector('#mark-paid-btn').addEventListener('click', () => {
-        this.showPaymentForm(panel, data, 'paid', container);
-      });
-
-      panel.querySelector('#partial-pay-btn').addEventListener('click', () => {
-        this.showPaymentForm(panel, data, 'partial', container);
-      });
-
-      panel.querySelector('#add-note-btn').addEventListener('click', () => {
-        this.showNoteForm(panel, data, container);
-      });
-
-      panel.querySelector('#view-history-btn').addEventListener('click', () => {
-        const historyArea = panel.querySelector('#panel-history-area');
-        historyArea.classList.toggle('hidden');
-      });
-
-      const arrearsBtn = panel.querySelector('#arrears-notice-btn');
-      if (arrearsBtn) {
-        arrearsBtn.addEventListener('click', () => {
-          this.generateArrearsNotice(data);
-        });
-      }
-
+      container.tenantDetailState.dashboard = data;
+      this.renderTenantDetailPage(container, data);
     } catch (error) {
-      panel.innerHTML = `
-        <div class="panel-header">
-          <h2>Error</h2>
-          <button class="panel-close" id="panel-close">&times;</button>
-        </div>
-        <div class="panel-body"><p>${error.message}</p></div>
-      `;
-      panel.querySelector('#panel-close').addEventListener('click', closePanel);
+      container.innerHTML = `<p class="error-text">Error loading tenant: ${error.message}</p>`;
     }
+  },
+
+  renderTenantDetailPage(container, data) {
+    const state = container.tenantDetailState;
+    const monthLabel = `${this.MONTHS[data.billing_month - 1]} ${data.billing_year}`;
+    const unitLabel = `${data.unit_number}${data.unit_type ? ` (${data.unit_type})` : ''}`;
+    const hasPayment = parseFloat(data.current_month_paid || 0) > 0;
+
+    container.innerHTML = `
+      <div class="tenant-detail-page">
+        <div class="tenant-detail-header">
+          <button class="back-link" id="back-to-financials">← Back to Financials</button>
+          <div class="tenant-detail-title">
+            <h1>${data.tenant_name}</h1>
+            <span class="tenant-detail-subtitle">— ${unitLabel}</span>
+          </div>
+          <button class="action-button secondary-btn ${hasPayment ? '' : 'hidden'}" id="header-print-receipt">Print Receipt</button>
+        </div>
+
+        <div class="tenant-info-strip">
+          <div class="info-strip-card">
+            <div class="info-strip-label">Phone</div>
+            <div class="info-strip-value">${data.phone || '—'}</div>
+          </div>
+          <div class="info-strip-card">
+            <div class="info-strip-label">Unit</div>
+            <div class="info-strip-value">${unitLabel}</div>
+          </div>
+          <div class="info-strip-card">
+            <div class="info-strip-label">Lease Period</div>
+            <div class="info-strip-value">${this.formatDate(data.lease_start)} → ${this.formatDate(data.lease_end)}</div>
+          </div>
+          <div class="info-strip-card">
+            <div class="info-strip-label">Monthly Rent</div>
+            <div class="info-strip-value">${this.formatKES(data.rent_amount)}</div>
+          </div>
+          <div class="info-strip-card">
+            <div class="info-strip-label">Status</div>
+            <div class="info-strip-value"><span class="status-badge status-${data.current_month_status}" id="header-status-badge">${data.current_month_status}</span></div>
+          </div>
+        </div>
+
+        <div class="tenant-payment-columns">
+          <div class="record-payment-card">
+            <h3>Record Payment — ${monthLabel}</h3>
+            <div class="form-group">
+              <label for="payment-amount">Amount Paid</label>
+              <div class="amount-input-row">
+                <span class="currency-prefix">KES</span>
+                <input type="number" id="payment-amount" min="0" step="0.01" placeholder="0.00">
+              </div>
+              <button type="button" class="link-btn" id="pay-exact-btn">Pay Exact Amount (${this.formatKES(data.current_month_expected)})</button>
+            </div>
+            <div class="form-group">
+              <label for="payment-method">Method</label>
+              <select id="payment-method">
+                <option value="mpesa">M-Pesa</option>
+                <option value="cash">Cash</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="cheque">Cheque</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="payment-reference">Ref No.</label>
+              <input type="text" id="payment-reference" placeholder="Optional">
+            </div>
+            <div class="form-group">
+              <label for="payment-notes">Notes</label>
+              <textarea id="payment-notes" rows="2" placeholder="Optional">${data.notes || ''}</textarea>
+            </div>
+            <button class="action-button primary-btn full-width-btn" id="submit-payment-btn" disabled>Submit Payment</button>
+          </div>
+
+          <div class="payment-feedback-card" id="payment-feedback">
+            <div class="feedback-placeholder">
+              <p>Payment result will appear here after submission.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="credit-arrears-bar" id="credit-arrears-bar">
+          ${this.renderCreditArrearsBar(data)}
+        </div>
+
+        <div class="tenant-history-section">
+          <h3>Payment History</h3>
+          <div id="tenant-history-table">${this.renderTenantHistoryTable(data.payment_history)}</div>
+        </div>
+      </div>
+    `;
+
+    container.querySelector('#back-to-financials').addEventListener('click', () => {
+      this.navigateBackToFinancials(state.billingMonth, state.billingYear);
+    });
+
+    const amountInput = container.querySelector('#payment-amount');
+    const submitBtn = container.querySelector('#submit-payment-btn');
+
+    amountInput.addEventListener('input', () => {
+      submitBtn.disabled = !(parseFloat(amountInput.value) > 0);
+    });
+
+    container.querySelector('#pay-exact-btn').addEventListener('click', () => {
+      amountInput.value = parseFloat(data.current_month_expected || data.rent_amount);
+      submitBtn.disabled = false;
+    });
+
+    submitBtn.addEventListener('click', () => {
+      this.submitTenantPayment(container);
+    });
+
+    const headerPrint = container.querySelector('#header-print-receipt');
+    if (headerPrint) {
+      headerPrint.addEventListener('click', () => {
+        this.printReceipt(state.lastPayment || this.buildReceiptFromDashboard(data), data);
+      });
+    }
+
+    this.attachHistorySortHandler(container);
+  },
+
+  renderCreditArrearsBar(data) {
+    const creditNote = parseFloat(data.credit_balance || 0) > 0
+      ? `<span class="credit-note">approx ${data.credit_days || 0} days into next month</span>`
+      : '';
+
+    return `
+      <div class="summary-pill"><span class="pill-label">Credit Balance</span><span class="pill-value">${this.formatKES(data.credit_balance)}</span>${creditNote}</div>
+      <div class="summary-pill"><span class="pill-label">Months in Arrears</span><span class="pill-value">${data.months_in_arrears}</span></div>
+      <div class="summary-pill"><span class="pill-label">Total Outstanding</span><span class="pill-value">${this.formatKES(data.total_outstanding)}</span></div>
+      <div class="summary-pill"><span class="pill-label">Streak</span><span class="pill-value">${data.payment_streak} months on time</span></div>
+    `;
+  },
+
+  renderTenantHistoryTable(history, sortDesc = true) {
+    if (!history || history.length === 0) {
+      return '<p class="empty-history">No payment history yet</p>';
+    }
+
+    const sorted = [...history].sort((a, b) => {
+      const da = a.billing_year * 100 + a.billing_month;
+      const db = b.billing_year * 100 + b.billing_month;
+      return sortDesc ? db - da : da - db;
+    });
+
+    return `
+      <table class="data-table sortable-history" id="tenant-history-sortable">
+        <thead>
+          <tr>
+            <th class="sortable-th" data-sort="month">Month ↕</th>
+            <th>Expected</th><th>Paid</th><th>Status</th><th>Method</th>
+            <th>Reference</th><th>Date</th><th>Late?</th><th>Recorded By</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sorted.map(p => `
+            <tr>
+              <td>${this.MONTHS[p.billing_month - 1]} ${p.billing_year}</td>
+              <td>${this.formatKES(p.amount_expected)}</td>
+              <td>${this.formatKES(p.amount_paid)}</td>
+              <td><span class="status-badge status-${p.status}">${p.status}</span></td>
+              <td>${p.payment_method ? this.formatMethod(p.payment_method) : '—'}</td>
+              <td>${p.reference_number || '—'}</td>
+              <td>${p.payment_date ? this.formatDate(p.payment_date) : '—'}</td>
+              <td>${p.is_late ? `${p.days_overdue} days late` : (p.payment_date ? 'On time' : '—')}</td>
+              <td>${p.recorded_by_name || '—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  },
+
+  buildReceiptFromDashboard(data) {
+    return {
+      billing_month: data.billing_month,
+      billing_year: data.billing_year,
+      amount_paid: data.current_month_paid,
+      amount_expected: data.current_month_expected,
+      payment_method: data.payment_method,
+      reference_number: data.reference_number,
+      payment_date: data.payment_date,
+      status: data.current_month_status,
+      id: data.payment_id,
+      recorded_by_name: data.recorded_by_name
+    };
+  },
+
+  async submitTenantPayment(container) {
+    const state = container.tenantDetailState;
+    const amount = container.querySelector('#payment-amount').value;
+
+    const payload = {
+      tenant_id: state.tenantId,
+      month: state.billingMonth,
+      year: state.billingYear,
+      amount_paid: amount,
+      payment_method: container.querySelector('#payment-method').value,
+      reference_number: container.querySelector('#payment-reference').value,
+      payment_date: new Date().toISOString().split('T')[0],
+      notes: container.querySelector('#payment-notes').value
+    };
+
+    const submitBtn = container.querySelector('#submit-payment-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
+
+    try {
+      const result = await apiClient.recordForTenant(payload);
+      state.lastPayment = result;
+
+      const data = await apiClient.getTenantDashboard(state.tenantId, {
+        month: state.billingMonth,
+        year: state.billingYear
+      });
+      state.dashboard = data;
+
+      this.updateTenantDetailAfterPayment(container, data, result);
+    } catch (error) {
+      alert('Error recording payment: ' + error.message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit Payment';
+    }
+  },
+
+  updateTenantDetailAfterPayment(container, data, payment) {
+    const state = container.tenantDetailState;
+    const monthLabel = `${this.MONTHS[data.billing_month - 1]} ${data.billing_year}`;
+    const feedback = container.querySelector('#payment-feedback');
+    const status = payment.status;
+    const paid = parseFloat(payment.amount_paid || 0);
+    const expected = parseFloat(payment.amount_expected || 0);
+    const owed = Math.max(expected - paid, 0);
+
+    let feedbackHtml = '';
+
+    if (status === 'paid') {
+      feedbackHtml = `
+        <div class="feedback-result feedback-paid">
+          <div class="feedback-status">Paid</div>
+          <p>${this.formatKES(paid)} received — Fully paid for ${monthLabel}</p>
+          <button class="action-button primary-btn" id="feedback-print-receipt">Print Receipt</button>
+        </div>`;
+    } else if (status === 'partial') {
+      feedbackHtml = `
+        <div class="feedback-result feedback-partial">
+          <div class="feedback-status">Partial</div>
+          <p>${this.formatKES(paid)} received — ${this.formatKES(owed)} still owed</p>
+          <button class="action-button primary-btn" id="feedback-print-receipt">Print Receipt</button>
+        </div>`;
+    } else if (status === 'overpaid') {
+      const breakdown = this.computeSurplusBreakdown(paid, expected, data.rent_amount);
+      feedbackHtml = `
+        <div class="feedback-result feedback-overpaid">
+          <div class="feedback-status">Overpaid</div>
+          <p>${this.formatKES(paid)} received on ${this.formatKES(expected)} rent</p>
+          <p>Surplus: ${this.formatKES(breakdown.surplus)}</p>
+          <p>Credit: ${breakdown.fullMonths} full months + ${breakdown.remainingDays} days into next month</p>
+          <p class="credit-formula">(${this.formatKES(data.rent_amount)}/month = ~${this.formatKES(breakdown.dailyRate)}/day)</p>
+          <button class="action-button primary-btn" id="feedback-print-receipt">Print Receipt</button>
+        </div>`;
+    }
+
+    feedback.innerHTML = feedbackHtml;
+
+    container.querySelector('#credit-arrears-bar').innerHTML = this.renderCreditArrearsBar(data);
+    container.querySelector('#tenant-history-table').innerHTML = this.renderTenantHistoryTable(data.payment_history);
+
+    const statusBadge = container.querySelector('#header-status-badge');
+    if (statusBadge) {
+      statusBadge.className = `status-badge status-${data.current_month_status}`;
+      statusBadge.textContent = data.current_month_status;
+    }
+
+    const headerPrint = container.querySelector('#header-print-receipt');
+    if (headerPrint) {
+      headerPrint.classList.remove('hidden');
+    }
+
+    const submitBtn = container.querySelector('#submit-payment-btn');
+    submitBtn.textContent = 'Submit Payment';
+    submitBtn.disabled = true;
+    container.querySelector('#payment-amount').value = '';
+
+    const printBtn = container.querySelector('#feedback-print-receipt');
+    if (printBtn) {
+      printBtn.addEventListener('click', () => {
+        this.printReceipt(payment, data);
+      });
+    }
+
+    if (headerPrint) {
+      headerPrint.onclick = () => this.printReceipt(payment, data);
+    }
+
+    this.attachHistorySortHandler(container);
+  },
+
+  attachHistorySortHandler(container) {
+    const th = container.querySelector('.sortable-th');
+    if (!th || th.dataset.bound) return;
+    th.dataset.bound = '1';
+    let sortDesc = true;
+    th.addEventListener('click', () => {
+      sortDesc = !sortDesc;
+      const data = container.tenantDetailState.dashboard;
+      if (data) {
+        container.querySelector('#tenant-history-table').innerHTML =
+          this.renderTenantHistoryTable(data.payment_history, sortDesc);
+        this.attachHistorySortHandler(container);
+      }
+    });
   },
 
   formatMethod(method) {
@@ -392,139 +636,63 @@ const FinancialsPages = {
     return map[method] || method;
   },
 
-  showPaymentForm(panel, data, mode, container) {
-    const formArea = panel.querySelector('#panel-form-area');
-    const defaultAmount = mode === 'paid'
-      ? parseFloat(data.current_month_expected || data.rent_amount)
-      : '';
-
-    formArea.classList.remove('hidden');
-    formArea.innerHTML = `
-      <h4>${mode === 'paid' ? 'Mark as Paid' : 'Record Partial Payment'}</h4>
-      <div class="form-group">
-        <label>Amount Received</label>
-        <input type="number" id="panel-amount" value="${defaultAmount}" step="0.01" ${mode === 'paid' ? 'readonly' : ''}>
-      </div>
-      <div class="form-group">
-        <label>Payment Method</label>
-        <select id="panel-method">
-          <option value="mpesa">M-Pesa</option>
-          <option value="cash">Cash</option>
-          <option value="bank_transfer">Bank Transfer</option>
-          <option value="cheque">Cheque</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Reference Number</label>
-        <input type="text" id="panel-reference" placeholder="M-Pesa code, cheque no., etc.">
-      </div>
-      <div class="form-group">
-        <label>Payment Date</label>
-        <input type="date" id="panel-date" value="${new Date().toISOString().split('T')[0]}">
-      </div>
-      <div class="form-group">
-        <label>Notes</label>
-        <textarea id="panel-notes" rows="2"></textarea>
-      </div>
-      <div class="form-actions">
-        <button class="action-button primary-btn" id="panel-submit">Submit</button>
-        <button class="action-button secondary-btn" id="panel-cancel">Cancel</button>
-      </div>
-    `;
-
-    formArea.querySelector('#panel-cancel').addEventListener('click', () => {
-      formArea.classList.add('hidden');
-    });
-
-    formArea.querySelector('#panel-submit').addEventListener('click', async () => {
-      const state = container.financialsState;
-      const payload = {
-        tenant_id: data.tenant_id,
-        month: state.month,
-        year: state.year,
-        amount_paid: formArea.querySelector('#panel-amount').value,
-        payment_method: formArea.querySelector('#panel-method').value,
-        reference_number: formArea.querySelector('#panel-reference').value,
-        payment_date: formArea.querySelector('#panel-date').value,
-        notes: formArea.querySelector('#panel-notes').value
-      };
-
-      try {
-        const result = await apiClient.recordForTenant(payload);
-        formArea.classList.add('hidden');
-        await this.refreshGridData(container);
-        this.showPaymentPanel(container, data.tenant_id);
-
-        if (mode === 'paid') {
-          this.offerPrintReceipt(result, data);
-        }
-      } catch (error) {
-        alert('Error recording payment: ' + error.message);
-      }
-    });
-  },
-
-  showNoteForm(panel, data, container) {
-    const formArea = panel.querySelector('#panel-form-area');
-    formArea.classList.remove('hidden');
-    formArea.innerHTML = `
-      <h4>Add Note</h4>
-      <div class="form-group">
-        <label>Note</label>
-        <textarea id="panel-note-text" rows="3">${data.notes || ''}</textarea>
-      </div>
-      <div class="form-actions">
-        <button class="action-button primary-btn" id="panel-note-submit">Save Note</button>
-        <button class="action-button secondary-btn" id="panel-note-cancel">Cancel</button>
-      </div>
-    `;
-
-    formArea.querySelector('#panel-note-cancel').addEventListener('click', () => {
-      formArea.classList.add('hidden');
-    });
-
-    formArea.querySelector('#panel-note-submit').addEventListener('click', async () => {
-      const state = container.financialsState;
-      try {
-        await apiClient.recordForTenant({
-          tenant_id: data.tenant_id,
-          month: state.month,
-          year: state.year,
-          note_only: true,
-          notes: formArea.querySelector('#panel-note-text').value
-        });
-        formArea.classList.add('hidden');
-        this.showPaymentPanel(container, data.tenant_id);
-      } catch (error) {
-        alert('Error saving note: ' + error.message);
-      }
-    });
-  },
-
-  offerPrintReceipt(payment, tenantData) {
-    if (!confirm('Payment recorded! Print receipt?')) return;
-    this.printReceipt(payment, tenantData);
-  },
-
   printReceipt(payment, tenantData) {
-    const win = window.open('', '_blank', 'width=400,height=600');
+    const monthLabel = `${this.MONTHS[payment.billing_month - 1]} ${payment.billing_year}`;
+    const receiptNo = tenantData.receipt_number ||
+      (payment.id ? `RCP-${payment.billing_year}-${String(payment.id).padStart(4, '0')}` : 'RCP-PENDING');
+    const paid = parseFloat(payment.amount_paid || 0);
+    const expected = parseFloat(payment.amount_expected || tenantData.current_month_expected || tenantData.rent_amount || 0);
+    const owed = Math.max(expected - paid, 0);
+    const breakdown = this.computeSurplusBreakdown(paid, expected, tenantData.rent_amount);
+    const status = payment.status || tenantData.current_month_status;
+    const recordedBy = payment.recorded_by_name || tenantData.recorded_by_name || '—';
+
+    let balanceSection = '';
+    if (status === 'partial') {
+      balanceSection = `<div class="row highlight"><span>Balance Remaining:</span><span>${this.formatKES(owed)}</span></div>`;
+    }
+    if (status === 'overpaid' && breakdown.surplus > 0) {
+      balanceSection = `
+        <div class="row"><span>Surplus:</span><span>${this.formatKES(breakdown.surplus)}</span></div>
+        <div class="row"><span>Credit:</span><span>${breakdown.fullMonths} months + ${breakdown.remainingDays} days</span></div>`;
+    }
+
+    const win = window.open('', '_blank', 'width=480,height=720');
     win.document.write(`
-      <html><head><title>Payment Receipt</title>
-      <style>body{font-family:sans-serif;padding:24px;max-width:360px;margin:0 auto}
-      h2{text-align:center;border-bottom:2px solid #333;padding-bottom:8px}
-      .row{display:flex;justify-content:space-between;margin:8px 0}
-      .total{font-size:18px;font-weight:bold;margin-top:16px;border-top:1px solid #ccc;padding-top:8px}
+      <!DOCTYPE html>
+      <html><head><title>Receipt ${receiptNo}</title>
+      <style>
+        * { box-sizing: border-box; }
+        body { font-family: Georgia, serif; padding: 32px; max-width: 420px; margin: 0 auto; color: #111; }
+        h1 { text-align: center; font-size: 20px; margin: 0 0 4px; }
+        .subtitle { text-align: center; color: #555; font-size: 13px; margin-bottom: 20px; }
+        .receipt-no { text-align: center; font-size: 12px; color: #666; margin-bottom: 16px; }
+        .divider { border-top: 2px solid #111; margin: 12px 0; }
+        .row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 13px; }
+        .row.highlight { font-weight: bold; margin-top: 8px; }
+        .total { font-size: 16px; font-weight: bold; border-top: 1px solid #ccc; padding-top: 10px; margin-top: 10px; }
+        .footer { text-align: center; margin-top: 28px; font-size: 11px; color: #888; border-top: 1px dashed #ccc; padding-top: 12px; }
+        @media print { body { padding: 16px; } }
       </style></head><body>
-      <h2>Payment Receipt</h2>
-      <div class="row"><span>Property:</span><span>${tenantData.property_name || ''}</span></div>
+      <h1>${tenantData.property_name || ''}</h1>
+      <div class="subtitle">${tenantData.property_address || ''}</div>
+      <div class="receipt-no">Receipt No: ${receiptNo}</div>
+      <div class="divider"></div>
+      <div class="row"><span>Date:</span><span>${payment.payment_date ? this.formatDate(payment.payment_date) : this.formatDate(new Date())}</span></div>
       <div class="row"><span>Tenant:</span><span>${tenantData.tenant_name}</span></div>
+      <div class="row"><span>Phone:</span><span>${tenantData.phone || '—'}</span></div>
       <div class="row"><span>Unit:</span><span>${tenantData.unit_number}</span></div>
-      <div class="row"><span>Month:</span><span>${this.MONTHS[payment.billing_month - 1]} ${payment.billing_year}</span></div>
+      <div class="row"><span>Lease:</span><span>${this.formatDate(tenantData.lease_start)} → ${this.formatDate(tenantData.lease_end)}</span></div>
+      <div class="row"><span>Billing Month:</span><span>${monthLabel}</span></div>
+      <div class="row"><span>Monthly Rent:</span><span>${this.formatKES(tenantData.rent_amount)}</span></div>
+      <div class="divider"></div>
+      <div class="row total"><span>Amount Paid:</span><span>${this.formatKES(paid)}</span></div>
       <div class="row"><span>Method:</span><span>${this.formatMethod(payment.payment_method)}</span></div>
-      <div class="row"><span>Reference:</span><span>${payment.reference_number || '-'}</span></div>
-      <div class="row"><span>Date:</span><span>${payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '-'}</span></div>
-      <div class="row total"><span>Amount:</span><span>${this.formatKES(payment.amount_paid)}</span></div>
-      <p style="text-align:center;margin-top:24px;color:#666;font-size:12px">Thank you for your payment</p>
+      <div class="row"><span>Reference:</span><span>${payment.reference_number || '—'}</span></div>
+      <div class="row"><span>Status:</span><span>${status.charAt(0).toUpperCase() + status.slice(1)}</span></div>
+      ${balanceSection}
+      <div class="row"><span>Recorded By:</span><span>${recordedBy}</span></div>
+      <div class="footer">This is a system-generated receipt — mijengo RMS</div>
       </body></html>
     `);
     win.document.close();

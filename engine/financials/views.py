@@ -31,6 +31,30 @@ def calculate_due_date(lease, month, year):
         return date(year, month, monthrange(year, month)[1])
 
 
+def compute_credit_breakdown(credit_amount, monthly_rent):
+    credit_amount = Decimal(str(credit_amount or 0))
+    monthly_rent = Decimal(str(monthly_rent or 0))
+    if monthly_rent <= 0 or credit_amount <= 0:
+        return {
+            'credit_full_months': 0,
+            'credit_days': 0,
+            'daily_rate': Decimal('0.00'),
+        }
+    full_months = int(credit_amount // monthly_rent)
+    remainder = credit_amount % monthly_rent
+    daily_rate = (monthly_rent / Decimal('30')).quantize(Decimal('0.01'))
+    credit_days = int(remainder / daily_rate) if daily_rate > 0 else 0
+    return {
+        'credit_full_months': full_months,
+        'credit_days': credit_days,
+        'daily_rate': daily_rate,
+    }
+
+
+def generate_receipt_number(payment):
+    return f"RCP-{payment.billing_year}-{payment.id:04d}"
+
+
 def get_or_create_rent_payment(lease, month, year, user=None):
     existing = RentPayment.objects.filter(
         tenant=lease.tenant,
@@ -413,7 +437,7 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
 
         payment_history = RentPayment.objects.filter(
             tenant=tenant
-        ).select_related('unit', 'recorded_by').order_by('-billing_year', '-billing_month')[:12]
+        ).select_related('unit', 'recorded_by').order_by('-billing_year', '-billing_month')
 
         amount_expected = current_payment.amount_expected if current_payment else active_lease.rent_amount
         amount_paid = current_payment.amount_paid if current_payment else Decimal('0.00')
@@ -426,13 +450,16 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
             is_overdue = True
             days_overdue = (date.today() - due_date).days
 
+        credit_breakdown = compute_credit_breakdown(credit_ledger.credit_balance, active_lease.rent_amount)
+
         data = {
             'tenant_id': tenant.id,
             'tenant_name': tenant.full_name,
-            'phone': tenant.phone,
+            'phone': tenant.phone or '',
             'unit_number': active_lease.unit.unit_number,
             'unit_type': active_lease.unit.unit_type or '',
             'property_name': active_lease.unit.property.name,
+            'property_address': active_lease.unit.property.location or '',
             'lease_id': active_lease.id,
             'lease_start': active_lease.start_date,
             'lease_end': active_lease.end_date,
@@ -454,12 +481,17 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
             'days_overdue': current_payment.days_overdue if current_payment and current_payment.is_late else days_overdue,
             'credit_balance': credit_ledger.credit_balance,
             'months_credit': credit_ledger.total_months_credit,
+            'credit_full_months': credit_breakdown['credit_full_months'],
+            'credit_days': credit_breakdown['credit_days'],
+            'daily_rate': credit_breakdown['daily_rate'],
             'months_in_arrears': arrears_record.months_in_arrears,
             'total_outstanding': arrears_record.total_outstanding,
             'last_payment_date': last_payment.payment_date if last_payment else None,
             'last_payment_amount': last_payment.amount_paid if last_payment else None,
             'last_payment_method': last_payment.payment_method if last_payment else None,
             'payment_streak': payment_streak.current_streak,
+            'recorded_by_name': current_payment.recorded_by.username if current_payment and current_payment.recorded_by else '',
+            'receipt_number': generate_receipt_number(current_payment) if current_payment and current_payment.amount_paid > 0 else '',
             'payment_history': payment_history,
         }
 
