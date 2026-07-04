@@ -231,6 +231,10 @@ class ApiClient {
     return this.get(`/api/financials/rent-payments/?${queryString}`);
   }
 
+  async getRentPayment(id) {
+    return this.get(`/api/financials/rent-payments/${id}/`);
+  }
+
   async createRentPayment(data) {
     return this.post('/api/financials/rent-payments/', data);
   }
@@ -247,8 +251,28 @@ class ApiClient {
     return this.post(`/api/financials/rent-payments/${id}/record_payment/`, data);
   }
 
-  async getTenantDashboard(tenantId) {
-    return this.get(`/api/financials/rent-payments/tenant_dashboard/?tenant_id=${tenantId}`);
+  async recordForTenant(data) {
+    return this.post('/api/financials/rent-payments/record_for_tenant/', data);
+  }
+
+  async getTenantDashboard(tenantId, params = {}) {
+    const queryParams = new URLSearchParams({ tenant_id: tenantId, ...params }).toString();
+    return this.get(`/api/financials/rent-payments/tenant_dashboard/?${queryParams}`);
+  }
+
+  async getPaymentGrid(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/api/financials/rent-payments/payment_grid/?${queryString}`);
+  }
+
+  async getRentSummary(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/api/financials/rent-payments/summary/?${queryString}`);
+  }
+
+  async getTenantPaymentHistory(tenantId, params = {}) {
+    const queryParams = new URLSearchParams({ tenant_id: tenantId, ...params }).toString();
+    return this.get(`/api/financials/rent-payments/tenant_history/?${queryParams}`);
   }
 
   async getBulkRentDashboard(params = {}) {

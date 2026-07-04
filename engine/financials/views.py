@@ -16,9 +16,203 @@ from .serializers import (
     RentPaymentSerializer, RentPaymentCreateSerializer,
     CreditLedgerSerializer, ArrearsRecordSerializer,
     PaymentAuditLogSerializer, PaymentStreakSerializer,
-    TenantPaymentDashboardSerializer, BulkRentDashboardSerializer
+    TenantPaymentDashboardSerializer, BulkRentDashboardSerializer,
+    PaymentGridSerializer,
 )
-from core.models import Lease, Unit
+from core.models import Lease, Unit, Tenant
+from calendar import monthrange
+
+
+def calculate_due_date(lease, month, year):
+    due_day = lease.start_date.day
+    try:
+        return date(year, month, due_day)
+    except ValueError:
+        return date(year, month, monthrange(year, month)[1])
+
+
+def get_or_create_rent_payment(lease, month, year, user=None):
+    existing = RentPayment.objects.filter(
+        tenant=lease.tenant,
+        unit=lease.unit,
+        lease=lease,
+        billing_month=month,
+        billing_year=year,
+    ).first()
+    if existing:
+        return existing, False
+
+    payment = RentPayment.objects.create(
+        tenant=lease.tenant,
+        unit=lease.unit,
+        lease=lease,
+        billing_month=month,
+        billing_year=year,
+        due_date=calculate_due_date(lease, month, year),
+        amount_expected=lease.rent_amount,
+        amount_paid=Decimal('0.00'),
+        recorded_by=user,
+    )
+    return payment, True
+
+
+def apply_payment_record(rent_payment, amount_paid, payment_method, reference_number, payment_date, notes, user):
+    with transaction.atomic():
+        credit_ledger, _ = CreditLedger.objects.get_or_create(tenant=rent_payment.tenant)
+
+        if amount_paid > rent_payment.amount_expected:
+            surplus = amount_paid - rent_payment.amount_expected
+            credit_ledger.add_credit(surplus)
+            credit_ledger.total_months_credit += surplus / rent_payment.amount_expected
+            credit_ledger.save()
+        elif amount_paid < rent_payment.amount_expected and credit_ledger.credit_balance > 0:
+            remaining = rent_payment.amount_expected - amount_paid
+            if credit_ledger.credit_balance >= remaining:
+                credit_ledger.deduct_credit(remaining)
+                amount_paid = rent_payment.amount_expected
+            else:
+                amount_paid += credit_ledger.credit_balance
+                credit_ledger.credit_balance = Decimal('0.00')
+                credit_ledger.save()
+
+        old_status = rent_payment.status
+        old_amount = rent_payment.amount_paid
+
+        rent_payment.amount_paid = amount_paid
+        rent_payment.payment_date = payment_date
+        rent_payment.payment_method = payment_method or rent_payment.payment_method
+        rent_payment.reference_number = reference_number or rent_payment.reference_number
+        if notes:
+            rent_payment.notes = notes
+        rent_payment.recorded_by = user
+        rent_payment.save()
+
+        arrears_record, _ = ArrearsRecord.objects.get_or_create(tenant=rent_payment.tenant)
+
+        if rent_payment.status in [RentPayment.PAID, RentPayment.OVERPAID]:
+            if old_status in [RentPayment.UNPAID, RentPayment.PARTIAL]:
+                arrears_record.decrement_arrears(rent_payment.amount_expected)
+                streak, _ = PaymentStreak.objects.get_or_create(tenant=rent_payment.tenant)
+                if not rent_payment.is_late:
+                    streak.increment_streak()
+                streak.last_payment_date = payment_date
+                streak.save()
+        elif rent_payment.status in [RentPayment.UNPAID, RentPayment.PARTIAL]:
+            if old_status in [RentPayment.PAID, RentPayment.OVERPAID]:
+                arrears_record.increment_arrears(rent_payment.amount_expected)
+                streak, _ = PaymentStreak.objects.get_or_create(tenant=rent_payment.tenant)
+                streak.reset_streak()
+
+        PaymentAuditLog.objects.create(
+            rent_payment=rent_payment,
+            changed_by=user,
+            old_status=old_status,
+            new_status=rent_payment.status,
+            old_amount_paid=old_amount,
+            new_amount_paid=amount_paid,
+            change_description=f"Payment recorded: {amount_paid} via {payment_method or 'N/A'}",
+        )
+
+    return rent_payment
+
+
+def build_payment_grid(property_id, month, year):
+    units = Unit.objects.filter(property_id=property_id).order_by('unit_number')
+    active_leases = Lease.objects.filter(
+        unit__property_id=property_id,
+        status=Lease.ACTIVE,
+    ).select_related('tenant', 'unit')
+    lease_by_unit = {lease.unit_id: lease for lease in active_leases}
+
+    payments = RentPayment.objects.filter(
+        billing_month=month,
+        billing_year=year,
+        unit__property_id=property_id,
+    ).select_related('tenant', 'unit', 'recorded_by')
+    payment_by_unit = {p.unit_id: p for p in payments}
+
+    streaks = PaymentStreak.objects.filter(
+        tenant_id__in=[l.tenant_id for l in active_leases]
+    )
+    streak_by_tenant = {s.tenant_id: s.current_streak for s in streaks}
+
+    grid_units = []
+    summary = {
+        'total_units': 0,
+        'occupied': 0,
+        'vacant': 0,
+        'paid': 0,
+        'unpaid': 0,
+        'partial': 0,
+        'overpaid': 0,
+        'total_collected': Decimal('0.00'),
+        'total_expected': Decimal('0.00'),
+    }
+
+    for unit in units:
+        lease = lease_by_unit.get(unit.id)
+        payment = payment_by_unit.get(unit.id)
+        is_vacant = lease is None
+
+        if is_vacant:
+            item_status = 'vacant'
+            amount_expected = Decimal('0.00')
+            amount_paid = Decimal('0.00')
+            summary['vacant'] += 1
+        else:
+            summary['occupied'] += 1
+            amount_expected = payment.amount_expected if payment else lease.rent_amount
+            amount_paid = payment.amount_paid if payment else Decimal('0.00')
+            item_status = payment.status if payment else RentPayment.UNPAID
+            if item_status in summary:
+                summary[item_status] += 1
+            summary['total_collected'] += amount_paid
+            summary['total_expected'] += amount_expected
+
+        due_date = payment.due_date if payment else (calculate_due_date(lease, month, year) if lease else None)
+        is_overdue = False
+        days_overdue = 0
+        if not is_vacant and item_status in [RentPayment.UNPAID, RentPayment.PARTIAL]:
+            if due_date and date.today() > due_date:
+                is_overdue = True
+                days_overdue = (date.today() - due_date).days
+
+        grid_units.append({
+            'unit_id': unit.id,
+            'unit_number': unit.unit_number,
+            'unit_type': unit.unit_type or '',
+            'is_vacant': is_vacant,
+            'tenant_id': lease.tenant_id if lease else None,
+            'tenant_name': lease.tenant.full_name if lease else '',
+            'tenant_phone': lease.tenant.phone if lease else '',
+            'lease_id': lease.id if lease else None,
+            'lease_start': lease.start_date if lease else None,
+            'lease_end': lease.end_date if lease else None,
+            'payment_id': payment.id if payment else None,
+            'status': item_status,
+            'amount_expected': amount_expected,
+            'amount_paid': amount_paid,
+            'due_date': due_date,
+            'payment_date': payment.payment_date if payment else None,
+            'payment_method': payment.payment_method if payment else '',
+            'reference_number': payment.reference_number if payment else '',
+            'notes': payment.notes if payment else '',
+            'is_late': payment.is_late if payment else False,
+            'days_overdue': payment.days_overdue if payment and payment.is_late else days_overdue,
+            'is_overdue': is_overdue,
+            'payment_streak': streak_by_tenant.get(lease.tenant_id, 0) if lease else 0,
+            'recorded_by_name': payment.recorded_by.username if payment and payment.recorded_by else '',
+        })
+
+    summary['total_units'] = len(grid_units)
+    if summary['total_expected'] > 0:
+        summary['collection_rate'] = round(
+            float(summary['total_collected'] / summary['total_expected'] * 100), 1
+        )
+    else:
+        summary['collection_rate'] = 0.0
+
+    return grid_units, summary
 
 
 class RentPaymentViewSet(viewsets.ModelViewSet):
@@ -92,7 +286,7 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
         payment_date = request.data.get('payment_date', date.today())
         notes = request.data.get('notes', '')
 
-        if not amount_paid:
+        if amount_paid is None:
             return Response(
                 {'error': 'amount_paid is required'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -106,82 +300,69 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        with transaction.atomic():
-            # Check for credit balance first
-            credit_ledger, _ = CreditLedger.objects.get_or_create(
-                tenant=rent_payment.tenant
-            )
-
-            # If overpayment, add to credit
-            if amount_paid > rent_payment.amount_expected:
-                surplus = amount_paid - rent_payment.amount_expected
-                credit_ledger.add_credit(surplus)
-                credit_ledger.total_months_credit += surplus / rent_payment.amount_expected
-                credit_ledger.save()
-
-            # If credit exists and payment is partial, apply credit
-            elif amount_paid < rent_payment.amount_expected and credit_ledger.credit_balance > 0:
-                remaining = rent_payment.amount_expected - amount_paid
-                if credit_ledger.credit_balance >= remaining:
-                    credit_ledger.deduct_credit(remaining)
-                    amount_paid = rent_payment.amount_expected
-                else:
-                    amount_paid += credit_ledger.credit_balance
-                    credit_ledger.credit_balance = Decimal('0.00')
-                    credit_ledger.save()
-
-            # Update rent payment
-            old_status = rent_payment.status
-            old_amount = rent_payment.amount_paid
-            
-            rent_payment.amount_paid = amount_paid
-            rent_payment.payment_date = payment_date
-            rent_payment.payment_method = payment_method
-            rent_payment.reference_number = reference_number
-            rent_payment.notes = notes
-            rent_payment.recorded_by = request.user
-            rent_payment.save()
-
-            # Update arrears
-            arrears_record, _ = ArrearsRecord.objects.get_or_create(
-                tenant=rent_payment.tenant
-            )
-            
-            if rent_payment.status in [RentPayment.PAID, RentPayment.OVERPAID]:
-                if old_status in [RentPayment.UNPAID, RentPayment.PARTIAL]:
-                    arrears_record.decrement_arrears(rent_payment.amount_expected)
-                    
-                    # Update payment streak
-                    streak, _ = PaymentStreak.objects.get_or_create(
-                        tenant=rent_payment.tenant
-                    )
-                    if not rent_payment.is_late:
-                        streak.increment_streak()
-                    streak.last_payment_date = payment_date
-                    streak.save()
-            elif rent_payment.status in [RentPayment.UNPAID, RentPayment.PARTIAL]:
-                if old_status in [RentPayment.PAID, RentPayment.OVERPAID]:
-                    arrears_record.increment_arrears(rent_payment.amount_expected)
-                    
-                    # Reset streak
-                    streak, _ = PaymentStreak.objects.get_or_create(
-                        tenant=rent_payment.tenant
-                    )
-                    streak.reset_streak()
-
-            # Log the change
-            PaymentAuditLog.objects.create(
-                rent_payment=rent_payment,
-                changed_by=request.user,
-                old_status=old_status,
-                new_status=rent_payment.status,
-                old_amount_paid=old_amount,
-                new_amount_paid=amount_paid,
-                change_description=f"Payment recorded: {amount_paid} via {payment_method}"
-            )
-
+        rent_payment = apply_payment_record(
+            rent_payment, amount_paid, payment_method, reference_number, payment_date, notes, request.user
+        )
         serializer = self.get_serializer(rent_payment)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['post'])
+    def record_for_tenant(self, request):
+        """Create payment record on-demand and record payment in one step."""
+        tenant_id = request.data.get('tenant_id')
+        month = request.data.get('month')
+        year = request.data.get('year')
+        amount_paid = request.data.get('amount_paid')
+        payment_method = request.data.get('payment_method', '')
+        reference_number = request.data.get('reference_number', '')
+        payment_date = request.data.get('payment_date', date.today().isoformat())
+        notes = request.data.get('notes', '')
+        note_only = request.data.get('note_only', False)
+
+        if not tenant_id or not month or not year:
+            return Response(
+                {'error': 'tenant_id, month, and year are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            tenant = Tenant.objects.get(id=tenant_id)
+        except Tenant.DoesNotExist:
+            return Response({'error': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        active_lease = Lease.objects.filter(tenant=tenant, status=Lease.ACTIVE).first()
+        if not active_lease:
+            return Response({'error': 'No active lease found for tenant'}, status=status.HTTP_404_NOT_FOUND)
+
+        month = int(month)
+        year = int(year)
+
+        if isinstance(payment_date, str):
+            payment_date = date.fromisoformat(payment_date)
+
+        rent_payment, created = get_or_create_rent_payment(active_lease, month, year, request.user)
+
+        if note_only:
+            if notes:
+                rent_payment.notes = notes
+                rent_payment.recorded_by = request.user
+                rent_payment.save()
+            serializer = self.get_serializer(rent_payment)
+            return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+        if amount_paid is None:
+            return Response({'error': 'amount_paid is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            amount_paid = Decimal(str(amount_paid))
+        except (ValueError, TypeError):
+            return Response({'error': 'Invalid amount_paid'}, status=status.HTTP_400_BAD_REQUEST)
+
+        rent_payment = apply_payment_record(
+            rent_payment, amount_paid, payment_method, reference_number, payment_date, notes, request.user
+        )
+        serializer = self.get_serializer(rent_payment)
+        return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'])
     def tenant_dashboard(self, request):
@@ -193,7 +374,6 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            from core.models import Tenant
             tenant = Tenant.objects.get(id=tenant_id)
         except Tenant.DoesNotExist:
             return Response(
@@ -201,11 +381,10 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Get active lease
         active_lease = Lease.objects.filter(
             tenant=tenant,
             status=Lease.ACTIVE
-        ).first()
+        ).select_related('unit', 'unit__property').first()
 
         if not active_lease:
             return Response(
@@ -213,47 +392,66 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Get current month rent payment
         today = date.today()
+        month = int(request.query_params.get('month', today.month))
+        year = int(request.query_params.get('year', today.year))
+
         current_payment = RentPayment.objects.filter(
             tenant=tenant,
-            billing_month=today.month,
-            billing_year=today.year
+            billing_month=month,
+            billing_year=year
         ).first()
 
-        # Get credit ledger
         credit_ledger, _ = CreditLedger.objects.get_or_create(tenant=tenant)
-
-        # Get arrears record
         arrears_record, _ = ArrearsRecord.objects.get_or_create(tenant=tenant)
-
-        # Get payment streak
         payment_streak, _ = PaymentStreak.objects.get_or_create(tenant=tenant)
 
-        # Get last payment
         last_payment = RentPayment.objects.filter(
             tenant=tenant,
             status__in=[RentPayment.PAID, RentPayment.OVERPAID]
         ).order_by('-payment_date').first()
 
-        # Get payment history
         payment_history = RentPayment.objects.filter(
             tenant=tenant
         ).order_by('-billing_year', '-billing_month')[:12]
+
+        amount_expected = current_payment.amount_expected if current_payment else active_lease.rent_amount
+        amount_paid = current_payment.amount_paid if current_payment else Decimal('0.00')
+        current_status = current_payment.status if current_payment else RentPayment.UNPAID
+        due_date = current_payment.due_date if current_payment else calculate_due_date(active_lease, month, year)
+
+        is_overdue = False
+        days_overdue = 0
+        if current_status in [RentPayment.UNPAID, RentPayment.PARTIAL] and due_date and date.today() > due_date:
+            is_overdue = True
+            days_overdue = (date.today() - due_date).days
 
         data = {
             'tenant_id': tenant.id,
             'tenant_name': tenant.full_name,
             'phone': tenant.phone,
             'unit_number': active_lease.unit.unit_number,
+            'unit_type': active_lease.unit.unit_type or '',
             'property_name': active_lease.unit.property.name,
+            'lease_id': active_lease.id,
             'lease_start': active_lease.start_date,
             'lease_end': active_lease.end_date,
             'rent_amount': active_lease.rent_amount,
-            'current_month_status': current_payment.status if current_payment else 'unpaid',
-            'current_month_paid': current_payment.amount_paid if current_payment else Decimal('0.00'),
-            'current_month_expected': current_payment.amount_expected if current_payment else active_lease.rent_amount,
-            'current_month_due_date': current_payment.due_date if current_payment else None,
+            'billing_month': month,
+            'billing_year': year,
+            'payment_id': current_payment.id if current_payment else None,
+            'current_month_status': current_status,
+            'current_month_paid': amount_paid,
+            'current_month_expected': amount_expected,
+            'current_month_due_date': due_date,
+            'amount_owed': max(amount_expected - amount_paid, Decimal('0.00')),
+            'payment_date': current_payment.payment_date if current_payment else None,
+            'payment_method': current_payment.payment_method if current_payment else '',
+            'reference_number': current_payment.reference_number if current_payment else '',
+            'notes': current_payment.notes if current_payment else '',
+            'is_late': current_payment.is_late if current_payment else False,
+            'is_overdue': is_overdue,
+            'days_overdue': current_payment.days_overdue if current_payment and current_payment.is_late else days_overdue,
             'credit_balance': credit_ledger.credit_balance,
             'months_credit': credit_ledger.total_months_credit,
             'months_in_arrears': arrears_record.months_in_arrears,
@@ -266,6 +464,62 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
         }
 
         serializer = TenantPaymentDashboardSerializer(data)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def payment_grid(self, request):
+        today = date.today()
+        month = int(request.query_params.get('month', today.month))
+        year = int(request.query_params.get('year', today.year))
+        property_id = request.query_params.get('property')
+
+        if not property_id:
+            return Response({'error': 'property is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        grid_units, summary = build_payment_grid(property_id, month, year)
+        data = {'units': grid_units, 'summary': summary}
+        serializer = PaymentGridSerializer(data)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        today = date.today()
+        month = int(request.query_params.get('month', today.month))
+        year = int(request.query_params.get('year', today.year))
+        property_id = request.query_params.get('property')
+
+        if not property_id:
+            return Response({'error': 'property is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        _, summary = build_payment_grid(property_id, month, year)
+        return Response(summary)
+
+    @action(detail=False, methods=['get'])
+    def tenant_history(self, request):
+        tenant_id = request.query_params.get('tenant_id')
+        if not tenant_id:
+            return Response({'error': 'tenant_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            tenant = Tenant.objects.get(id=tenant_id)
+        except Tenant.DoesNotExist:
+            return Response({'error': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        payments = RentPayment.objects.filter(tenant=tenant).select_related(
+            'unit', 'recorded_by'
+        ).order_by('-billing_year', '-billing_month')
+
+        status_filter = request.query_params.get('status')
+        month = request.query_params.get('month')
+        year = request.query_params.get('year')
+        if status_filter:
+            payments = payments.filter(status=status_filter)
+        if month:
+            payments = payments.filter(billing_month=month)
+        if year:
+            payments = payments.filter(billing_year=year)
+
+        serializer = RentPaymentSerializer(payments, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
@@ -285,19 +539,19 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
 
         rent_payments = queryset.all()
 
-        # Calculate summary
+        total_expected = rent_payments.aggregate(total=Sum('amount_expected'))['total'] or Decimal('0.00')
+        total_collected = rent_payments.aggregate(total=Sum('amount_paid'))['total'] or Decimal('0.00')
+        collection_rate = round(float(total_collected / total_expected * 100), 1) if total_expected > 0 else 0.0
+
         summary = {
             'total': rent_payments.count(),
             'paid': rent_payments.filter(status=RentPayment.PAID).count(),
             'unpaid': rent_payments.filter(status=RentPayment.UNPAID).count(),
             'partial': rent_payments.filter(status=RentPayment.PARTIAL).count(),
             'overpaid': rent_payments.filter(status=RentPayment.OVERPAID).count(),
-            'total_collected': rent_payments.aggregate(
-                total=Sum('amount_paid')
-            )['total'] or Decimal('0.00'),
-            'total_expected': rent_payments.aggregate(
-                total=Sum('amount_expected')
-            )['total'] or Decimal('0.00'),
+            'total_collected': total_collected,
+            'total_expected': total_expected,
+            'collection_rate': collection_rate,
         }
 
         data = {
@@ -312,15 +566,17 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
     def generate_billing_cycle(self, request):
         month = request.data.get('month')
         year = request.data.get('year')
-        
+        property_id = request.data.get('property')
+
         if not month or not year:
             return Response(
                 {'error': 'month and year are required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Get all active leases
-        active_leases = Lease.objects.filter(status=Lease.ACTIVE)
+        active_leases = Lease.objects.filter(status=Lease.ACTIVE).select_related('unit')
+        if property_id:
+            active_leases = active_leases.filter(unit__property_id=property_id)
         
         created_count = 0
         skipped_count = 0
@@ -339,14 +595,7 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
                 skipped_count += 1
                 continue
 
-            # Calculate due date (1st of next month by default, or based on lease start day)
-            due_day = lease.start_date.day
-            try:
-                due_date = date(year, month, due_day)
-            except ValueError:
-                # If the day doesn't exist in that month, use last day
-                from calendar import monthrange
-                due_date = date(year, month, monthrange(year, month)[1])
+            due_date = calculate_due_date(lease, month, year)
 
             RentPayment.objects.create(
                 tenant=lease.tenant,

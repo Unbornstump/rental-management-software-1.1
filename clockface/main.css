@@ -1585,3 +1585,424 @@
 .danger-btn:hover {
   background-color: #b91c1c;
 }
+
+/* Financials Tabs */
+.financials-tab {
+  padding: 8px 16px;
+  background-color: #e8eef5;
+  color: #333;
+  border: 1px solid #cdd4e0;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.financials-tab:hover {
+  background-color: #d7dbe7;
+}
+
+.financials-tab.active {
+  background-color: #2f80ed;
+  color: white;
+  border-color: #2f80ed;
+}
+
+.secondary-btn {
+  background-color: #e8eef5;
+  color: #333;
+  border: 1px solid #cdd4e0;
+}
+
+.secondary-btn:hover {
+  background-color: #d7dbe7;
+}
+
+/* Billing Cycle Selector */
+.billing-cycle-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.billing-cycle-selector label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.billing-cycle-selector select {
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+/* Rent Metric Cards */
+.rent-metric-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.metric-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.metric-card-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.metric-card-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.metric-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.metric-dot.paid { background-color: #10b981; }
+.metric-dot.unpaid { background-color: #ef4444; }
+.metric-dot.partial { background-color: #f59e0b; }
+
+.metric-card.metric-rate .metric-card-value {
+  color: #2f80ed;
+}
+
+/* Payment Filter Tabs */
+.payment-filter-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* Payment Grid */
+.payment-grid-panel {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.payment-grid {
+  max-height: none;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+
+.payment-grid-tile {
+  position: relative;
+  min-height: 90px;
+  gap: 4px;
+}
+
+.payment-grid-tile.clickable:hover {
+  border-color: #2f80ed;
+  background-color: #eff6ff;
+}
+
+.payment-grid-tile.vacant-tile {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.payment-grid-tenant {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.payment-grid-amount {
+  font-size: 11px;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* Payment Status Dots */
+.unit-overview-dot.paid {
+  background-color: #10b981;
+}
+
+.unit-overview-dot.partial {
+  background-color: #f59e0b;
+}
+
+.unit-overview-dot.unpaid {
+  background-color: #ef4444;
+}
+
+.unit-overview-dot.vacant-payment {
+  background-color: #9ca3af;
+}
+
+.streak-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 12px;
+}
+
+.overdue-tag {
+  font-size: 10px;
+  color: #dc2626;
+  font-weight: 600;
+  background: #fef2f2;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.payment-grid-legend {
+  margin-top: 16px;
+}
+
+/* Payment Status Badges */
+.status-badge.status-paid,
+.status-badge.status-overpaid {
+  background-color: #ecfdf5;
+  color: #059669;
+}
+
+.status-badge.status-unpaid {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.status-badge.status-partial {
+  background-color: #fffbeb;
+  color: #d97706;
+}
+
+.late-badge {
+  font-size: 11px;
+  color: #dc2626;
+  margin-left: 6px;
+}
+
+/* Payment Side Panel */
+.payment-side-panel {
+  position: fixed;
+  top: 0;
+  right: -420px;
+  width: 400px;
+  height: 100vh;
+  background: white;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  transition: right 0.3s ease;
+  overflow-y: auto;
+}
+
+.payment-side-panel.open {
+  right: 0;
+}
+
+body.panel-open::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 999;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.panel-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0 4px;
+}
+
+.panel-body {
+  padding: 20px;
+}
+
+.panel-section {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.panel-section h3,
+.panel-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.panel-section p {
+  margin: 6px 0;
+  font-size: 13px;
+  color: #374151;
+}
+
+.panel-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.panel-credit {
+  background: #ecfdf5;
+  padding: 12px;
+  border-radius: 6px;
+  border-bottom: none;
+}
+
+.panel-arrears {
+  background: #fef2f2;
+  padding: 12px;
+  border-radius: 6px;
+  border-bottom: none;
+}
+
+.amount-owed {
+  color: #dc2626 !important;
+  font-weight: 500;
+}
+
+.late-notice {
+  color: #d97706 !important;
+  font-weight: 500;
+}
+
+.panel-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.panel-form-area,
+.panel-history-area {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.panel-form-area.hidden,
+.panel-history-area.hidden {
+  display: none;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.panel-loading {
+  padding: 40px 20px;
+  text-align: center;
+  color: #6b7280;
+}
+
+/* Payment History */
+.history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.history-filters select,
+.history-filters input {
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.data-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.data-table td {
+  padding: 10px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.data-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.compact-table th,
+.compact-table td {
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.loading-text {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.error-text {
+  color: #dc2626;
+  font-size: 14px;
+}
+

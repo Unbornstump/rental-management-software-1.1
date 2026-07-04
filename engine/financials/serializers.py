@@ -96,37 +96,89 @@ class TenantPaymentDashboardSerializer(serializers.Serializer):
     tenant_name = serializers.CharField()
     phone = serializers.CharField()
     unit_number = serializers.CharField()
+    unit_type = serializers.CharField(required=False, allow_blank=True)
     property_name = serializers.CharField()
+    lease_id = serializers.IntegerField(required=False, allow_null=True)
     lease_start = serializers.DateField()
     lease_end = serializers.DateField()
     rent_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
-    
-    # Current month status
+    billing_month = serializers.IntegerField(required=False)
+    billing_year = serializers.IntegerField(required=False)
+    payment_id = serializers.IntegerField(required=False, allow_null=True)
+
     current_month_status = serializers.CharField()
     current_month_paid = serializers.DecimalField(max_digits=12, decimal_places=2)
     current_month_expected = serializers.DecimalField(max_digits=12, decimal_places=2)
-    current_month_due_date = serializers.DateField()
-    
-    # Credit balance
+    current_month_due_date = serializers.DateField(allow_null=True)
+    amount_owed = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    payment_date = serializers.DateField(allow_null=True, required=False)
+    payment_method = serializers.CharField(required=False, allow_blank=True)
+    reference_number = serializers.CharField(required=False, allow_blank=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    is_late = serializers.BooleanField(required=False)
+    is_overdue = serializers.BooleanField(required=False)
+    days_overdue = serializers.IntegerField(required=False)
+
     credit_balance = serializers.DecimalField(max_digits=12, decimal_places=2)
     months_credit = serializers.DecimalField(max_digits=10, decimal_places=2)
-    
-    # Arrears
+
     months_in_arrears = serializers.IntegerField()
     total_outstanding = serializers.DecimalField(max_digits=12, decimal_places=2)
-    
-    # Last payment
+
     last_payment_date = serializers.DateField(allow_null=True)
     last_payment_amount = serializers.DecimalField(max_digits=12, decimal_places=2, allow_null=True)
     last_payment_method = serializers.CharField(allow_null=True)
-    
-    # Streak
+
     payment_streak = serializers.IntegerField()
-    
-    # Payment history
+
     payment_history = RentPaymentSerializer(many=True)
 
 
 class BulkRentDashboardSerializer(serializers.Serializer):
     rent_payments = RentPaymentSerializer(many=True)
     summary = serializers.DictField()
+
+
+class PaymentGridUnitSerializer(serializers.Serializer):
+    unit_id = serializers.IntegerField()
+    unit_number = serializers.CharField()
+    unit_type = serializers.CharField(allow_blank=True)
+    is_vacant = serializers.BooleanField()
+    tenant_id = serializers.IntegerField(allow_null=True)
+    tenant_name = serializers.CharField(allow_blank=True)
+    tenant_phone = serializers.CharField(allow_blank=True)
+    lease_id = serializers.IntegerField(allow_null=True)
+    lease_start = serializers.DateField(allow_null=True)
+    lease_end = serializers.DateField(allow_null=True)
+    payment_id = serializers.IntegerField(allow_null=True)
+    status = serializers.CharField()
+    amount_expected = serializers.DecimalField(max_digits=12, decimal_places=2)
+    amount_paid = serializers.DecimalField(max_digits=12, decimal_places=2)
+    due_date = serializers.DateField(allow_null=True)
+    payment_date = serializers.DateField(allow_null=True)
+    payment_method = serializers.CharField(allow_blank=True)
+    reference_number = serializers.CharField(allow_blank=True)
+    notes = serializers.CharField(allow_blank=True)
+    is_late = serializers.BooleanField()
+    days_overdue = serializers.IntegerField()
+    is_overdue = serializers.BooleanField()
+    payment_streak = serializers.IntegerField()
+    recorded_by_name = serializers.CharField(allow_blank=True)
+
+
+class PaymentGridSummarySerializer(serializers.Serializer):
+    total_units = serializers.IntegerField()
+    occupied = serializers.IntegerField()
+    vacant = serializers.IntegerField()
+    paid = serializers.IntegerField()
+    unpaid = serializers.IntegerField()
+    partial = serializers.IntegerField()
+    overpaid = serializers.IntegerField()
+    total_collected = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_expected = serializers.DecimalField(max_digits=12, decimal_places=2)
+    collection_rate = serializers.FloatField()
+
+
+class PaymentGridSerializer(serializers.Serializer):
+    units = PaymentGridUnitSerializer(many=True)
+    summary = PaymentGridSummarySerializer()
