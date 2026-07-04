@@ -284,6 +284,32 @@ class ApiClient {
     return this.post('/api/financials/rent-payments/generate_billing_cycle/', data);
   }
 
+  // Dashboard
+  async getDashboardSummary(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/api/dashboard/summary/?${queryString}`);
+  }
+
+  async getDashboardPaymentStatus(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/api/dashboard/payment-status/?${queryString}`);
+  }
+
+  async getDashboardAlerts(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/api/dashboard/alerts/?${queryString}`);
+  }
+
+  async getDashboardActivity(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/api/dashboard/activity/?${queryString}`);
+  }
+
+  async getDashboardSnapshot(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/api/dashboard/snapshot/?${queryString}`);
+  }
+
   // Financials - Credit Ledgers
   async getCreditLedgers() {
     return this.get('/api/financials/credit-ledgers/');

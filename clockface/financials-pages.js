@@ -368,7 +368,8 @@ const FinancialsPages = {
                 <span class="currency-prefix">KES</span>
                 <input type="number" id="payment-amount" min="0" step="0.01" placeholder="0.00">
               </div>
-              <button type="button" class="link-btn" id="pay-exact-btn">Pay Exact Amount (${this.formatKES(data.current_month_expected)})</button>
+              <button type="button" class="link-btn" id="pay-exact-btn">Pay Remaining (${this.formatKES(Math.max(parseFloat(data.current_month_expected || 0) - parseFloat(data.current_month_paid || 0), 0))})</button>
+              <p class="form-hint">This amount is added to the monthly running total.</p>
             </div>
             <div class="form-group">
               <label for="payment-method">Method</label>
@@ -420,8 +421,12 @@ const FinancialsPages = {
     });
 
     container.querySelector('#pay-exact-btn').addEventListener('click', () => {
-      amountInput.value = parseFloat(data.current_month_expected || data.rent_amount);
-      submitBtn.disabled = false;
+      const remaining = Math.max(
+        parseFloat(data.current_month_expected || data.rent_amount) - parseFloat(data.current_month_paid || 0),
+        0
+      );
+      amountInput.value = remaining;
+      submitBtn.disabled = !(remaining > 0);
     });
 
     submitBtn.addEventListener('click', () => {
@@ -431,11 +436,15 @@ const FinancialsPages = {
     const headerPrint = container.querySelector('#header-print-receipt');
     if (headerPrint) {
       headerPrint.addEventListener('click', () => {
-        this.printReceipt(state.lastPayment || this.buildReceiptFromDashboard(data), data);
+        this.printReceiptFromPreview(this.buildReceiptData(data));
       });
     }
 
     this.attachHistorySortHandler(container);
+
+    if (hasPayment) {
+      this.renderPaymentFeedbackColumn(container, data);
+    }
   },
 
   renderCreditArrearsBar(data) {
@@ -490,19 +499,220 @@ const FinancialsPages = {
     `;
   },
 
-  buildReceiptFromDashboard(data) {
+  renderPaymentBreakdown(data) {
+    const monthLabel = `${this.MONTHS[data.billing_month - 1]} ${data.billing_year}`;
+    const txs = data.month_transactions || [];
+    if (txs.length === 0) return '';
+
+    const lines = txs.map(tx => {
+      const ref = tx.reference_number ? `  ${tx.reference_number}` : '';
+      const method = tx.payment_method_display || this.formatMethod(tx.payment_method);
+      return `<div class="breakdown-line"><span>${this.formatDateShort(tx.payment_date)}</span><span>${this.formatKES(tx.amount)}</span><span>${method}${ref}</span></div>`;
+    }).join('');
+
+    const paid = parseFloat(data.current_month_paid || 0);
+    const expected = parseFloat(data.current_month_expected || 0);
+    const surplus = Math.max(paid - expected, 0);
+    const owed = Math.max(expected - paid, 0);
+
+    let totalsHtml = `
+      <div class="breakdown-totals">
+        <div class="breakdown-total-row"><span>Total paid:</span><strong>${this.formatKES(paid)}</strong></div>
+        <div class="breakdown-total-row"><span>Expected:</span><strong>${this.formatKES(expected)}</strong></div>`;
+
+    if (owed > 0) {
+      totalsHtml += `<div class="breakdown-total-row owed"><span>Still owed:</span><strong>${this.formatKES(owed)}</strong></div>`;
+    }
+    if (surplus > 0) {
+      const surplusBreakdown = this.computeSurplusBreakdown(paid, expected, data.rent_amount);
+      const nextMonth = data.next_month_name || 'next month';
+      totalsHtml += `<div class="breakdown-total-row surplus"><span>Surplus:</span><strong>${this.formatKES(surplus)} → ${surplusBreakdown.remainingDays} days credit into ${nextMonth}</strong></div>`;
+    }
+    totalsHtml += '</div>';
+
+    return `
+      <div class="payment-breakdown">
+        <h4>Payment breakdown — ${monthLabel}</h4>
+        <div class="breakdown-lines">${lines}</div>
+        <div class="breakdown-divider"></div>
+        ${totalsHtml}
+      </div>`;
+  },
+
+  formatDateShort(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  },
+
+  buildReceiptData(data) {
+    const paid = parseFloat(data.current_month_paid || 0);
+    const expected = parseFloat(data.current_month_expected || data.rent_amount || 0);
+    const owed = Math.max(expected - paid, 0);
+    const surplus = Math.max(paid - expected, 0);
+    const breakdown = this.computeSurplusBreakdown(paid, expected, data.rent_amount);
+    const txs = data.month_transactions || [];
+    const latestTx = txs.length ? txs[txs.length - 1] : null;
+
     return {
-      billing_month: data.billing_month,
-      billing_year: data.billing_year,
-      amount_paid: data.current_month_paid,
-      amount_expected: data.current_month_expected,
-      payment_method: data.payment_method,
-      reference_number: data.reference_number,
-      payment_date: data.payment_date,
+      propertyName: data.property_name,
+      propertyAddress: data.property_address || '',
+      receiptNo: data.receipt_number || (latestTx && latestTx.receipt_number) || 'RCP-PENDING',
+      date: latestTx ? latestTx.payment_date : data.payment_date,
+      tenantName: data.tenant_name,
+      phone: data.phone,
+      unitLabel: `${data.unit_number}${data.unit_type ? ` (${data.unit_type})` : ''}`,
+      leaseStart: data.lease_start,
+      leaseEnd: data.lease_end,
+      monthLabel: `${this.MONTHS[data.billing_month - 1]} ${data.billing_year}`,
+      rentAmount: data.rent_amount,
+      totalPaid: paid,
+      methods: data.payment_methods_summary || '—',
+      references: data.references_summary || '—',
       status: data.current_month_status,
-      id: data.payment_id,
-      recorded_by_name: data.recorded_by_name
+      owed,
+      surplus,
+      creditDays: breakdown.remainingDays,
+      nextMonth: data.next_month_name || '',
+      recordedBy: data.recorded_by_name || (latestTx && latestTx.recorded_by_name) || '—',
     };
+  },
+
+  renderReceiptPreviewHtml(receipt) {
+    const statusLabel = receipt.status.charAt(0).toUpperCase() + receipt.status.slice(1);
+    let extraRows = '';
+    if (receipt.status === 'partial' && receipt.owed > 0) {
+      extraRows += `<div class="receipt-row"><span>Balance Remaining:</span><span>${this.formatKES(receipt.owed)}</span></div>`;
+    }
+    if (receipt.surplus > 0) {
+      extraRows += `
+        <div class="receipt-row"><span>Surplus:</span><span>${this.formatKES(receipt.surplus)}</span></div>
+        <div class="receipt-row"><span>Credit:</span><span>≈ ${receipt.creditDays} days (${receipt.nextMonth})</span></div>`;
+    }
+
+    return `
+      <div class="receipt-preview-card">
+        <div class="receipt-preview-header">
+          <div class="receipt-property">${receipt.propertyName}</div>
+          <div class="receipt-address">${receipt.propertyAddress}</div>
+        </div>
+        <div class="receipt-preview-title">RENT RECEIPT</div>
+        <div class="receipt-row"><span>Receipt No:</span><span>${receipt.receiptNo}</span></div>
+        <div class="receipt-row"><span>Date:</span><span>${this.formatDate(receipt.date)}</span></div>
+        <div class="receipt-divider"></div>
+        <div class="receipt-row"><span>Tenant:</span><span>${receipt.tenantName}</span></div>
+        <div class="receipt-row"><span>Unit:</span><span>${receipt.unitLabel}</span></div>
+        <div class="receipt-row"><span>Phone:</span><span>${receipt.phone || '—'}</span></div>
+        <div class="receipt-row"><span>Lease:</span><span>${this.formatDate(receipt.leaseStart)} → ${this.formatDate(receipt.leaseEnd)}</span></div>
+        <div class="receipt-divider"></div>
+        <div class="receipt-row"><span>Billing Month:</span><span>${receipt.monthLabel}</span></div>
+        <div class="receipt-row"><span>Monthly Rent:</span><span>${this.formatKES(receipt.rentAmount)}</span></div>
+        <div class="receipt-row receipt-total"><span>Total Paid:</span><span>${this.formatKES(receipt.totalPaid)}</span></div>
+        <div class="receipt-row"><span>Method:</span><span>${receipt.methods}</span></div>
+        <div class="receipt-row"><span>Reference:</span><span>${receipt.references}</span></div>
+        <div class="receipt-row"><span>Status:</span><span>${statusLabel}</span></div>
+        ${extraRows}
+        <div class="receipt-row"><span>Recorded by:</span><span>${receipt.recordedBy}</span></div>
+        <div class="receipt-footer">System-generated receipt · mijengo RMS</div>
+      </div>`;
+  },
+
+  renderPaymentStatusSummary(data) {
+    const monthLabel = `${this.MONTHS[data.billing_month - 1]} ${data.billing_year}`;
+    const paid = parseFloat(data.current_month_paid || 0);
+    const expected = parseFloat(data.current_month_expected || 0);
+    const owed = Math.max(expected - paid, 0);
+    const status = data.current_month_status;
+    const statusClass = `feedback-${status === 'overpaid' ? 'overpaid' : status}`;
+
+    let message = '';
+    if (status === 'paid') {
+      message = `${this.formatKES(paid)} received — Fully paid for ${monthLabel}`;
+    } else if (status === 'partial') {
+      message = `${this.formatKES(paid)} received — ${this.formatKES(owed)} still owed`;
+    } else if (status === 'overpaid') {
+      const surplus = parseFloat(data.surplus_amount || paid - expected);
+      message = `${this.formatKES(paid)} received on ${this.formatKES(expected)} rent · Surplus ${this.formatKES(surplus)}`;
+    } else {
+      message = `${this.formatKES(paid)} recorded for ${monthLabel}`;
+    }
+
+    return `
+      <div class="feedback-result ${statusClass}">
+        <div class="feedback-status">${status}</div>
+        <p>${message}</p>
+      </div>`;
+  },
+
+  renderPaymentFeedbackColumn(container, data) {
+    const feedback = container.querySelector('#payment-feedback');
+    if (!feedback) return;
+
+    const receipt = this.buildReceiptData(data);
+    feedback.innerHTML = `
+      ${this.renderPaymentStatusSummary(data)}
+      ${this.renderPaymentBreakdown(data)}
+      ${this.renderReceiptPreviewHtml(receipt)}
+      <button class="action-button primary-btn full-width-btn" id="feedback-print-receipt">Print Receipt</button>
+    `;
+
+    const headerPrint = container.querySelector('#header-print-receipt');
+    if (headerPrint) headerPrint.classList.remove('hidden');
+
+    const printHandler = () => this.printReceiptFromPreview(receipt);
+    feedback.querySelector('#feedback-print-receipt').addEventListener('click', printHandler);
+    if (headerPrint) headerPrint.onclick = printHandler;
+  },
+
+  printReceiptFromPreview(receipt) {
+    const bodyHtml = this.renderReceiptPreviewHtml(receipt);
+    const win = window.open('', '_blank', 'width=480,height=720');
+    win.document.write(`
+      <!DOCTYPE html><html><head><title>Receipt ${receipt.receiptNo}</title>
+      <style>
+        body { font-family: Georgia, serif; padding: 24px; margin: 0; background: #fff; }
+        .receipt-preview-card { max-width: 400px; margin: 0 auto; font-size: 13px; color: #111; }
+        .receipt-preview-header { text-align: center; margin-bottom: 12px; }
+        .receipt-property { font-weight: 700; font-size: 15px; }
+        .receipt-address { color: #555; font-size: 12px; }
+        .receipt-preview-title { text-align: center; font-weight: 700; letter-spacing: 0.05em; margin: 12px 0; border-top: 1px solid #111; border-bottom: 1px solid #111; padding: 6px 0; }
+        .receipt-row { display: flex; justify-content: space-between; margin: 5px 0; gap: 12px; }
+        .receipt-row span:last-child { text-align: right; }
+        .receipt-total { font-weight: 700; border-top: 1px solid #ccc; padding-top: 8px; margin-top: 6px; }
+        .receipt-divider { border-top: 1px dashed #ccc; margin: 8px 0; }
+        .receipt-footer { text-align: center; margin-top: 16px; font-size: 11px; color: #888; border-top: 1px dashed #ccc; padding-top: 10px; }
+        @media print { body { padding: 12px; } }
+      </style></head><body>${bodyHtml}</body></html>`);
+    win.document.close();
+    win.print();
+  },
+
+  updateTenantDetailAfterPayment(container, data) {
+    container.querySelector('#credit-arrears-bar').innerHTML = this.renderCreditArrearsBar(data);
+    container.querySelector('#tenant-history-table').innerHTML = this.renderTenantHistoryTable(data.payment_history);
+
+    const statusBadge = container.querySelector('#header-status-badge');
+    if (statusBadge) {
+      statusBadge.className = `status-badge status-${data.current_month_status}`;
+      statusBadge.textContent = data.current_month_status;
+    }
+
+    const submitBtn = container.querySelector('#submit-payment-btn');
+    submitBtn.textContent = 'Submit Payment';
+    submitBtn.disabled = true;
+    container.querySelector('#payment-amount').value = '';
+    container.querySelector('#payment-reference').value = '';
+
+    const remaining = Math.max(
+      parseFloat(data.current_month_expected || 0) - parseFloat(data.current_month_paid || 0),
+      0
+    );
+    const payExactBtn = container.querySelector('#pay-exact-btn');
+    if (payExactBtn) {
+      payExactBtn.textContent = `Pay Remaining (${this.formatKES(remaining)})`;
+    }
+
+    this.renderPaymentFeedbackColumn(container, data);
+    this.attachHistorySortHandler(container);
   },
 
   async submitTenantPayment(container) {
@@ -534,85 +744,12 @@ const FinancialsPages = {
       });
       state.dashboard = data;
 
-      this.updateTenantDetailAfterPayment(container, data, result);
+      this.updateTenantDetailAfterPayment(container, data);
     } catch (error) {
       alert('Error recording payment: ' + error.message);
       submitBtn.disabled = false;
       submitBtn.textContent = 'Submit Payment';
     }
-  },
-
-  updateTenantDetailAfterPayment(container, data, payment) {
-    const state = container.tenantDetailState;
-    const monthLabel = `${this.MONTHS[data.billing_month - 1]} ${data.billing_year}`;
-    const feedback = container.querySelector('#payment-feedback');
-    const status = payment.status;
-    const paid = parseFloat(payment.amount_paid || 0);
-    const expected = parseFloat(payment.amount_expected || 0);
-    const owed = Math.max(expected - paid, 0);
-
-    let feedbackHtml = '';
-
-    if (status === 'paid') {
-      feedbackHtml = `
-        <div class="feedback-result feedback-paid">
-          <div class="feedback-status">Paid</div>
-          <p>${this.formatKES(paid)} received — Fully paid for ${monthLabel}</p>
-          <button class="action-button primary-btn" id="feedback-print-receipt">Print Receipt</button>
-        </div>`;
-    } else if (status === 'partial') {
-      feedbackHtml = `
-        <div class="feedback-result feedback-partial">
-          <div class="feedback-status">Partial</div>
-          <p>${this.formatKES(paid)} received — ${this.formatKES(owed)} still owed</p>
-          <button class="action-button primary-btn" id="feedback-print-receipt">Print Receipt</button>
-        </div>`;
-    } else if (status === 'overpaid') {
-      const breakdown = this.computeSurplusBreakdown(paid, expected, data.rent_amount);
-      feedbackHtml = `
-        <div class="feedback-result feedback-overpaid">
-          <div class="feedback-status">Overpaid</div>
-          <p>${this.formatKES(paid)} received on ${this.formatKES(expected)} rent</p>
-          <p>Surplus: ${this.formatKES(breakdown.surplus)}</p>
-          <p>Credit: ${breakdown.fullMonths} full months + ${breakdown.remainingDays} days into next month</p>
-          <p class="credit-formula">(${this.formatKES(data.rent_amount)}/month = ~${this.formatKES(breakdown.dailyRate)}/day)</p>
-          <button class="action-button primary-btn" id="feedback-print-receipt">Print Receipt</button>
-        </div>`;
-    }
-
-    feedback.innerHTML = feedbackHtml;
-
-    container.querySelector('#credit-arrears-bar').innerHTML = this.renderCreditArrearsBar(data);
-    container.querySelector('#tenant-history-table').innerHTML = this.renderTenantHistoryTable(data.payment_history);
-
-    const statusBadge = container.querySelector('#header-status-badge');
-    if (statusBadge) {
-      statusBadge.className = `status-badge status-${data.current_month_status}`;
-      statusBadge.textContent = data.current_month_status;
-    }
-
-    const headerPrint = container.querySelector('#header-print-receipt');
-    if (headerPrint) {
-      headerPrint.classList.remove('hidden');
-    }
-
-    const submitBtn = container.querySelector('#submit-payment-btn');
-    submitBtn.textContent = 'Submit Payment';
-    submitBtn.disabled = true;
-    container.querySelector('#payment-amount').value = '';
-
-    const printBtn = container.querySelector('#feedback-print-receipt');
-    if (printBtn) {
-      printBtn.addEventListener('click', () => {
-        this.printReceipt(payment, data);
-      });
-    }
-
-    if (headerPrint) {
-      headerPrint.onclick = () => this.printReceipt(payment, data);
-    }
-
-    this.attachHistorySortHandler(container);
   },
 
   attachHistorySortHandler(container) {
@@ -634,69 +771,6 @@ const FinancialsPages = {
   formatMethod(method) {
     const map = { cash: 'Cash', mpesa: 'M-Pesa', bank_transfer: 'Bank Transfer', cheque: 'Cheque' };
     return map[method] || method;
-  },
-
-  printReceipt(payment, tenantData) {
-    const monthLabel = `${this.MONTHS[payment.billing_month - 1]} ${payment.billing_year}`;
-    const receiptNo = tenantData.receipt_number ||
-      (payment.id ? `RCP-${payment.billing_year}-${String(payment.id).padStart(4, '0')}` : 'RCP-PENDING');
-    const paid = parseFloat(payment.amount_paid || 0);
-    const expected = parseFloat(payment.amount_expected || tenantData.current_month_expected || tenantData.rent_amount || 0);
-    const owed = Math.max(expected - paid, 0);
-    const breakdown = this.computeSurplusBreakdown(paid, expected, tenantData.rent_amount);
-    const status = payment.status || tenantData.current_month_status;
-    const recordedBy = payment.recorded_by_name || tenantData.recorded_by_name || '—';
-
-    let balanceSection = '';
-    if (status === 'partial') {
-      balanceSection = `<div class="row highlight"><span>Balance Remaining:</span><span>${this.formatKES(owed)}</span></div>`;
-    }
-    if (status === 'overpaid' && breakdown.surplus > 0) {
-      balanceSection = `
-        <div class="row"><span>Surplus:</span><span>${this.formatKES(breakdown.surplus)}</span></div>
-        <div class="row"><span>Credit:</span><span>${breakdown.fullMonths} months + ${breakdown.remainingDays} days</span></div>`;
-    }
-
-    const win = window.open('', '_blank', 'width=480,height=720');
-    win.document.write(`
-      <!DOCTYPE html>
-      <html><head><title>Receipt ${receiptNo}</title>
-      <style>
-        * { box-sizing: border-box; }
-        body { font-family: Georgia, serif; padding: 32px; max-width: 420px; margin: 0 auto; color: #111; }
-        h1 { text-align: center; font-size: 20px; margin: 0 0 4px; }
-        .subtitle { text-align: center; color: #555; font-size: 13px; margin-bottom: 20px; }
-        .receipt-no { text-align: center; font-size: 12px; color: #666; margin-bottom: 16px; }
-        .divider { border-top: 2px solid #111; margin: 12px 0; }
-        .row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 13px; }
-        .row.highlight { font-weight: bold; margin-top: 8px; }
-        .total { font-size: 16px; font-weight: bold; border-top: 1px solid #ccc; padding-top: 10px; margin-top: 10px; }
-        .footer { text-align: center; margin-top: 28px; font-size: 11px; color: #888; border-top: 1px dashed #ccc; padding-top: 12px; }
-        @media print { body { padding: 16px; } }
-      </style></head><body>
-      <h1>${tenantData.property_name || ''}</h1>
-      <div class="subtitle">${tenantData.property_address || ''}</div>
-      <div class="receipt-no">Receipt No: ${receiptNo}</div>
-      <div class="divider"></div>
-      <div class="row"><span>Date:</span><span>${payment.payment_date ? this.formatDate(payment.payment_date) : this.formatDate(new Date())}</span></div>
-      <div class="row"><span>Tenant:</span><span>${tenantData.tenant_name}</span></div>
-      <div class="row"><span>Phone:</span><span>${tenantData.phone || '—'}</span></div>
-      <div class="row"><span>Unit:</span><span>${tenantData.unit_number}</span></div>
-      <div class="row"><span>Lease:</span><span>${this.formatDate(tenantData.lease_start)} → ${this.formatDate(tenantData.lease_end)}</span></div>
-      <div class="row"><span>Billing Month:</span><span>${monthLabel}</span></div>
-      <div class="row"><span>Monthly Rent:</span><span>${this.formatKES(tenantData.rent_amount)}</span></div>
-      <div class="divider"></div>
-      <div class="row total"><span>Amount Paid:</span><span>${this.formatKES(paid)}</span></div>
-      <div class="row"><span>Method:</span><span>${this.formatMethod(payment.payment_method)}</span></div>
-      <div class="row"><span>Reference:</span><span>${payment.reference_number || '—'}</span></div>
-      <div class="row"><span>Status:</span><span>${status.charAt(0).toUpperCase() + status.slice(1)}</span></div>
-      ${balanceSection}
-      <div class="row"><span>Recorded By:</span><span>${recordedBy}</span></div>
-      <div class="footer">This is a system-generated receipt — mijengo RMS</div>
-      </body></html>
-    `);
-    win.document.close();
-    win.print();
   },
 
   generateArrearsNotice(data) {

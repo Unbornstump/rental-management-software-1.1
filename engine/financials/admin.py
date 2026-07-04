@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     RentPayment, CreditLedger, ArrearsRecord,
-    PaymentAuditLog, PaymentStreak
+    PaymentAuditLog, PaymentStreak, PaymentTransaction
 )
 
 
@@ -68,3 +68,11 @@ class PaymentStreakAdmin(admin.ModelAdmin):
     list_display = ['tenant', 'current_streak', 'longest_streak', 'last_payment_date', 'updated_at']
     search_fields = ['tenant__full_name']
     readonly_fields = ['updated_at']
+
+
+@admin.register(PaymentTransaction)
+class PaymentTransactionAdmin(admin.ModelAdmin):
+    list_display = ['receipt_number', 'rent_payment', 'amount', 'payment_method', 'payment_date', 'recorded_by']
+    list_filter = ['payment_method', 'payment_date']
+    search_fields = ['receipt_number', 'rent_payment__tenant__full_name', 'reference_number']
+    readonly_fields = ['receipt_number', 'created_at']

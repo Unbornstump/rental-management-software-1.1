@@ -90,6 +90,34 @@ class RentPayment(models.Model):
         super().save(*args, **kwargs)
 
 
+class PaymentTransaction(models.Model):
+    """Individual payment submission within a billing month (audit trail)."""
+    rent_payment = models.ForeignKey(
+        RentPayment, related_name='transactions', on_delete=models.CASCADE
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
+    payment_method = models.CharField(max_length=32, choices=RentPayment.PAYMENT_METHOD_CHOICES, blank=True)
+    reference_number = models.CharField(max_length=128, blank=True)
+    payment_date = models.DateField()
+    notes = models.TextField(blank=True)
+    receipt_number = models.CharField(max_length=32, blank=True)
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['payment_date', 'created_at']
+
+    def __str__(self):
+        return f"PaymentTransaction: {self.rent_payment} +{self.amount}"
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        if is_new and not self.receipt_number:
+            self.receipt_number = f"RCP-{self.payment_date.year}-{self.id:04d}"
+            super().save(update_fields=['receipt_number'])
+
+
 class CreditLedger(models.Model):
     tenant = models.OneToOneField('core.Tenant', related_name='credit_ledger', on_delete=models.CASCADE)
     credit_balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))

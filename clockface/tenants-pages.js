@@ -3,7 +3,8 @@
 
 const TenantsPages = {
   // Property Tenants (Property Space - Tenants module)
-  async loadPropertyTenants(container, initialFilter = 'active') {
+  async loadPropertyTenants(container, params = {}) {
+    const initialFilter = typeof params === 'string' ? params : (params.filter || 'active');
     const property = AppState.getPropertyContext();
 
     if (!property) {
@@ -18,6 +19,7 @@ const TenantsPages = {
       <div class="tenant-filter-tabs">
         <button class="filter-tab ${initialFilter === 'active' ? 'active' : ''}" data-filter="active">Active Tenants</button>
         <button class="filter-tab ${initialFilter === 'inactive' ? 'active' : ''}" data-filter="inactive">Inactive Tenants</button>
+        ${initialFilter === 'expiring' ? '<button class="filter-tab active" data-filter="expiring">Expiring Leases</button>' : ''}
       </div>
       <div class="tenants-grid" id="tenants-grid"></div>
     `;
@@ -77,22 +79,39 @@ const TenantsPages = {
     const allPropertyTenants = allTenants.filter(t => allPropertyTenantIds.includes(t.id));
 
     const filteredTenants = allPropertyTenants.filter(t => {
+      if (filter === 'expiring') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const cutoff = new Date(today);
+        cutoff.setDate(cutoff.getDate() + 14);
+        return propertyLeases.some(l => {
+          if (l.tenant != t.id || l.status !== 'active') return false;
+          const end = new Date(l.end_date);
+          return end >= today && end <= cutoff;
+        });
+      }
       if (filter === 'active') {
         return t.status === 'active';
-      } else {
-        return t.status === 'inactive';
       }
+      return t.status === 'inactive';
     });
 
     if (filteredTenants.length === 0) {
-      const emptyMessage = filter === 'active' 
-        ? 'No active tenants. Register your first tenant to get started.'
-        : 'No inactive tenants. Tenants appear here after vacating.';
+      const emptyTitles = {
+        active: 'No Active Tenants',
+        inactive: 'No Inactive Tenants',
+        expiring: 'No Expiring Leases',
+      };
+      const emptyMessages = {
+        active: 'No active tenants. Register your first tenant to get started.',
+        inactive: 'No inactive tenants. Tenants appear here after vacating.',
+        expiring: 'No leases expiring within the next 14 days.',
+      };
       tenantsGrid.innerHTML = `
         <div class="empty-state">
           <div class="empty-state-icon">👥</div>
-          <h3 class="empty-state-title">${filter === 'active' ? 'No Active Tenants' : 'No Inactive Tenants'}</h3>
-          <p class="empty-state-text">${emptyMessage}</p>
+          <h3 class="empty-state-title">${emptyTitles[filter] || 'No Tenants'}</h3>
+          <p class="empty-state-text">${emptyMessages[filter] || ''}</p>
           ${filter === 'active' ? `<button class="action-button" onclick="Modals.showTenantModal(null, ${property.id})">+ Register Tenant</button>` : ''}
         </div>
       `;

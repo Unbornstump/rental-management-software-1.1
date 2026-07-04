@@ -105,8 +105,8 @@ const PageLoaders = {
   },
 
   // Property Tenants - delegated to TenantsPages
-  async loadPropertyTenants(container, initialFilter = 'active') {
-    TenantsPages.loadPropertyTenants(container, initialFilter);
+  async loadPropertyTenants(container, params = {}) {
+    TenantsPages.loadPropertyTenants(container, params);
   },
 
   // Tenants (Legacy) - delegated to TenantsPages
@@ -461,7 +461,7 @@ const PageLoaders = {
         this.loadPropertyUnits(contentDiv);
         break;
       case 'property-tenants':
-        this.loadPropertyTenants(contentDiv);
+        TenantsPages.loadPropertyTenants(contentDiv, AppState.getPageParams());
         break;
       case 'units':
         this.loadUnits(contentDiv);

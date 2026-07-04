@@ -10,14 +10,14 @@ from decimal import Decimal
 
 from .models import (
     RentPayment, CreditLedger, ArrearsRecord,
-    PaymentAuditLog, PaymentStreak
+    PaymentAuditLog, PaymentStreak, PaymentTransaction
 )
 from .serializers import (
     RentPaymentSerializer, RentPaymentCreateSerializer,
     CreditLedgerSerializer, ArrearsRecordSerializer,
     PaymentAuditLogSerializer, PaymentStreakSerializer,
     TenantPaymentDashboardSerializer, BulkRentDashboardSerializer,
-    PaymentGridSerializer,
+    PaymentGridSerializer, PaymentTransactionSerializer,
 )
 from core.models import Lease, Unit, Tenant
 from calendar import monthrange
@@ -52,7 +52,76 @@ def compute_credit_breakdown(credit_amount, monthly_rent):
 
 
 def generate_receipt_number(payment):
+    latest_tx = payment.transactions.order_by('-id').first()
+    if latest_tx and latest_tx.receipt_number:
+        return latest_tx.receipt_number
     return f"RCP-{payment.billing_year}-{payment.id:04d}"
+
+
+def get_month_transactions(rent_payment):
+    """Return transaction queryset, or synthesize legacy single entry if none exist."""
+    txs = list(
+        rent_payment.transactions.select_related('recorded_by').order_by('payment_date', 'created_at')
+    )
+    if txs:
+        return txs
+    if rent_payment.amount_paid and rent_payment.amount_paid > 0:
+        return [{
+            'id': None,
+            'amount': rent_payment.amount_paid,
+            'payment_method': rent_payment.payment_method,
+            'payment_method_display': dict(RentPayment.PAYMENT_METHOD_CHOICES).get(
+                rent_payment.payment_method, rent_payment.payment_method
+            ),
+            'reference_number': rent_payment.reference_number,
+            'payment_date': rent_payment.payment_date,
+            'notes': rent_payment.notes,
+            'receipt_number': generate_receipt_number(rent_payment),
+            'recorded_by_name': rent_payment.recorded_by.username if rent_payment.recorded_by else '',
+            'created_at': rent_payment.updated_at,
+            '_legacy': True,
+        }]
+    return []
+
+
+def serialize_month_transactions(rent_payment):
+    txs = get_month_transactions(rent_payment)
+    if not txs:
+        return []
+    if isinstance(txs[0], dict):
+        return txs
+    return PaymentTransactionSerializer(txs, many=True).data
+
+
+def summarize_payment_methods(transactions_data):
+    method_labels = {
+        'cash': 'Cash',
+        'mpesa': 'M-Pesa',
+        'bank_transfer': 'Bank Transfer',
+        'cheque': 'Cheque',
+    }
+    seen = []
+    for tx in transactions_data:
+        method = tx.get('payment_method') if isinstance(tx, dict) else tx.payment_method
+        label = method_labels.get(method, method)
+        if label and label not in seen:
+            seen.append(label)
+    return ' + '.join(seen) if seen else '—'
+
+
+def summarize_references(transactions_data):
+    refs = []
+    for tx in transactions_data:
+        ref = tx.get('reference_number') if isinstance(tx, dict) else tx.reference_number
+        if ref and ref not in refs:
+            refs.append(ref)
+    return ', '.join(refs) if refs else '—'
+
+
+def next_month_name(month, year):
+    if month == 12:
+        return 'January'
+    return date(year, month + 1, 1).strftime('%B')
 
 
 def get_or_create_rent_payment(lease, month, year, user=None):
@@ -80,36 +149,46 @@ def get_or_create_rent_payment(lease, month, year, user=None):
     return payment, True
 
 
-def apply_payment_record(rent_payment, amount_paid, payment_method, reference_number, payment_date, notes, user):
+def apply_payment_record(rent_payment, incremental_amount, payment_method, reference_number, payment_date, notes, user):
+    incremental_amount = Decimal(str(incremental_amount))
+    if incremental_amount <= 0:
+        raise ValueError('Payment amount must be greater than zero')
+
     with transaction.atomic():
-        credit_ledger, _ = CreditLedger.objects.get_or_create(tenant=rent_payment.tenant)
-
-        if amount_paid > rent_payment.amount_expected:
-            surplus = amount_paid - rent_payment.amount_expected
-            credit_ledger.add_credit(surplus)
-            credit_ledger.total_months_credit += surplus / rent_payment.amount_expected
-            credit_ledger.save()
-        elif amount_paid < rent_payment.amount_expected and credit_ledger.credit_balance > 0:
-            remaining = rent_payment.amount_expected - amount_paid
-            if credit_ledger.credit_balance >= remaining:
-                credit_ledger.deduct_credit(remaining)
-                amount_paid = rent_payment.amount_expected
-            else:
-                amount_paid += credit_ledger.credit_balance
-                credit_ledger.credit_balance = Decimal('0.00')
-                credit_ledger.save()
-
         old_status = rent_payment.status
         old_amount = rent_payment.amount_paid
+        new_total = old_amount + incremental_amount
 
-        rent_payment.amount_paid = amount_paid
+        credit_ledger, _ = CreditLedger.objects.get_or_create(tenant=rent_payment.tenant)
+        old_surplus = max(Decimal('0'), old_amount - rent_payment.amount_expected)
+        new_surplus = max(Decimal('0'), new_total - rent_payment.amount_expected)
+        credit_added = new_surplus - old_surplus
+        if credit_added > 0:
+            credit_ledger.add_credit(credit_added)
+            if rent_payment.amount_expected > 0:
+                credit_ledger.total_months_credit += credit_added / rent_payment.amount_expected
+            credit_ledger.save()
+
+        rent_payment.amount_paid = new_total
         rent_payment.payment_date = payment_date
-        rent_payment.payment_method = payment_method or rent_payment.payment_method
-        rent_payment.reference_number = reference_number or rent_payment.reference_number
+        if payment_method:
+            rent_payment.payment_method = payment_method
+        if reference_number:
+            rent_payment.reference_number = reference_number
         if notes:
             rent_payment.notes = notes
         rent_payment.recorded_by = user
         rent_payment.save()
+
+        payment_tx = PaymentTransaction.objects.create(
+            rent_payment=rent_payment,
+            amount=incremental_amount,
+            payment_method=payment_method or '',
+            reference_number=reference_number or '',
+            payment_date=payment_date,
+            notes=notes or '',
+            recorded_by=user,
+        )
 
         arrears_record, _ = ArrearsRecord.objects.get_or_create(tenant=rent_payment.tenant)
 
@@ -133,11 +212,14 @@ def apply_payment_record(rent_payment, amount_paid, payment_method, reference_nu
             old_status=old_status,
             new_status=rent_payment.status,
             old_amount_paid=old_amount,
-            new_amount_paid=amount_paid,
-            change_description=f"Payment recorded: {amount_paid} via {payment_method or 'N/A'}",
+            new_amount_paid=new_total,
+            change_description=(
+                f"Payment +{incremental_amount} via {payment_method or 'N/A'} "
+                f"(total now {new_total})"
+            ),
         )
 
-    return rent_payment
+    return rent_payment, payment_tx
 
 
 def build_payment_grid(property_id, month, year):
@@ -319,14 +401,17 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
         try:
             amount_paid = Decimal(str(amount_paid))
         except (ValueError, TypeError):
-            return Response(
-                {'error': 'Invalid amount_paid'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'Invalid amount_paid'}, status=status.HTTP_400_BAD_REQUEST)
 
-        rent_payment = apply_payment_record(
-            rent_payment, amount_paid, payment_method, reference_number, payment_date, notes, request.user
-        )
+        if amount_paid <= 0:
+            return Response({'error': 'amount_paid must be greater than zero'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            rent_payment, _payment_tx = apply_payment_record(
+                rent_payment, amount_paid, payment_method, reference_number, payment_date, notes, request.user
+            )
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         serializer = self.get_serializer(rent_payment)
         return Response(serializer.data)
 
@@ -382,9 +467,16 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
         except (ValueError, TypeError):
             return Response({'error': 'Invalid amount_paid'}, status=status.HTTP_400_BAD_REQUEST)
 
-        rent_payment = apply_payment_record(
-            rent_payment, amount_paid, payment_method, reference_number, payment_date, notes, request.user
-        )
+        if amount_paid <= 0:
+            return Response({'error': 'amount_paid must be greater than zero'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            rent_payment, _payment_tx = apply_payment_record(
+                rent_payment, amount_paid, payment_method, reference_number, payment_date, notes, request.user
+            )
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = self.get_serializer(rent_payment)
         return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
@@ -451,6 +543,8 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
             days_overdue = (date.today() - due_date).days
 
         credit_breakdown = compute_credit_breakdown(credit_ledger.credit_balance, active_lease.rent_amount)
+        surplus_amount = max(Decimal('0'), amount_paid - amount_expected)
+        month_tx_data = serialize_month_transactions(current_payment) if current_payment else []
 
         data = {
             'tenant_id': tenant.id,
@@ -492,6 +586,11 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
             'payment_streak': payment_streak.current_streak,
             'recorded_by_name': current_payment.recorded_by.username if current_payment and current_payment.recorded_by else '',
             'receipt_number': generate_receipt_number(current_payment) if current_payment and current_payment.amount_paid > 0 else '',
+            'surplus_amount': surplus_amount,
+            'next_month_name': next_month_name(month, year),
+            'month_transactions': month_tx_data,
+            'payment_methods_summary': summarize_payment_methods(month_tx_data),
+            'references_summary': summarize_references(month_tx_data),
             'payment_history': payment_history,
         }
 

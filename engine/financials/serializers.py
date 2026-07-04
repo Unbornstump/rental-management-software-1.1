@@ -2,10 +2,27 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import (
     RentPayment, CreditLedger, ArrearsRecord,
-    PaymentAuditLog, PaymentStreak
+    PaymentAuditLog, PaymentStreak, PaymentTransaction
 )
 
 User = get_user_model()
+
+
+class PaymentTransactionSerializer(serializers.ModelSerializer):
+    recorded_by_name = serializers.CharField(source='recorded_by.username', read_only=True)
+    payment_method_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PaymentTransaction
+        fields = [
+            'id', 'amount', 'payment_method', 'payment_method_display',
+            'reference_number', 'payment_date', 'notes', 'receipt_number',
+            'recorded_by_name', 'created_at',
+        ]
+        read_only_fields = fields
+
+    def get_payment_method_display(self, obj):
+        return dict(RentPayment.PAYMENT_METHOD_CHOICES).get(obj.payment_method, obj.payment_method)
 
 
 class RentPaymentSerializer(serializers.ModelSerializer):
@@ -140,6 +157,12 @@ class TenantPaymentDashboardSerializer(serializers.Serializer):
     last_payment_method = serializers.CharField(allow_null=True)
 
     payment_streak = serializers.IntegerField()
+
+    month_transactions = serializers.ListField(child=serializers.DictField(), required=False)
+    payment_methods_summary = serializers.CharField(required=False, allow_blank=True)
+    references_summary = serializers.CharField(required=False, allow_blank=True)
+    surplus_amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    next_month_name = serializers.CharField(required=False, allow_blank=True)
 
     payment_history = RentPaymentSerializer(many=True)
 
