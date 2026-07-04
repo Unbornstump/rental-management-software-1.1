@@ -20,7 +20,7 @@ async function initializeApp() {
     // Load initial page - if no property context, show property list
     const property = AppState.getPropertyContext();
     if (property) {
-      PageLoaders.loadPage('dashboard');
+      PageLoaders.loadPage('property-dashboard');
     } else {
       PageLoaders.loadPage('properties');
     }

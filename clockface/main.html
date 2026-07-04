@@ -8,8 +8,8 @@
   <link rel="stylesheet" href="main.css">
 </head>
 <body>
-  <div class="main-container">
-    <aside class="sidebar">
+  <div class="main-container no-sidebar">
+    <aside class="sidebar" aria-hidden="true">
       <nav class="sidebar-nav">
         <!-- General App Navigation -->
         <div id="global-nav">
@@ -24,7 +24,7 @@
             <div class="property-context-header">
               <div class="property-context-info">
                 <div class="property-context-name" id="property-context-name">Property Name</div>
-                <div class="property-context-label">Property Space</div>
+                <div class="property-context-label" id="property-context-type">Property type</div>
               </div>
             </div>
             <div class="nav-divider"></div>

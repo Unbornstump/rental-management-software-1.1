@@ -5,6 +5,7 @@ const AppState = {
   authToken: null,
   currentProperty: null, // null = all properties, object = specific property
   allProperties: [],
+  currentPage: null, // Track current page for sidebar visibility
 
   setAuthToken(token) {
     this.authToken = token;
@@ -43,6 +44,14 @@ const AppState = {
 
   getPropertyById(id) {
     return this.allProperties.find(p => p.id == id);
+  },
+
+  setCurrentPage(page) {
+    this.currentPage = page;
+  },
+
+  getCurrentPage() {
+    return this.currentPage;
   },
 
   pageParams: null,

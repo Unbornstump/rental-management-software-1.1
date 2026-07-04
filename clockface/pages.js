@@ -15,6 +15,22 @@ const PageLoaders = {
     SharedComponents.updateSidebarVisibility();
   },
 
+  syncNavActiveState(pageName) {
+    const navMap = {
+      'property-dashboard': 'property-dashboard',
+      'property-units': 'property-units',
+      'property-tenants': 'property-tenants',
+      'financials': 'financials',
+      'financials-tenant-detail': 'financials',
+    };
+    const activePage = navMap[pageName];
+    if (!activePage) return;
+
+    document.querySelectorAll('.nav-button[data-page]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.page === activePage);
+    });
+  },
+
   renderPropertySpaceHeader(title, propertyName, actionsHtml = '') {
     return SharedComponents.renderPropertySpaceHeader(title, propertyName, actionsHtml);
   },
@@ -434,19 +450,26 @@ const PageLoaders = {
     const contentDiv = document.getElementById('page-content');
     contentDiv.innerHTML = '<p>Loading...</p>';
 
+    // Track current page
+    AppState.setCurrentPage(pageName);
+
     // Handle back button action
     if (pageName === 'back-to-properties') {
       AppState.clearPropertyContext();
       AppState.clearPageParams();
+      AppState.setCurrentPage('properties');
       this.updateSidebarVisibility();
-      this.loadPage('properties');
+      contentDiv.innerHTML = '';
+      this.loadProperties(contentDiv);
       return;
     }
 
     // Property space pages - require property context
     const propertySpacePages = ['property-dashboard', 'property-units', 'property-tenants', 'financials', 'financials-tenant-detail'];
     if (propertySpacePages.includes(pageName) && !AppState.getPropertyContext()) {
+      AppState.setCurrentPage('properties');
       this.loadProperties(contentDiv);
+      this.updateSidebarVisibility();
       return;
     }
 
@@ -490,5 +513,9 @@ const PageLoaders = {
       default:
         contentDiv.innerHTML = '<p>Page not found</p>';
     }
+
+    // Update sidebar visibility and nav state after page load
+    this.updateSidebarVisibility();
+    this.syncNavActiveState(pageName);
   }
 };

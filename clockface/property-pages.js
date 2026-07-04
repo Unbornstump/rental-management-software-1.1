@@ -419,7 +419,8 @@ const PropertyPages = {
   onPropertyDeleted(container, propertyId) {
     if (AppState.getPropertyContext()?.id == propertyId) {
       AppState.clearPropertyContext();
-      SharedComponents.updateSidebarVisibility();
+      PageLoaders.loadPage('properties');
+      return;
     }
     AppState.setAllProperties(AppState.getAllProperties().filter(p => p.id != propertyId));
     const card = container.querySelector(`.property-card[data-property-id="${propertyId}"]`);
@@ -432,10 +433,18 @@ const PropertyPages = {
   async loadProperties(container) {
     container.innerHTML = `
       <div class="property-list-header">
-        <h1 class="page-title">Properties</h1>
+        <div class="property-list-header-text">
+          <h1 class="page-title">Properties</h1>
+          <p class="property-list-subtitle">Select a property to get started</p>
+        </div>
+        <button type="button" class="action-button" id="add-property-header-btn">+ Add Property</button>
       </div>
       <div class="properties-grid" id="properties-grid"></div>
     `;
+
+    document.getElementById('add-property-header-btn').addEventListener('click', () => {
+      Modals.showPropertyModal();
+    });
 
     const propertiesGrid = document.getElementById('properties-grid');
 
@@ -515,7 +524,6 @@ const PropertyPages = {
           const property = AppState.getPropertyById(propertyId);
           if (property) {
             AppState.setPropertyContext(property);
-            SharedComponents.updateSidebarVisibility();
             PageLoaders.loadPage('property-dashboard');
           }
         });

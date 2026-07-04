@@ -48,16 +48,29 @@ const SharedComponents = {
 
   updateSidebarVisibility() {
     const property = AppState.getPropertyContext();
-    const globalNav = document.getElementById('global-nav');
+    const currentPage = AppState.getCurrentPage();
+    const mainContainer = document.querySelector('.main-container');
+    const sidebar = document.querySelector('.sidebar');
     const propertySpaceNav = document.getElementById('property-space-nav');
     const propertyContextName = document.getElementById('property-context-name');
+    const propertyContextType = document.getElementById('property-context-type');
+    const showSidebar = Boolean(property) && currentPage !== 'properties';
 
-    if (property) {
-      globalNav.style.display = 'none';
+    if (showSidebar) {
+      mainContainer.classList.remove('no-sidebar');
+      mainContainer.classList.add('sidebar-visible');
+      sidebar.classList.remove('hidden');
+      sidebar.setAttribute('aria-hidden', 'false');
       propertySpaceNav.style.display = 'flex';
-      propertyContextName.textContent = property.name;
+      if (propertyContextName) propertyContextName.textContent = property.name;
+      if (propertyContextType) {
+        propertyContextType.textContent = property.property_type || 'Property';
+      }
     } else {
-      globalNav.style.display = 'block';
+      mainContainer.classList.add('no-sidebar');
+      mainContainer.classList.remove('sidebar-visible');
+      sidebar.classList.add('hidden');
+      sidebar.setAttribute('aria-hidden', 'true');
       propertySpaceNav.style.display = 'none';
     }
   },
