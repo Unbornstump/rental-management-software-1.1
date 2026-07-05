@@ -88,6 +88,10 @@ const Modals = {
 
   // Unit Modal
   showUnitModal(unit = null, preselectedPropertyId = null) {
+    if (!(AppState.isManager() || AppState.isPropertyOfficer())) {
+      alert('You do not have permission to manage units.');
+      return;
+    }
     const isEdit = unit !== null;
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
@@ -192,6 +196,10 @@ const Modals = {
 
   // Bulk Unit Creation Modal
   showBulkUnitModal(propertyId) {
+    if (!(AppState.isManager() || AppState.isPropertyOfficer())) {
+      alert('You do not have permission to create units.');
+      return;
+    }
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `
@@ -274,6 +282,10 @@ const Modals = {
   },
 
   async showDeleteUnitsModal(propertyId) {
+    if (!(AppState.isManager() || AppState.isPropertyOfficer())) {
+      alert('You do not have permission to delete units.');
+      return;
+    }
     const extractUnitNumber = (unitNumber) => {
       if (!unitNumber) return 0;
       const matches = unitNumber.match(/\d+/g);
@@ -377,6 +389,10 @@ const Modals = {
 
   // Unit Edit Modal (for individual unit editing)
   showUnitEditModal(unit) {
+    if (!(AppState.isManager() || AppState.isPropertyOfficer())) {
+      alert('You do not have permission to edit units.');
+      return;
+    }
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `
@@ -517,6 +533,11 @@ const Modals = {
 
   // Tenant Modal
   async showTenantModal(tenant = null, propertyId = null) {
+    if (!AppState.isManager()) {
+      alert('You do not have permission to manage tenants.');
+      return;
+    }
+
     const isEdit = tenant !== null;
     const property = propertyId ? { id: propertyId } : AppState.getPropertyContext();
     

@@ -37,12 +37,26 @@ ipcRenderer.on('auth-token', (event, authData) => {
     showPasswordChangeDialog();
   }
   
-  // Show admin nav if user is manager
+  // Show admin nav only if user is manager
   const adminNav = document.getElementById('admin-nav');
-  if (adminNav && AppState.isManager()) {
-    adminNav.style.display = 'block';
+  if (adminNav) {
+    adminNav.style.display = AppState.isManager() ? 'block' : 'none';
   }
-  
+
+  // Hide financials and unit management links for unauthorized roles
+  const financialsNav = document.querySelector('.nav-button[data-page="financials"]');
+  const unitsNav = document.querySelector('.nav-button[data-page="property-units"]');
+  const tenantsNav = document.querySelector('.nav-button[data-page="property-tenants"]');
+  if (financialsNav) {
+    financialsNav.style.display = AppState.isManager() || AppState.isAccountant() ? 'block' : 'none';
+  }
+  if (unitsNav) {
+    unitsNav.style.display = AppState.isManager() || AppState.isPropertyOfficer() || AppState.isCaretaker() ? 'block' : 'none';
+  }
+  if (tenantsNav) {
+    tenantsNav.style.display = AppState.isManager() || AppState.isAccountant() || AppState.isCaretaker() ? 'block' : 'none';
+  }
+
   // Start session timeout
   resetSessionTimeout();
   

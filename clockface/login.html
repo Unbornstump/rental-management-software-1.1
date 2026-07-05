@@ -64,6 +64,31 @@
       <div id="recovery-form-container" class="recovery-form-container" hidden></div>
     </div>
   </div>
+
+  <div id="password-change-screen" class="password-change-screen" hidden>
+    <div class="password-change-card" role="dialog" aria-modal="true" aria-labelledby="password-change-title">
+      <h2 id="password-change-title">Set New Password</h2>
+      <p id="password-change-welcome" class="password-change-welcome"></p>
+      <p class="password-change-subtitle">You must set a new password before continuing.</p>
+
+      <form id="password-change-form" class="password-change-form">
+        <div class="form-group">
+          <label for="new-password">New Password</label>
+          <input type="password" id="new-password" class="modal-input" placeholder="Enter new password" required>
+          <span class="field-error" id="new-password-error"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="confirm-password">Confirm Password</label>
+          <input type="password" id="confirm-password" class="modal-input" placeholder="Confirm new password" required>
+          <span class="field-error" id="confirm-password-error"></span>
+        </div>
+
+        <button type="submit" class="modal-button">Set Password & Continue</button>
+      </form>
+    </div>
+  </div>
+
   <script src="api-client.js"></script>
   <script src="state.js"></script>
   <script src="login.js"></script>

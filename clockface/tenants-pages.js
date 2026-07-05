@@ -139,9 +139,14 @@ const TenantsPages = {
       <div class="tenants-grid" id="tenants-grid"></div>
     `;
 
-    document.getElementById('create-tenant-btn').addEventListener('click', () => {
-      Modals.showTenantModal(null, property.id);
-    });
+    const createTenantButton = document.getElementById('create-tenant-btn');
+    if (AppState.isManager()) {
+      createTenantButton.addEventListener('click', () => {
+        Modals.showTenantModal(null, property.id);
+      });
+    } else {
+      createTenantButton.style.display = 'none';
+    }
 
     const searchInput = document.getElementById('tenants-search');
     let searchQuery = '';
@@ -415,7 +420,7 @@ const TenantsPages = {
           <div class="empty-state-icon">👥</div>
           <h3 class="empty-state-title">${emptyTitle}</h3>
           <p class="empty-state-text">${emptyMessage}</p>
-          ${showButton ? `<button class="action-button" onclick="Modals.showTenantModal(null, ${property.id})">+ Register Tenant</button>` : ''}
+          ${showButton && AppState.isManager() ? `<button class="action-button" onclick="Modals.showTenantModal(null, ${property.id})">+ Register Tenant</button>` : ''}
         </div>
       `;
       
@@ -581,7 +586,7 @@ const TenantsPages = {
             <p><strong>Status:</strong> ${tenant.status === 'active' ? 'Active' : 'Inactive'}</p>
           </div>
           <div class="action-buttons">
-            <button class="action-button danger-btn" id="vacate-tenant-btn">Vacate Tenant</button>
+            ${AppState.isManager() ? `<button class="action-button danger-btn" id="vacate-tenant-btn">Vacate Tenant</button>` : '<p class="action-note">Only managers can vacate tenants.</p>'}
           </div>
         </div>
       </div>
@@ -691,12 +696,18 @@ const TenantsPages = {
 
     SharedComponents.attachContextSelectorHandler(container);
 
-    document.getElementById('create-tenant-btn').addEventListener('click', () => {
-      Modals.showTenantModal();
-    });
+    const createTenantButton = document.getElementById('create-tenant-btn');
+    if (AppState.isManager()) {
+      createTenantButton.addEventListener('click', () => {
+        Modals.showTenantModal();
+      });
+    } else {
+      createTenantButton.style.display = 'none';
+    }
 
     const list = document.getElementById('tenants-list');
     const property = AppState.getPropertyContext();
+    const canManageTenants = AppState.isManager();
 
     try {
       const tenants = await apiClient.getTenants();
@@ -718,8 +729,8 @@ const TenantsPages = {
             <span>${tenant.phone || 'N/A'} — ${tenant.email || 'N/A'}</span>
           </div>
           <div class="data-item-actions">
-            <button class="action-button-small edit-btn" data-id="${tenant.id}">Edit</button>
-            <button class="action-button-small delete-btn" data-id="${tenant.id}">Delete</button>
+            ${canManageTenants ? `<button class="action-button-small edit-btn" data-id="${tenant.id}">Edit</button>` : ''}
+            ${canManageTenants ? `<button class="action-button-small delete-btn" data-id="${tenant.id}">Delete</button>` : ''}
           </div>
         </li>
       `).join('');

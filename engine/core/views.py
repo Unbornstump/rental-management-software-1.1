@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils.crypto import get_random_string
 from financials.models import RentPayment
+from .permissions import RolePermission
 from .models import (
     Property, Unit, Landlord, LandlordProperty, Commission, LandlordPayout,
     Tenant, TenantUnit, Lease, Invoice, Payment, PenaltyRule, Reminder,
@@ -25,12 +26,6 @@ from .serializers import (
 )
 
 User = get_user_model()
-
-
-class IsManager(permissions.BasePermission):
-    """Only managers can access."""
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == User.MANAGER
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -66,10 +61,10 @@ class UserViewSet(viewsets.ModelViewSet):
             return [permissions.IsAuthenticated()]
         elif self.action in ['staff', 'create_staff', 'update_role', 'reset_password', 'deactivate']:
             # Only managers can manage staff
-            return [permissions.IsAuthenticated(), IsManager()]
+            return [permissions.IsAuthenticated(), RolePermission([User.MANAGER])()]
         else:
             # Default to manager only for list/create/update/destroy
-            return [permissions.IsAuthenticated(), IsManager()]
+            return [permissions.IsAuthenticated(), RolePermission([User.MANAGER])()]
 
     @action(detail=False, methods=['get'])
     def me(self, request):
@@ -249,7 +244,7 @@ class UserViewSet(viewsets.ModelViewSet):
 class PropertyViewSet(viewsets.ModelViewSet):
     queryset = Property.objects.all().order_by('-date_added')
     serializer_class = PropertySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
     @transaction.atomic
     def destroy(self, request, *args, **kwargs):
@@ -286,116 +281,130 @@ class PropertyViewSet(viewsets.ModelViewSet):
 class UnitViewSet(viewsets.ModelViewSet):
     queryset = Unit.objects.select_related('property').all().order_by('property', 'unit_number')
     serializer_class = UnitSerializer
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.IsAuthenticated(), RolePermission([User.MANAGER, User.PROPERTY_OFFICER, User.CARETAKER])()]
+        if self.action in ['create', 'update', 'partial_update']:
+            return [permissions.IsAuthenticated(), RolePermission([User.MANAGER, User.PROPERTY_OFFICER])()]
+        return [permissions.IsAuthenticated(), RolePermission([User.MANAGER])()]
 
 
 class LandlordViewSet(viewsets.ModelViewSet):
     queryset = Landlord.objects.all().order_by('full_name')
     serializer_class = LandlordSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
 
 class LandlordPropertyViewSet(viewsets.ModelViewSet):
     queryset = LandlordProperty.objects.select_related('landlord', 'property').all()
     serializer_class = LandlordPropertySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
 
 class CommissionViewSet(viewsets.ModelViewSet):
     queryset = Commission.objects.select_related('landlord', 'property', 'payment').all()
     serializer_class = CommissionSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
 
 class LandlordPayoutViewSet(viewsets.ModelViewSet):
     queryset = LandlordPayout.objects.select_related('landlord', 'property').all()
     serializer_class = LandlordPayoutSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
 
 class TenantViewSet(viewsets.ModelViewSet):
     queryset = Tenant.objects.all().order_by('-date_added')
     serializer_class = TenantSerializer
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.IsAuthenticated(), RolePermission([User.MANAGER, User.ACCOUNTANT, User.CARETAKER])()]
+        return [permissions.IsAuthenticated(), RolePermission([User.MANAGER])()]
 
 
 class TenantUnitViewSet(viewsets.ModelViewSet):
     queryset = TenantUnit.objects.select_related('tenant', 'unit').all()
     serializer_class = TenantUnitSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
 
 class LeaseViewSet(viewsets.ModelViewSet):
     queryset = Lease.objects.select_related('tenant', 'unit').all()
     serializer_class = LeaseSerializer
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.IsAuthenticated(), RolePermission([User.MANAGER, User.ACCOUNTANT])()]
+        return [permissions.IsAuthenticated(), RolePermission([User.MANAGER])()]
 
 
 class InvoiceViewSet(viewsets.ModelViewSet):
     queryset = Invoice.objects.select_related('tenant', 'unit').all()
     serializer_class = InvoiceSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
 
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.select_related('invoice', 'tenant').all()
     serializer_class = PaymentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
 
 class PenaltyRuleViewSet(viewsets.ModelViewSet):
     queryset = PenaltyRule.objects.select_related('property').all()
     serializer_class = PenaltyRuleSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
 
 class ReminderViewSet(viewsets.ModelViewSet):
     queryset = Reminder.objects.select_related('invoice', 'tenant').all()
     serializer_class = ReminderSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
 
 class ExpenseViewSet(viewsets.ModelViewSet):
     queryset = Expense.objects.select_related('property', 'unit', 'added_by').all()
     serializer_class = ExpenseSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
 
 class DepositViewSet(viewsets.ModelViewSet):
     queryset = Deposit.objects.select_related('lease').all()
     serializer_class = DepositSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
 
 class MessageTemplateViewSet(viewsets.ModelViewSet):
     queryset = MessageTemplate.objects.all()
     serializer_class = MessageTemplateSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
 
 class MessageLogViewSet(viewsets.ModelViewSet):
     queryset = MessageLog.objects.select_related('tenant', 'related_invoice').all()
     serializer_class = MessageLogSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
 
 class MaintenanceRequestViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceRequest.objects.select_related('unit', 'reported_by').all()
     serializer_class = MaintenanceRequestSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
 
 class MaintenanceAssignmentViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceAssignment.objects.select_related('request', 'assigned_to').all()
     serializer_class = MaintenanceAssignmentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     """Read-only audit log (manager only)."""
     queryset = AuditLog.objects.all()
     serializer_class = AuditLogSerializer
-    permission_classes = [permissions.IsAuthenticated, IsManager]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
     def get_queryset(self):
         queryset = AuditLog.objects.all()
@@ -455,7 +464,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
 
 class SystemSettingsViewSet(viewsets.ViewSet):
     """System settings management (manager only)."""
-    permission_classes = [permissions.IsAuthenticated, IsManager]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
     def list(self, request):
         """Get system settings."""

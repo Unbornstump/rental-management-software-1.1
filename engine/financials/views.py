@@ -19,7 +19,8 @@ from .serializers import (
     TenantPaymentDashboardSerializer, BulkRentDashboardSerializer,
     PaymentGridSerializer, PaymentTransactionSerializer,
 )
-from core.models import Lease, Unit, Tenant
+from core.models import Lease, Unit, Tenant, CustomUser
+from core.permissions import RolePermission
 from calendar import monthrange
 
 
@@ -322,11 +323,25 @@ def build_payment_grid(property_id, month, year):
 
 
 class RentPaymentViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['tenant__full_name', 'unit__unit_number', 'reference_number']
     ordering_fields = ['billing_year', 'billing_month', 'due_date', 'payment_date']
     ordering = ['-billing_year', '-billing_month', 'due_date']
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated(), RolePermission([CustomUser.MANAGER, CustomUser.ACCOUNTANT])()]
+        if self.action in ['create', 'update', 'partial_update']:
+            return [IsAuthenticated(), RolePermission([CustomUser.MANAGER, CustomUser.ACCOUNTANT])()]
+        if self.action in ['destroy']:
+            return [IsAuthenticated(), RolePermission([CustomUser.MANAGER])()]
+        if self.action in ['record_payment', 'record_for_tenant']:
+            return [IsAuthenticated(), RolePermission([CustomUser.MANAGER, CustomUser.ACCOUNTANT])()]
+        if self.action in ['tenant_dashboard', 'payment_grid', 'summary', 'tenant_history', 'bulk_dashboard']:
+            return [IsAuthenticated(), RolePermission([CustomUser.MANAGER, CustomUser.ACCOUNTANT])()]
+        if self.action == 'generate_billing_cycle':
+            return [IsAuthenticated(), RolePermission([CustomUser.MANAGER])()]
+        return [IsAuthenticated(), RolePermission([CustomUser.MANAGER])()]
 
     def get_queryset(self):
         queryset = RentPayment.objects.select_related(
@@ -751,19 +766,19 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
 class CreditLedgerViewSet(viewsets.ModelViewSet):
     queryset = CreditLedger.objects.select_related('tenant')
     serializer_class = CreditLedgerSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission([CustomUser.MANAGER])]
 
 
 class ArrearsRecordViewSet(viewsets.ModelViewSet):
     queryset = ArrearsRecord.objects.select_related('tenant')
     serializer_class = ArrearsRecordSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission([CustomUser.MANAGER])]
 
 
 class PaymentAuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = PaymentAuditLog.objects.select_related('rent_payment', 'changed_by')
     serializer_class = PaymentAuditLogSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission([CustomUser.MANAGER])]
     filter_backends = [filters.OrderingFilter]
     ordering = ['-timestamp']
 
@@ -771,4 +786,4 @@ class PaymentAuditLogViewSet(viewsets.ReadOnlyModelViewSet):
 class PaymentStreakViewSet(viewsets.ModelViewSet):
     queryset = PaymentStreak.objects.select_related('tenant')
     serializer_class = PaymentStreakSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission([CustomUser.MANAGER])]

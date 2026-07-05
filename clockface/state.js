@@ -66,6 +66,18 @@ const AppState = {
     return this.userRole;
   },
 
+  isAccountant() {
+    return this.userRole === 'accountant';
+  },
+
+  isPropertyOfficer() {
+    return this.userRole === 'property_officer';
+  },
+
+  isCaretaker() {
+    return this.userRole === 'caretaker';
+  },
+
   setUsername(username) {
     this.username = username;
     this.persistSessionState();

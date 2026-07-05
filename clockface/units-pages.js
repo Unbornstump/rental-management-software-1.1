@@ -21,13 +21,21 @@ const UnitsPages = {
       <div id="units-container"></div>
     `;
 
-    document.getElementById('create-unit-btn').addEventListener('click', () => {
-      Modals.showBulkUnitModal(property.id);
-    });
+    const createUnitButton = document.getElementById('create-unit-btn');
+    const deleteUnitsButton = document.getElementById('delete-units-btn');
+    const canManageUnits = AppState.isManager() || AppState.isPropertyOfficer();
 
-    document.getElementById('delete-units-btn').addEventListener('click', () => {
-      Modals.showDeleteUnitsModal(property.id);
-    });
+    if (canManageUnits) {
+      createUnitButton.addEventListener('click', () => {
+        Modals.showBulkUnitModal(property.id);
+      });
+      deleteUnitsButton.addEventListener('click', () => {
+        Modals.showDeleteUnitsModal(property.id);
+      });
+    } else {
+      createUnitButton.style.display = 'none';
+      deleteUnitsButton.style.display = 'none';
+    }
 
     this.renderUnits(container, property);
   },
@@ -52,12 +60,13 @@ const UnitsPages = {
       }));
 
       if (filteredUnits.length === 0) {
+        const canManageUnits = AppState.isManager() || AppState.isPropertyOfficer();
         unitsContainer.innerHTML = `
           <div class="empty-state">
             <div class="empty-state-icon">🚪</div>
             <h3 class="empty-state-title">No Units Yet</h3>
             <p class="empty-state-text">Bulk create your first units to get started.</p>
-            <button class="action-button" onclick="Modals.showBulkUnitModal(${property.id})">+ Bulk Create Units</button>
+            ${canManageUnits ? `<button class="action-button" onclick="Modals.showBulkUnitModal(${property.id})">+ Bulk Create Units</button>` : ''}
           </div>
         `;
         return;
@@ -151,8 +160,10 @@ const UnitsPages = {
 
     container.appendChild(tableSection);
 
+    const canEditUnits = AppState.isManager() || AppState.isPropertyOfficer();
     tableSection.querySelectorAll('.unit-row').forEach(row => {
       row.addEventListener('click', () => {
+        if (!canEditUnits) return;
         const unitId = row.dataset.unitId;
         const unit = units.find(u => u.id == unitId);
         if (unit) {
@@ -175,10 +186,16 @@ const UnitsPages = {
 
     SharedComponents.attachContextSelectorHandler(container);
 
-    document.getElementById('create-unit-btn').addEventListener('click', () => {
-      const property = AppState.getPropertyContext();
-      Modals.showUnitModal(null, property?.id);
-    });
+    const canManageUnits = AppState.isManager() || AppState.isPropertyOfficer();
+    const createUnitBtn = document.getElementById('create-unit-btn');
+    if (canManageUnits) {
+      createUnitBtn.addEventListener('click', () => {
+        const property = AppState.getPropertyContext();
+        Modals.showUnitModal(null, property?.id);
+      });
+    } else {
+      createUnitBtn.style.display = 'none';
+    }
 
     const list = document.getElementById('units-list');
     const property = AppState.getPropertyContext();
@@ -199,8 +216,8 @@ const UnitsPages = {
             <span>${unit.unit_type || 'N/A'} — ${unit.rent_amount || 'N/A'}</span>
           </div>
           <div class="data-item-actions">
-            <button class="action-button-small edit-btn" data-id="${unit.id}">Edit</button>
-            <button class="action-button-small delete-btn" data-id="${unit.id}">Delete</button>
+            ${canManageUnits ? `<button class="action-button-small edit-btn" data-id="${unit.id}">Edit</button>` : ''}
+            ${canManageUnits ? `<button class="action-button-small delete-btn" data-id="${unit.id}">Delete</button>` : ''}
           </div>
         </li>
       `).join('');

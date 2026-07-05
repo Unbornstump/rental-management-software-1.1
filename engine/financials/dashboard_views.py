@@ -3,6 +3,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 
+from core.models import CustomUser
+from core.permissions import RolePermission
+
 from .dashboard import (
     build_dashboard_summary,
     build_payment_status,
@@ -30,7 +33,7 @@ class PropertyDashboardMixin:
 
 
 class DashboardSummaryView(PropertyDashboardMixin, APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission([CustomUser.MANAGER])]
 
     def get(self, request):
         property_id, err = self.require_property(request)
@@ -45,7 +48,7 @@ class DashboardSummaryView(PropertyDashboardMixin, APIView):
 
 
 class DashboardPaymentStatusView(PropertyDashboardMixin, APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission([CustomUser.MANAGER])]
 
     def get(self, request):
         property_id, err = self.require_property(request)
@@ -60,7 +63,7 @@ class DashboardPaymentStatusView(PropertyDashboardMixin, APIView):
 
 
 class DashboardAlertsView(PropertyDashboardMixin, APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission([CustomUser.MANAGER])]
 
     def get(self, request):
         property_id, err = self.require_property(request)
@@ -70,7 +73,7 @@ class DashboardAlertsView(PropertyDashboardMixin, APIView):
 
 
 class DashboardActivityView(PropertyDashboardMixin, APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission([CustomUser.MANAGER])]
 
     def get(self, request):
         property_id, err = self.require_property(request)
@@ -81,7 +84,7 @@ class DashboardActivityView(PropertyDashboardMixin, APIView):
 
 
 class DashboardSnapshotView(PropertyDashboardMixin, APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission([CustomUser.MANAGER])]
 
     def get(self, request):
         property_id, err = self.require_property(request)

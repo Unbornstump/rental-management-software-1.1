@@ -10,6 +10,7 @@ from django.contrib.auth.hashers import make_password, check_password
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from core.models import AuditLog, SystemSettings, SecurityQuestion, RecoveryCode, format_audit_log_details
+from core.permissions import RolePermission
 from .serializers import (
     StaffSerializer, StaffUpdateSerializer, PasswordResetSerializer,
     AuditLogSerializer, SystemSettingsSerializer, ChangePasswordSerializer,
@@ -317,7 +318,7 @@ def change_password(request):
 
 class StaffListView(generics.ListCreateAPIView):
     serializer_class = StaffSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
     def get_queryset(self):
         user = self.request.user
@@ -354,7 +355,7 @@ class StaffListView(generics.ListCreateAPIView):
 
 class StaffDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = StaffUpdateSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
     def get_queryset(self):
         user = self.request.user
@@ -423,7 +424,7 @@ def reset_staff_password(request, staff_id):
 
 class AuditLogListView(generics.ListAPIView):
     serializer_class = AuditLogSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
     def get_queryset(self):
         user = self.request.user
@@ -455,7 +456,7 @@ class AuditLogListView(generics.ListAPIView):
 
 class SystemSettingsView(generics.RetrieveUpdateAPIView):
     serializer_class = SystemSettingsSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
     def get_object(self):
         settings, created = SystemSettings.objects.get_or_create(id=1)
