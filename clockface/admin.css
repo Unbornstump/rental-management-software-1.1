@@ -145,32 +145,35 @@
 }
 
 .action-button {
-  background-color: var(--primary-color);
+  background-color: #1A1A1A;
   color: white;
 }
 
 .action-button:hover {
-  background-color: var(--primary-dark);
+  background-color: #333333;
 }
 
 .action-button.secondary {
-  background-color: var(--background-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
+  background-color: #FFFFFF;
+  color: #1A1A1A;
+  border: 1px solid #E5E5E5;
 }
 
 .action-button.secondary:hover {
-  background-color: var(--background-tertiary);
+  background-color: #1A1A1A;
+  color: #FFFFFF;
+  border-color: #1A1A1A;
 }
 
 .cancel-btn {
-  background-color: var(--background-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
+  background-color: #FFFFFF;
+  color: #1A1A1A;
+  border: 1px solid #1A1A1A;
 }
 
 .cancel-btn:hover {
-  background-color: var(--background-tertiary);
+  background-color: #1A1A1A;
+  color: #FFFFFF;
 }
 
 .modal-overlay {

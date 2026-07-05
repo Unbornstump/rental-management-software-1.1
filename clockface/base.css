@@ -75,6 +75,35 @@ body {
   color: #FFFFFF;
 }
 
+.secondary-btn {
+  background-color: #FFFFFF;
+  color: #1A1A1A;
+  border: 1px solid #E5E5E5;
+}
+
+.secondary-btn:hover {
+  background-color: #1A1A1A;
+  color: #FFFFFF;
+  border-color: #1A1A1A;
+}
+
+.danger-btn {
+  background-color: #dc2626;
+  border-color: #dc2626;
+  color: white;
+}
+
+.danger-btn:hover {
+  background-color: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.primary-btn {
+  background-color: #1A1A1A;
+  border-color: #1A1A1A;
+  color: white;
+}
+
 /* Modal */
 .modal-overlay {
   position: fixed;
