@@ -19,7 +19,50 @@ let setupState = {
   confirmPassword: ''
 };
 
+function showInactivityMessage() {
+  const authView = document.getElementById('auth-view');
+  if (!authView) return;
+
+  // Check if we have a message to show
+  if (localStorage.getItem('loggedOutDueToInactivity') === 'true') {
+    // Clear the flag
+    localStorage.removeItem('loggedOutDueToInactivity');
+
+    // Create message element
+    const message = document.createElement('div');
+    message.style.cssText = `
+      background-color: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      color: #78350f;
+      font-size: 14px;
+      text-align: center;
+      animation: fadeIn 0.3s ease;
+    `;
+    message.textContent = 'You were logged out due to inactivity';
+
+    // Insert after the login title
+    const loginTitle = authView.querySelector('h2');
+    if (loginTitle && loginTitle.nextSibling) {
+      authView.insertBefore(message, loginTitle.nextSibling);
+    } else {
+      authView.insertBefore(message, authView.firstChild);
+    }
+
+    // Remove after 4 seconds
+    setTimeout(() => {
+      message.style.opacity = '0';
+      message.style.transition = 'opacity 0.3s ease';
+      setTimeout(() => message.remove(), 300);
+    }, 4000);
+  }
+}
+
 function initializeLoginPage() {
+  showInactivityMessage();
+
   const passwordToggle = document.getElementById('password-toggle');
   if (passwordToggle) {
     passwordToggle.addEventListener('click', () => {

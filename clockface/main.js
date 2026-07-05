@@ -147,7 +147,15 @@ ipcMain.on('logout', () => {
   if (mainWindow) {
     mainWindow.close();
   }
-  if (!homepageWindow) {
+  if (loginWindow) {
+    loginWindow.close();
+  }
+
+  if (homepageWindow) {
+    homepageWindow.show();
+    homepageWindow.focus();
+    homepageWindow.setEnabled(true);
+  } else {
     createHomepageWindow();
   }
 });

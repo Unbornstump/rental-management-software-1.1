@@ -1,5 +1,20 @@
 const { ipcRenderer } = require('electron');
 
+let sessionTimeout;
+const SESSION_DURATION = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+
+function resetSessionTimeout() {
+  if (sessionTimeout) {
+    clearTimeout(sessionTimeout);
+  }
+  sessionTimeout = setTimeout(() => {
+    // Session expired, logout
+    Modals.performLogout();
+    // Store that we logged out due to inactivity
+    localStorage.setItem('loggedOutDueToInactivity', 'true');
+  }, SESSION_DURATION);
+}
+
 ipcRenderer.on('auth-token', (event, authData) => {
   // Handle both old (string) and new (object) auth data formats for backward compatibility
   const token = typeof authData === 'string' ? authData : authData.token;
@@ -28,6 +43,14 @@ ipcRenderer.on('auth-token', (event, authData) => {
     adminNav.style.display = 'block';
   }
   
+  // Start session timeout
+  resetSessionTimeout();
+  
+  // Reset timeout on user activity
+  ['mousemove', 'mousedown', 'keydown', 'scroll', 'click', 'touchstart'].forEach(eventType => {
+    document.addEventListener(eventType, resetSessionTimeout, { passive: true });
+  });
+  
   WorkspaceLoading.run();
 });
 
@@ -42,8 +65,10 @@ document.querySelectorAll('.nav-button').forEach(button => {
     
     if (action === 'logout') {
       // Clear auth and return to login
-      AppState.clearAll?.();
-      ipcRenderer.send('logout');
+      if (sessionTimeout) {
+        clearTimeout(sessionTimeout);
+      }
+      Modals.showLogoutModal();
       return;
     }
 

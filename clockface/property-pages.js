@@ -437,10 +437,33 @@ const PropertyPages = {
           <h1 class="page-title">Properties</h1>
           <p class="property-list-subtitle">Select a property to get started</p>
         </div>
-        <button type="button" class="action-button" id="add-property-header-btn">+ Add Property</button>
+        <div class="header-actions">
+          <button type="button" class="logout-button" id="logout-btn">
+            <span class="logout-icon">→</span>
+            Exit
+          </button>
+          <button type="button" class="action-button" id="add-property-header-btn">+ Add Property</button>
+        </div>
       </div>
       <div class="properties-grid" id="properties-grid"></div>
     `;
+
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        console.log('Logout button clicked');
+        // Check for unsaved changes before logout
+        if (AppState.hasUnsavedChanges()) {
+          console.log('Showing unsaved changes modal');
+          Modals.showUnsavedChangesModal();
+        } else {
+          console.log('Showing logout modal');
+          Modals.showLogoutModal();
+        }
+      });
+    } else {
+      console.error('Logout button not found');
+    }
 
     document.getElementById('add-property-header-btn').addEventListener('click', () => {
       Modals.showPropertyModal();

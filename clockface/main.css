@@ -431,6 +431,12 @@ body {
   margin-top: 4px;
 }
 
+.property-list-header .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 /* Properties Grid */
 .properties-grid {
   display: grid;
@@ -3150,5 +3156,148 @@ body.panel-open::before {
 
 .activity-item.clickable:hover {
   background: #f3f4f6;
+}
+
+/* Logout Button - Icon + Label Pill */
+.logout-button {
+  background-color: white;
+  border: 1px solid #6B6B6B;
+  color: #6B6B6B;
+  border-radius: 9999px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 200ms ease;
+}
+
+.logout-button .logout-icon {
+  font-size: 16px;
+  transition: transform 200ms ease;
+}
+
+.logout-button:hover {
+  background-color: #1A1A1A;
+  border-color: #1A1A1A;
+  color: white;
+}
+
+.logout-button:hover .logout-icon {
+  transform: translateX(3px);
+}
+
+.logout-button:focus {
+  outline: 2px solid rgba(26, 26, 26, 0.25);
+  outline-offset: 2px;
+}
+
+/* Logout Modal */
+.logout-modal {
+  max-width: 400px;
+  animation: logoutModalIn 220ms ease both;
+  transform-origin: center;
+}
+
+.logout-modal-content {
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.logout-modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 12px;
+}
+
+.logout-modal-message {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.logout-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.logout-modal-actions .action-button {
+  min-width: 100px;
+}
+
+.logout-modal-actions .action-button.secondary {
+  background-color: white;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+
+.logout-modal-actions .action-button.secondary:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.logout-modal-actions .action-button:not(.secondary) {
+  background-color: #1A1A1A;
+  border-color: #1A1A1A;
+  color: white;
+}
+
+.logout-modal-actions .action-button:not(.secondary):hover {
+  background-color: #333333;
+  border-color: #333333;
+}
+
+/* Unsaved Changes Modal */
+.unsaved-modal .logout-modal-title {
+  color: #111827;
+}
+
+.logout-btn-danger {
+  background-color: white;
+  border: 1px solid #d1d5db;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.logout-btn-danger:hover {
+  background-color: #fef2f2;
+  border-color: #dc2626;
+  color: #b91c1c;
+}
+
+@keyframes logoutModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Logout Overlay - White Fade */
+.logout-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: white;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease;
+}
+
+.logout-overlay.active {
+  opacity: 1;
+  pointer-events: all;
 }
 

@@ -52,6 +52,15 @@ const Modals = {
       if (e.target === modal) modal.remove();
     });
 
+    // Track unsaved changes
+    const form = modal.querySelector('#property-form');
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+      input.addEventListener('input', () => {
+        AppState.setUnsavedChanges(true);
+      });
+    });
+
     modal.querySelector('#property-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
@@ -68,6 +77,7 @@ const Modals = {
         } else {
           await apiClient.createProperty(data);
         }
+        AppState.setUnsavedChanges(false);
         modal.remove();
         PageLoaders.loadPage('properties');
       } catch (error) {
@@ -139,6 +149,15 @@ const Modals = {
       if (e.target === modal) modal.remove();
     });
 
+    // Track unsaved changes
+    const form = modal.querySelector('#unit-form');
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+      input.addEventListener('input', () => {
+        AppState.setUnsavedChanges(true);
+      });
+    });
+
     modal.querySelector('#unit-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
@@ -155,8 +174,9 @@ const Modals = {
         } else {
           await apiClient.createUnit(data);
         }
+        AppState.setUnsavedChanges(false);
         modal.remove();
-        
+
         // Reload appropriate page based on context
         const property = AppState.getPropertyContext();
         if (property) {
@@ -596,6 +616,15 @@ const Modals = {
       if (e.target === modal) modal.remove();
     });
 
+    // Track unsaved changes
+    const form = modal.querySelector('#tenant-form');
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+      input.addEventListener('input', () => {
+        AppState.setUnsavedChanges(true);
+      });
+    });
+
     // Unit selector logic (only for new tenant registration)
     if (!isEdit) {
       const unitSearch = modal.querySelector('#unit-search');
@@ -696,12 +725,12 @@ const Modals = {
           } else {
             // Create tenant
             const createdTenant = await apiClient.createTenant(data);
-            
+
             if (selectedUnitId) {
               // Get unit details for lease modal
               const allUnits = await apiClient.getUnits();
               const unit = allUnits.find(u => u.id == selectedUnitId);
-              
+
               // Close tenant modal and open lease agreement modal
               modal.remove();
               this.showLeaseAgreementModal(
@@ -712,6 +741,7 @@ const Modals = {
                 unit.rent_amount
               );
             } else {
+              AppState.setUnsavedChanges(false);
               modal.remove();
               const currentProperty = AppState.getPropertyContext();
               if (currentProperty) {
@@ -741,8 +771,9 @@ const Modals = {
 
         try {
           await apiClient.updateTenant(tenant.id, data);
+          AppState.setUnsavedChanges(false);
           modal.remove();
-          
+
           // Reload appropriate page based on context
           const currentProperty = AppState.getPropertyContext();
           if (currentProperty) {
@@ -850,6 +881,7 @@ const Modals = {
 
     modal.querySelector('.modal-close').addEventListener('click', () => {
       if (confirm('Warning: Closing this without confirming the lease means this tenant cannot be charged rent. You can create the lease later from the tenant\'s profile.')) {
+        AppState.setUnsavedChanges(false);
         modal.remove();
         if (isReLease) {
           PageLoaders.loadPage('property-tenants');
@@ -861,6 +893,7 @@ const Modals = {
 
     modal.querySelector('.cancel-btn').addEventListener('click', () => {
       if (confirm('Warning: Closing this without confirming the lease means this tenant cannot be charged rent. You can create the lease later from the tenant\'s profile.')) {
+        AppState.setUnsavedChanges(false);
         modal.remove();
         if (isReLease) {
           PageLoaders.loadPage('property-tenants');
@@ -873,6 +906,7 @@ const Modals = {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
         if (confirm('Warning: Closing this without confirming the lease means this tenant cannot be charged rent. You can create the lease later from the tenant\'s profile.')) {
+          AppState.setUnsavedChanges(false);
           modal.remove();
           if (isReLease) {
             PageLoaders.loadPage('property-tenants');
@@ -881,6 +915,15 @@ const Modals = {
           }
         }
       }
+    });
+
+    // Track unsaved changes
+    const form = modal.querySelector('#lease-form');
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+      input.addEventListener('input', () => {
+        AppState.setUnsavedChanges(true);
+      });
     });
 
     modal.querySelector('#lease-form').addEventListener('submit', async (e) => {
@@ -923,7 +966,8 @@ const Modals = {
 
         // Ensure tenant is marked active again (relevant for re-leases)
         await apiClient.updateTenant(tenantId, { status: 'active' });
-        
+
+        AppState.setUnsavedChanges(false);
         modal.remove();
         PageLoaders.loadPage('property-tenants');
       } catch (error) {
@@ -1022,6 +1066,15 @@ const Modals = {
       if (e.target === modal) modal.remove();
     });
 
+    // Track unsaved changes
+    const form = modal.querySelector('#lease-form');
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+      input.addEventListener('input', () => {
+        AppState.setUnsavedChanges(true);
+      });
+    });
+
     modal.querySelector('#lease-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
@@ -1041,6 +1094,7 @@ const Modals = {
         } else {
           await apiClient.createLease(data);
         }
+        AppState.setUnsavedChanges(false);
         modal.remove();
         PageLoaders.loadPage('leases');
       } catch (error) {
@@ -1158,5 +1212,102 @@ const Modals = {
 
     document.body.appendChild(modal);
     renderWarningStep();
+  },
+
+  showLogoutModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal logout-modal" role="dialog" aria-modal="true" aria-labelledby="logout-modal-title">
+        <div class="logout-modal-content">
+          <h2 class="logout-modal-title" id="logout-modal-title">Log Out?</h2>
+          <p class="logout-modal-message">You will be returned to the login screen.</p>
+          <div class="logout-modal-actions">
+            <button type="button" class="action-button secondary" id="logout-cancel-btn">Cancel</button>
+            <button type="button" class="action-button" id="logout-confirm-btn">Log Out</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const closeModal = () => {
+      modal.remove();
+    };
+
+    modal.querySelector('#logout-cancel-btn').addEventListener('click', closeModal);
+    const closeButton = modal.querySelector('.modal-close');
+    if (closeButton) {
+      closeButton.addEventListener('click', closeModal);
+    }
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    modal.querySelector('#logout-confirm-btn').addEventListener('click', () => {
+      closeModal();
+      this.performLogout();
+    });
+
+    document.body.appendChild(modal);
+  },
+
+  showUnsavedChangesModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal logout-modal unsaved-modal" role="dialog" aria-modal="true" aria-labelledby="unsaved-modal-title">
+        <div class="logout-modal-content">
+          <h2 class="logout-modal-title" id="unsaved-modal-title">Unsaved Changes</h2>
+          <p class="logout-modal-message">You have unsaved changes that will be lost if you log out.</p>
+          <div class="logout-modal-actions">
+            <button type="button" class="action-button secondary" id="unsaved-stay-btn">Stay</button>
+            <button type="button" class="logout-btn-danger" id="unsaved-logout-btn">Log Out Anyway</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const closeModal = () => modal.remove();
+
+    modal.querySelector('#unsaved-stay-btn').addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    modal.querySelector('#unsaved-logout-btn').addEventListener('click', () => {
+      closeModal();
+      this.performLogout();
+    });
+
+    document.body.appendChild(modal);
+  },
+
+  performLogout() {
+    // Create white overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'logout-overlay';
+    document.body.appendChild(overlay);
+
+    // Activate overlay
+    requestAnimationFrame(() => {
+      overlay.classList.add('active');
+    });
+
+    // Wait for fade animation
+    setTimeout(() => {
+      if (typeof apiClient !== 'undefined') {
+        apiClient.token = null;
+      }
+
+      AppState.clearAll();
+
+      // Check if we're in electron
+      if (typeof ipcRenderer !== 'undefined') {
+        ipcRenderer.send('logout');
+      } else {
+        // Fallback for web
+        window.location.href = 'login.html';
+      }
+    }, 300);
   },
 };
