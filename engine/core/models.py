@@ -3,6 +3,55 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
+def format_audit_log_details(action, details=None):
+    if isinstance(details, str):
+        return details
+    if not details:
+        return action or 'System action'
+
+    normalized_action = (action or '').strip().lower()
+    username = details.get('username') or details.get('full_name') or details.get('name') or details.get('user')
+
+    if normalized_action in {'login', 'logged in'}:
+        role = details.get('role') or 'user'
+        return f"Logged in as {role}"
+
+    if normalized_action in {'failed login attempt', 'failed_login_attempt'}:
+        resolved_username = username or 'unknown'
+        return f"Failed login attempt for username '{resolved_username}'"
+
+    if normalized_action in {'reset password', 'reset_staff_password', 'reset staff password'}:
+        reset_by = details.get('reset_by') or details.get('performed_by') or 'System'
+        target_user = username or 'staff member'
+        return f"Password reset for {target_user} by {reset_by}"
+
+    if normalized_action in {'added staff', 'added_staff', 'created staff', 'created_staff'}:
+        full_name = details.get('full_name') or username or 'Staff member'
+        role = details.get('role') or 'staff'
+        return f"{full_name} added with role: {role}"
+
+    if normalized_action in {'deactivated staff', 'deactivated_staff', 'deactivated'}:
+        target_user = username or 'staff member'
+        return f"{target_user} deactivated"
+
+    if normalized_action in {'password_changed', 'changed password', 'changed_password'}:
+        return 'Password changed'
+
+    if normalized_action in {'configured security questions', 'configured_security_questions'}:
+        return 'Security questions configured'
+
+    if normalized_action in {'recorded payment', 'recorded_payment'}:
+        amount = details.get('amount') or details.get('amount_paid') or 'payment'
+        tenant = details.get('tenant') or details.get('tenant_name') or 'tenant'
+        method = details.get('payment_method') or 'Cash'
+        return f"{amount} recorded for {tenant} — {method}"
+
+    if normalized_action in {'updated staff account', 'updated_staff_account'}:
+        return f"Staff account updated for {username or 'staff member'}"
+
+    return action or 'System action'
+
+
 class CustomUser(AbstractUser):
     MANAGER = 'manager'
     ACCOUNTANT = 'accountant'
@@ -34,6 +83,30 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.role})"
+
+
+class SecurityQuestion(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='security_questions')
+    question_1 = models.CharField(max_length=255)
+    answer_1_hash = models.CharField(max_length=255)
+    question_2 = models.CharField(max_length=255)
+    answer_2_hash = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Security questions for {self.user.username}"
+
+
+class RecoveryCode(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='recovery_codes')
+    code_hash = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used = models.BooleanField(default=False)
+    expires_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"Recovery code for {self.user.username}"
 
 
 class Property(models.Model):

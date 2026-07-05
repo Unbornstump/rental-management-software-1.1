@@ -53,6 +53,21 @@ class ApiClient {
     return response.data;
   }
 
+  async getSetupStatus() {
+    const response = await axios.get(`${this.baseURL}/api/auth/setup-status/`);
+    return response.data;
+  }
+
+  async registerManager(fullName, username, password) {
+    const response = await axios.post(`${this.baseURL}/api/auth/register/`, {
+      full_name: fullName,
+      username,
+      password
+    });
+    this.user = response.data;
+    return response.data;
+  }
+
   async refreshToken(refreshToken) {
     const response = await axios.post(`${this.baseURL}/api/auth/refresh/`, {
       refresh: refreshToken
@@ -105,6 +120,26 @@ class ApiClient {
 
   async getMe() {
     return this.get('/api/auth/me/');
+  }
+
+  async updateMe(data) {
+    return this.patch('/api/auth/me/', data);
+  }
+
+  async saveSecurityQuestions(question1, answer1, question2, answer2) {
+    return this.post('/api/auth/security-questions/', {
+      question_1: question1,
+      answer_1: answer1,
+      question_2: question2,
+      answer_2: answer2
+    });
+  }
+
+  async verifySecurityQuestions(answer1, answer2) {
+    return this.post('/api/auth/verify-security-questions/', {
+      answer_1: answer1,
+      answer_2: answer2
+    });
   }
 
   // Staff management endpoints (manager only) - via thegate

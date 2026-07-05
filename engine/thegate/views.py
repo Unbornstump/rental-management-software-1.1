@@ -1,9 +1,15 @@
+import re
+
 from rest_framework import generics, status, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
-from core.models import AuditLog, SystemSettings
+from django.contrib.auth.hashers import make_password, check_password
+from django.utils import timezone
+from django.utils.crypto import get_random_string
+from core.models import AuditLog, SystemSettings, SecurityQuestion, RecoveryCode, format_audit_log_details
 from .serializers import (
     StaffSerializer, StaffUpdateSerializer, PasswordResetSerializer,
     AuditLogSerializer, SystemSettingsSerializer, ChangePasswordSerializer,
@@ -13,6 +19,83 @@ from .serializers import (
 User = get_user_model()
 
 
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def setup_status(request):
+    setup_required = not User.objects.filter(role=User.MANAGER).exists()
+    return Response({'setup_required': setup_required})
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def check_username_availability(request):
+    username = (request.query_params.get('username') or '').strip()
+    if not username:
+        return Response({'available': False, 'message': 'Username is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    available = not User.objects.filter(username__iexact=username).exists()
+    return Response({'available': available})
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def register_manager(request):
+    if User.objects.filter(role=User.MANAGER).exists():
+        if not request.user or not request.user.is_authenticated:
+            return Response({'error': 'Authentication required.'}, status=status.HTTP_403_FORBIDDEN)
+        if request.user.role != User.MANAGER:
+            return Response({'error': 'Only managers can create another manager account.'}, status=status.HTTP_403_FORBIDDEN)
+
+    full_name = (request.data.get('full_name') or '').strip()
+    username = (request.data.get('username') or '').strip()
+    password = request.data.get('password') or ''
+
+    if not full_name:
+        return Response({'error': 'full_name is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not re.fullmatch(r"[A-Za-z ]+", full_name):
+        return Response({'error': 'full_name must contain letters and spaces only.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not username:
+        return Response({'error': 'username is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    if any(char.isspace() for char in username):
+        return Response({'error': 'Username cannot contain spaces.'}, status=status.HTTP_400_BAD_REQUEST)
+    if len(username) < 4:
+        return Response({'error': 'Username must be at least 4 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+    if User.objects.filter(username__iexact=username).exists():
+        return Response({'error': 'Username already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+    if len(password) < 8:
+        return Response({'error': 'Password must be at least 8 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not re.search(r'\d', password):
+        return Response({'error': 'Password must include at least one number.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    first_name = full_name.split()[0] if full_name else ''
+    last_name = ' '.join(full_name.split()[1:]) if len(full_name.split()) > 1 else ''
+
+    user = User.objects.create_user(
+        username=username,
+        password=password,
+        first_name=first_name,
+        last_name=last_name,
+        role=User.MANAGER,
+        must_change_password=False,
+    )
+
+    AuditLog.objects.create(
+        user=user,
+        action='Created manager account',
+        target_model='CustomUser',
+        target_id=user.id,
+        details=format_audit_log_details('Created manager account', {'username': user.username, 'full_name': full_name})
+    )
+
+    return Response({
+        'id': user.id,
+        'username': user.username,
+        'full_name': full_name,
+        'role': user.role,
+        'must_change_password': user.must_change_password,
+    }, status=status.HTTP_201_CREATED)
+
+
 class LoginView(TokenObtainPairView):
     serializer_class = LoginSerializer
 
@@ -20,23 +103,25 @@ class LoginView(TokenObtainPairView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
-        
-        # Get JWT tokens
-        from rest_framework_simplejwt.tokens import RefreshToken
+
         refresh = RefreshToken.for_user(user)
-        
-        # Log successful login
+
         AuditLog.objects.create(
             user=user,
             action='Login',
             target_model='CustomUser',
             target_id=user.id,
-            details={'username': user.username, 'role': user.role}
+            details=format_audit_log_details('Login', {'username': user.username, 'role': user.role})
         )
-        
+
+        requires_security_questions_setup = (
+            user.role == User.MANAGER and not SecurityQuestion.objects.filter(user=user).exists()
+        )
+
         return Response({
             'access': str(refresh.access_token),
             'refresh': str(refresh),
+            'requires_security_questions_setup': requires_security_questions_setup,
             'user': {
                 'id': user.id,
                 'username': user.username,
@@ -48,10 +133,143 @@ class LoginView(TokenObtainPairView):
         })
 
 
-@api_view(['GET'])
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def save_security_questions(request):
+    user = request.user
+    if user.role != User.MANAGER:
+        return Response({'error': 'Only managers can set security questions'}, status=status.HTTP_403_FORBIDDEN)
+
+    question_1 = (request.data.get('question_1') or '').strip()
+    answer_1 = (request.data.get('answer_1') or '').strip()
+    question_2 = (request.data.get('question_2') or '').strip()
+    answer_2 = (request.data.get('answer_2') or '').strip()
+
+    if not question_1 or not answer_1 or not question_2 or not answer_2:
+        return Response({'error': 'Both security questions and answers are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if question_1 == question_2:
+        return Response({'error': 'Security questions must be different.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    security_questions, _ = SecurityQuestion.objects.get_or_create(user=user)
+    security_questions.question_1 = question_1
+    security_questions.answer_1_hash = make_password(answer_1.lower())
+    security_questions.question_2 = question_2
+    security_questions.answer_2_hash = make_password(answer_2.lower())
+    security_questions.save()
+
+    AuditLog.objects.create(
+        user=user,
+        action='Configured security questions',
+        target_model='SecurityQuestion',
+        target_id=security_questions.id,
+        details=format_audit_log_details('Configured security questions', {'username': user.username})
+    )
+
+    return Response({'message': 'Security questions saved successfully.'})
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def verify_security_questions(request):
+    user = request.user
+    security_questions = SecurityQuestion.objects.filter(user=user).first()
+    if not security_questions:
+        return Response({'error': 'Security questions have not been set up yet.'}, status=status.HTTP_404_NOT_FOUND)
+
+    answer_1 = (request.data.get('answer_1') or '').strip().lower()
+    answer_2 = (request.data.get('answer_2') or '').strip().lower()
+
+    if not answer_1 or not answer_2:
+        return Response({'error': 'Both answers are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not check_password(answer_1, security_questions.answer_1_hash) or not check_password(answer_2, security_questions.answer_2_hash):
+        return Response({'error': 'One or more answers are incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    recovery_code = get_random_string(12, allowed_chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789')
+    expires_at = timezone.now() + timezone.timedelta(minutes=15)
+    RecoveryCode.objects.create(
+        user=user,
+        code_hash=make_password(recovery_code),
+        expires_at=expires_at,
+    )
+
+    return Response({'message': 'Identity verified.', 'recovery_code': recovery_code})
+
+
+@api_view(['POST'])
+def login_with_recovery_code(request):
+    code = (request.data.get('code') or '').strip()
+    if not code:
+        return Response({'error': 'Recovery code is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    active_codes = RecoveryCode.objects.filter(
+        user__role=User.MANAGER,
+        used=False,
+        expires_at__gt=timezone.now(),
+    ).order_by('-created_at')
+
+    matching_code = None
+    for recovery_code in active_codes:
+        if check_password(code, recovery_code.code_hash):
+            matching_code = recovery_code
+            break
+
+    if not matching_code:
+        return Response({'error': 'Recovery code is invalid or has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    matching_code.used = True
+    matching_code.save()
+
+    user = matching_code.user
+    user.must_change_password = True
+    user.save()
+
+    refresh = RefreshToken.for_user(user)
+
+    return Response({
+        'access': str(refresh.access_token),
+        'refresh': str(refresh),
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'role': user.role,
+            'must_change_password': user.must_change_password,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+        },
+        'message': 'Recovery code accepted. Please set a new password.'
+    })
+
+
+@api_view(['GET', 'PATCH'])
 @permission_classes([permissions.IsAuthenticated])
 def get_current_user(request):
     user = request.user
+    if request.method == 'PATCH':
+        username = (request.data.get('username') or '').strip()
+        first_name = (request.data.get('first_name') or '').strip()
+        last_name = (request.data.get('last_name') or '').strip()
+
+        if username and User.objects.exclude(id=user.id).filter(username=username).exists():
+            return Response({'error': 'Username already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if username:
+            user.username = username
+        if first_name is not None:
+            user.first_name = first_name
+        if last_name is not None:
+            user.last_name = last_name
+        user.save()
+
+        AuditLog.objects.create(
+            user=user,
+            action='Updated profile',
+            target_model='CustomUser',
+            target_id=user.id,
+            details=format_audit_log_details('Updated profile', {'username': user.username, 'full_name': f'{user.first_name} {user.last_name}'.strip()})
+        )
+
     return Response({
         'id': user.id,
         'username': user.username,
@@ -91,7 +309,7 @@ def change_password(request):
         action='Changed password',
         target_model='CustomUser',
         target_id=user.id,
-        details={'username': user.username}
+        details=format_audit_log_details('Changed password', {'username': user.username})
     )
     
     return Response({'message': 'Password changed successfully'})
@@ -158,7 +376,7 @@ def reset_staff_password(request, staff_id):
             action='Reset staff password',
             target_model='CustomUser',
             target_id=staff.id,
-            details={'username': staff.username, 'reset_by': request.user.username}
+            details=format_audit_log_details('Reset staff password', {'username': staff.username, 'reset_by': request.user.username})
         )
         
         return Response({'temp_password': temp_password, 'message': 'Password reset successfully'})

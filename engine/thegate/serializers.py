@@ -1,6 +1,8 @@
+import re
+
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from core.models import AuditLog, SystemSettings
+from core.models import AuditLog, SystemSettings, format_audit_log_details
 
 User = get_user_model()
 
@@ -102,11 +104,28 @@ class AuditLogSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     user_role = serializers.CharField(source='user.role', read_only=True)
     timestamp = serializers.DateTimeField(read_only=True)
+    readable_details = serializers.SerializerMethodField()
+    target_display = serializers.SerializerMethodField()
 
     class Meta:
         model = AuditLog
-        fields = ['id', 'user', 'username', 'user_role', 'action', 'target_model', 'target_id', 'details', 'timestamp', 'ip_address']
+        fields = ['id', 'user', 'username', 'user_role', 'action', 'target_model', 'target_id', 'details', 'timestamp', 'ip_address', 'readable_details', 'target_display']
         read_only_fields = ['id', 'timestamp']
+
+    def get_readable_details(self, obj):
+        return format_audit_log_details(obj.action, obj.details)
+
+    def get_target_display(self, obj):
+        if isinstance(obj.details, dict):
+            for key in ('username', 'full_name', 'name', 'tenant'):
+                value = obj.details.get(key)
+                if value:
+                    return str(value)
+        if obj.user:
+            return obj.user.username
+        if obj.target_model and obj.target_id is not None:
+            return f"{obj.target_model}:{obj.target_id}"
+        return 'System'
 
 
 class SystemSettingsSerializer(serializers.ModelSerializer):
@@ -117,6 +136,26 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
             'rent_due_day', 'currency', 'grace_period_days'
         ]
         read_only_fields = ['id']
+
+    def validate_company_name(self, value):
+        if not value or not str(value).strip():
+            raise serializers.ValidationError('Company name is required.')
+        return str(value).strip()
+
+    def validate_contact_phone(self, value):
+        if value and not re.match(r'^\+?[0-9\s()-]{7,15}$', value):
+            raise serializers.ValidationError('Enter a valid phone number.')
+        return value
+
+    def validate_rent_due_day(self, value):
+        if not 1 <= value <= 28:
+            raise serializers.ValidationError('Rent due day must be between 1 and 28.')
+        return value
+
+    def validate_grace_period_days(self, value):
+        if value <= 0:
+            raise serializers.ValidationError('Grace period must be a positive number.')
+        return value
 
 
 class ChangePasswordSerializer(serializers.Serializer):

@@ -1,6 +1,34 @@
 // Admin Pages - Staff Management, Audit Log, System Settings, Roles & Permissions
 
 const AdminPages = {
+  roleDescriptions: {
+    accountant: 'Financials access only',
+    property_officer: 'Units access only',
+    caretaker: 'View only'
+  },
+
+  formatDate(value) {
+    if (!value) return 'Never';
+    return new Intl.DateTimeFormat('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).format(new Date(value));
+  },
+
+  formatReadableDetails(log) {
+    if (log?.readable_details) return log.readable_details;
+    if (log?.details && typeof log.details === 'string') return log.details;
+    return log?.action || 'System action';
+  },
+
+  getRoleHelpText(role) {
+    return this.roleDescriptions[role] || 'Select a role to see the access level.';
+  },
+
   async loadStaffManagement() {
     const html = `
       <div class="admin-page">
@@ -8,7 +36,7 @@ const AdminPages = {
           <h1>Staff Management</h1>
           <button id="add-staff-btn" class="action-button">+ Add Staff Member</button>
         </div>
-        
+
         <div id="staff-table-container" class="table-container">
           <table id="staff-table" class="data-table">
             <thead>
@@ -29,52 +57,63 @@ const AdminPages = {
         </div>
       </div>
     `;
-    
+
     document.getElementById('page-content').innerHTML = html;
-    
-    // Load staff data
+
     try {
-      const staff = await apiClient.getStaff();
-      this.populateStaffTable(staff);
-      
-      // Attach add staff button handler
+      const [staff, currentUser] = await Promise.all([apiClient.getStaff(), apiClient.getMe().catch(() => null)]);
+      this.populateStaffTable(staff, currentUser);
       document.getElementById('add-staff-btn').addEventListener('click', () => this.showAddStaffDialog());
     } catch (error) {
       console.error('Failed to load staff:', error);
       document.getElementById('staff-tbody').innerHTML = '<tr><td colspan="5" class="error">Failed to load staff members</td></tr>';
     }
   },
-  
-  populateStaffTable(staff) {
+
+  populateStaffTable(staff, currentUser = null) {
     const tbody = document.getElementById('staff-tbody');
     tbody.innerHTML = '';
-    
-    if (staff.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty">No staff members</td></tr>';
+
+    const visibleStaff = (staff || []).filter(member => member.role !== 'manager' || member.id === currentUser?.id);
+
+    if (visibleStaff.length === 0) {
+      tbody.innerHTML = `
+        <tr class="empty-row">
+          <td colspan="5">
+            <div class="empty-state">
+              <strong>No staff members yet.</strong>
+              <span>Add a staff member to get started.</span>
+            </div>
+          </td>
+        </tr>
+      `;
       return;
     }
-    
-    staff.forEach(member => {
+
+    visibleStaff.forEach(member => {
       const row = document.createElement('tr');
       const fullName = `${member.first_name} ${member.last_name}`.trim() || member.username;
       const status = member.is_active ? 'Active' : 'Inactive';
-      const lastActive = member.last_login ? new Date(member.last_login).toLocaleDateString() : 'Never';
-      
+      const lastActive = member.last_login ? this.formatDate(member.last_login) : 'Never';
+      const isManagerAccount = currentUser && member.id === currentUser.id;
+
       row.innerHTML = `
         <td>${fullName}</td>
         <td><span class="role-badge role-${member.role}">${member.role_display || member.role}</span></td>
         <td>${status}</td>
         <td>${lastActive}</td>
-        <td class="actions">
-          <button class="action-link" onclick="AdminPages.editStaff(${member.id}, '${member.role}')">Edit</button>
-          <button class="action-link" onclick="AdminPages.resetPassword(${member.id}, '${member.username}')">Reset Pwd</button>
-          <button class="action-link danger" onclick="AdminPages.deactivateStaff(${member.id}, '${member.username}')">Deactivate</button>
+        <td class="action-cell">
+          ${isManagerAccount ? '<span class="account-self-label">Your account</span>' : `
+            <button class="table-action-btn" onclick="AdminPages.editStaff(${member.id}, '${member.role}')">Edit</button>
+            <button class="table-action-btn" onclick="AdminPages.resetPassword(${member.id}, '${member.username}')">Reset Pwd</button>
+            <button class="table-action-btn danger" onclick="AdminPages.deactivateStaff(${member.id}, '${member.username}')">Deactivate</button>
+          `}
         </td>
       `;
       tbody.appendChild(row);
     });
   },
-  
+
   showAddStaffDialog() {
     const html = `
       <div id="staff-modal" class="modal-overlay">
@@ -91,13 +130,15 @@ const AdminPages = {
             </div>
             <div class="form-group">
               <label for="staff-role">Role</label>
-              <select id="staff-role" required>
+              <select id="staff-role" required onchange="AdminPages.updateRoleHelp(this.value)">
                 <option value="">Select role</option>
                 <option value="accountant">Accountant</option>
                 <option value="property_officer">Property Officer</option>
                 <option value="caretaker">Caretaker</option>
               </select>
+              <div id="staff-role-help" class="role-help-text">Select a role to see the access level.</div>
             </div>
+            <div class="form-note">A temporary password will be generated and shown after the account is created.</div>
             <div class="form-actions">
               <button type="button" class="cancel-btn" onclick="document.getElementById('staff-modal').remove()">Cancel</button>
               <button type="submit" class="action-button">Create Staff Member</button>
@@ -106,16 +147,17 @@ const AdminPages = {
         </div>
       </div>
     `;
-    
+
     document.body.insertAdjacentHTML('beforeend', html);
-    
+    this.updateRoleHelp('');
+
     document.getElementById('add-staff-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
       const fullName = document.getElementById('staff-name').value;
       const username = document.getElementById('staff-username').value;
       const role = document.getElementById('staff-role').value;
-      
+
       try {
         const result = await apiClient.createStaff(username, fullName, role);
         alert(`Staff member created.\nUsername: ${username}\nTemporary Password: ${result.temp_password}\n\nShare this password with them.`);
@@ -126,7 +168,12 @@ const AdminPages = {
       }
     });
   },
-  
+
+  updateRoleHelp(role) {
+    const help = document.getElementById('staff-role-help');
+    if (help) help.textContent = this.getRoleHelpText(role);
+  },
+
   editStaff(staffId, currentRole) {
     const html = `
       <div id="edit-staff-modal" class="modal-overlay">
@@ -150,14 +197,14 @@ const AdminPages = {
         </div>
       </div>
     `;
-    
+
     document.body.insertAdjacentHTML('beforeend', html);
-    
+
     document.getElementById('edit-staff-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
       const newRole = document.getElementById('new-role').value;
-      
+
       try {
         await apiClient.updateStaffRole(staffId, newRole);
         alert('Staff role updated successfully');
@@ -168,31 +215,91 @@ const AdminPages = {
       }
     });
   },
-  
+
   async resetPassword(staffId, username) {
-    if (!confirm(`Reset password for ${username}?`)) return;
-    
-    try {
-      const result = await apiClient.resetStaffPassword(staffId);
-      alert(`Password reset for ${username}.\nTemporary Password: ${result.temp_password}`);
-      this.loadStaffManagement();
-    } catch (error) {
-      alert('Failed to reset password: ' + (error.response?.data?.error || error.message));
-    }
+    const modalHtml = `
+      <div id="staff-reset-modal" class="modal-overlay">
+        <div class="modal-card">
+          <h2>Reset Password</h2>
+          <p>Reset password for ${username}?</p>
+          <p class="password-reset-subtitle">A temporary password will be generated. Share it with the staff member and they will be required to change it on their next login.</p>
+          <div class="form-actions">
+            <button type="button" class="cancel-btn" onclick="document.getElementById('staff-reset-modal').remove()">Cancel</button>
+            <button type="button" class="action-button" id="generate-reset-password-btn">Generate Password</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    document.getElementById('generate-reset-password-btn').addEventListener('click', async () => {
+      try {
+        const result = await apiClient.resetStaffPassword(staffId);
+        document.getElementById('staff-reset-modal').innerHTML = `
+          <div class="modal-card">
+            <h2>Password Reset — ${username}</h2>
+            <p class="password-reset-subtitle">Temporary password:</p>
+            <div class="recovery-code">${result.temp_password}</div>
+            <button type="button" class="action-button" id="copy-staff-password-btn">Copy to Clipboard</button>
+            <p class="helper-text">Share this with ${username}. It expires after first use.</p>
+            <div class="form-actions">
+              <button type="button" class="action-button" id="close-staff-reset-btn">Done</button>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('copy-staff-password-btn').addEventListener('click', async () => {
+          await navigator.clipboard.writeText(result.temp_password);
+          const copyButton = document.getElementById('copy-staff-password-btn');
+          copyButton.textContent = 'Copied ✓';
+          setTimeout(() => { copyButton.textContent = 'Copy to Clipboard'; }, 2000);
+        });
+
+        document.getElementById('close-staff-reset-btn').addEventListener('click', () => {
+          document.getElementById('staff-reset-modal').remove();
+          this.loadStaffManagement();
+        });
+      } catch (error) {
+        alert('Failed to reset password: ' + (error.response?.data?.error || error.message));
+      }
+    });
   },
-  
+
+  showDeactivateStaffModal(staffId, username) {
+    const html = `
+      <div id="deactivate-staff-modal" class="modal-overlay">
+        <div class="modal-card confirm-card">
+          <h2>Deactivate Account</h2>
+          <p class="confirm-title">Deactivate ${username}?</p>
+          <p class="confirm-copy">They will be logged out immediately and unable to log in until reactivated.</p>
+          <div class="form-actions">
+            <button type="button" class="cancel-btn" id="deactivate-cancel-btn">Cancel</button>
+            <button type="button" class="action-button danger" id="deactivate-confirm-btn">Deactivate</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    document.getElementById('deactivate-cancel-btn').addEventListener('click', () => document.getElementById('deactivate-staff-modal').remove());
+    document.getElementById('deactivate-confirm-btn').addEventListener('click', async () => {
+      try {
+        await apiClient.deactivateStaff(staffId);
+        document.getElementById('deactivate-staff-modal').remove();
+        alert(`${username} has been deactivated`);
+        this.loadStaffManagement();
+      } catch (error) {
+        alert('Failed to deactivate: ' + (error.response?.data?.error || error.message));
+      }
+    });
+  },
+
   async deactivateStaff(staffId, username) {
-    if (!confirm(`Deactivate ${username}? They will be logged out.`)) return;
-    
-    try {
-      await apiClient.deactivateStaff(staffId);
-      alert(`${username} has been deactivated`);
-      this.loadStaffManagement();
-    } catch (error) {
-      alert('Failed to deactivate: ' + (error.response?.data?.error || error.message));
-    }
+    this.showDeactivateStaffModal(staffId, username);
   },
-  
+
   async loadRolesPermissions() {
     const html = `
       <div class="admin-page">
@@ -200,7 +307,7 @@ const AdminPages = {
           <h1>Roles & Permissions</h1>
           <p class="subtitle">This is a read-only reference showing what each role can access.</p>
         </div>
-        
+
         <div class="table-container">
           <table class="data-table permissions-table">
             <thead>
@@ -213,99 +320,27 @@ const AdminPages = {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>View Dashboard</td>
-                <td class="check">✓</td>
-                <td>✗</td>
-                <td>✗</td>
-                <td>✗</td>
-              </tr>
-              <tr>
-                <td>Manage Properties</td>
-                <td class="check">✓</td>
-                <td>✗</td>
-                <td>✗</td>
-                <td>✗</td>
-              </tr>
-              <tr>
-                <td>Add/Edit Units</td>
-                <td class="check">✓</td>
-                <td>✗</td>
-                <td class="check">✓</td>
-                <td>✗</td>
-              </tr>
-              <tr>
-                <td>View Units</td>
-                <td class="check">✓</td>
-                <td>✗</td>
-                <td class="check">✓</td>
-                <td class="check">✓</td>
-              </tr>
-              <tr>
-                <td>Add/Edit Tenants</td>
-                <td class="check">✓</td>
-                <td>✗</td>
-                <td>✗</td>
-                <td>✗</td>
-              </tr>
-              <tr>
-                <td>View Tenants</td>
-                <td class="check">✓</td>
-                <td class="check">✓</td>
-                <td>✗</td>
-                <td class="check">✓</td>
-              </tr>
-              <tr>
-                <td>Record Payments</td>
-                <td class="check">✓</td>
-                <td class="check">✓</td>
-                <td>✗</td>
-                <td>✗</td>
-              </tr>
-              <tr>
-                <td>View Financials</td>
-                <td class="check">✓</td>
-                <td class="check">✓</td>
-                <td>✗</td>
-                <td>✗</td>
-              </tr>
-              <tr>
-                <td>Print Receipts</td>
-                <td class="check">✓</td>
-                <td class="check">✓</td>
-                <td>✗</td>
-                <td>✗</td>
-              </tr>
-              <tr>
-                <td>View Audit Log</td>
-                <td class="check">✓</td>
-                <td>✗</td>
-                <td>✗</td>
-                <td>✗</td>
-              </tr>
-              <tr>
-                <td>Manage Staff</td>
-                <td class="check">✓</td>
-                <td>✗</td>
-                <td>✗</td>
-                <td>✗</td>
-              </tr>
-              <tr>
-                <td>System Settings</td>
-                <td class="check">✓</td>
-                <td>✗</td>
-                <td>✗</td>
-                <td>✗</td>
-              </tr>
+              <tr><td>View Dashboard</td><td class="permission-yes">✓</td><td class="permission-no">✗</td><td class="permission-no">✗</td><td class="permission-no">✗</td></tr>
+              <tr><td>Manage Properties</td><td class="permission-yes">✓</td><td class="permission-no">✗</td><td class="permission-no">✗</td><td class="permission-no">✗</td></tr>
+              <tr><td>Add / Edit Units</td><td class="permission-yes">✓</td><td class="permission-no">✗</td><td class="permission-yes">✓</td><td class="permission-no">✗</td></tr>
+              <tr><td>View Units</td><td class="permission-yes">✓</td><td class="permission-no">✗</td><td class="permission-yes">✓</td><td class="permission-yes">✓</td></tr>
+              <tr><td>Add / Edit Tenants</td><td class="permission-yes">✓</td><td class="permission-no">✗</td><td class="permission-no">✗</td><td class="permission-no">✗</td></tr>
+              <tr><td>View Tenants</td><td class="permission-yes">✓</td><td class="permission-yes">✓</td><td class="permission-no">✗</td><td class="permission-yes">✓</td></tr>
+              <tr><td>Record Payments</td><td class="permission-yes">✓</td><td class="permission-yes">✓</td><td class="permission-no">✗</td><td class="permission-no">✗</td></tr>
+              <tr><td>View Financials</td><td class="permission-yes">✓</td><td class="permission-yes">✓</td><td class="permission-no">✗</td><td class="permission-no">✗</td></tr>
+              <tr><td>Print Receipts</td><td class="permission-yes">✓</td><td class="permission-yes">✓</td><td class="permission-no">✗</td><td class="permission-no">✗</td></tr>
+              <tr><td>View Audit Log</td><td class="permission-yes">✓</td><td class="permission-no">✗</td><td class="permission-no">✗</td><td class="permission-no">✗</td></tr>
+              <tr><td>Manage Staff</td><td class="permission-yes">✓</td><td class="permission-no">✗</td><td class="permission-no">✗</td><td class="permission-no">✗</td></tr>
+              <tr><td>System Settings</td><td class="permission-yes">✓</td><td class="permission-no">✗</td><td class="permission-no">✗</td><td class="permission-no">✗</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     `;
-    
+
     document.getElementById('page-content').innerHTML = html;
   },
-  
+
   async loadAuditLog() {
     const html = `
       <div class="admin-page">
@@ -313,7 +348,7 @@ const AdminPages = {
           <h1>Audit Log</h1>
           <button id="export-audit-btn" class="action-button secondary">Export to CSV</button>
         </div>
-        
+
         <div class="filter-bar">
           <input type="text" id="filter-user" placeholder="Filter by user" class="filter-input">
           <select id="filter-role" class="filter-input">
@@ -326,15 +361,16 @@ const AdminPages = {
           <select id="filter-action" class="filter-input">
             <option value="">All Actions</option>
             <option value="Login">Login</option>
-            <option value="Created staff">Created staff</option>
+            <option value="Failed login attempt">Failed login attempt</option>
             <option value="Reset staff password">Reset staff password</option>
-            <option value="Changed password">Changed password</option>
+            <option value="Added staff">Added staff</option>
+            <option value="Deactivated staff">Deactivated staff</option>
           </select>
           <button id="apply-filters-btn" class="action-button">Apply Filters</button>
         </div>
-        
+
         <div id="audit-table-container" class="table-container">
-          <table id="audit-table" class="data-table">
+          <table id="audit-table" class="data-table audit-table">
             <thead>
               <tr>
                 <th>Timestamp</th>
@@ -354,25 +390,21 @@ const AdminPages = {
         </div>
       </div>
     `;
-    
+
     document.getElementById('page-content').innerHTML = html;
-    
-    // Load audit log data
     this.loadAuditLogData();
-    
-    // Attach event listeners
     document.getElementById('apply-filters-btn').addEventListener('click', () => this.loadAuditLogData());
     document.getElementById('export-audit-btn').addEventListener('click', () => this.exportAuditLog());
   },
-  
+
   async loadAuditLogData() {
     try {
       const filters = {
-        user_id: document.getElementById('filter-user')?.value || '',
+        user: document.getElementById('filter-user')?.value || '',
         role: document.getElementById('filter-role')?.value || '',
         action: document.getElementById('filter-action')?.value || ''
       };
-      
+
       const logs = await apiClient.getAuditLog(filters);
       this.populateAuditTable(logs);
     } catch (error) {
@@ -380,63 +412,60 @@ const AdminPages = {
       document.getElementById('audit-tbody').innerHTML = '<tr><td colspan="6" class="error">Failed to load audit log</td></tr>';
     }
   },
-  
+
   populateAuditTable(logs) {
     const tbody = document.getElementById('audit-tbody');
     tbody.innerHTML = '';
-    
+
     if (logs.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" class="empty">No audit log entries</td></tr>';
       return;
     }
-    
+
     logs.forEach(log => {
       const row = document.createElement('tr');
-      const timestamp = new Date(log.timestamp).toLocaleString();
-      const target = log.target_id ? `${log.target_model}:${log.target_id}` : log.target_model;
-      const details = JSON.stringify(log.details).substring(0, 50) + '...';
-      
+      const timestamp = this.formatDate(log.timestamp);
+      const target = log.target_display || (log.target_id ? `${log.target_model}:${log.target_id}` : log.target_model || 'System');
+      const details = this.formatReadableDetails(log);
+      const isFailedLogin = (log.action || '').toLowerCase() === 'failed login attempt';
+
+      row.className = isFailedLogin ? 'audit-failed' : '';
       row.innerHTML = `
         <td>${timestamp}</td>
         <td>${log.username || 'System'}</td>
         <td>${log.user_role || '-'}</td>
         <td>${log.action}</td>
         <td>${target}</td>
-        <td title="${JSON.stringify(log.details)}">${details}</td>
+        <td>${details}</td>
       `;
       tbody.appendChild(row);
     });
   },
-  
+
   async exportAuditLog() {
     try {
       const filters = {
-        user_id: document.getElementById('filter-user')?.value || '',
+        user: document.getElementById('filter-user')?.value || '',
         role: document.getElementById('filter-role')?.value || '',
         action: document.getElementById('filter-action')?.value || ''
       };
-      
-      // Get audit log data
+
       const logs = await apiClient.getAuditLog(filters);
-      
-      // Convert to CSV
-      const headers = ['Timestamp', 'User', 'Role', 'Action', 'Target', 'IP Address'];
+      const headers = ['Timestamp', 'User', 'Role', 'Action', 'Target', 'Details'];
       const rows = logs.map(log => [
-        new Date(log.timestamp).toLocaleString(),
-        log.user_username || 'System',
+        this.formatDate(log.timestamp),
+        log.username || 'System',
         log.user_role || '',
         log.action,
-        `${log.target_model}${log.target_id ? ':' + log.target_id : ''}`,
-        log.ip_address || '-'
+        log.target_display || `${log.target_model}${log.target_id ? ':' + log.target_id : ''}`,
+        this.formatReadableDetails(log)
       ]);
-      
-      // Build CSV string
+
       const csv = [
         headers.join(','),
         ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
       ].join('\n');
-      
-      // Download CSV
+
       const link = document.createElement('a');
       link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
       link.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
@@ -445,81 +474,157 @@ const AdminPages = {
       alert('Failed to export audit log: ' + error.message);
     }
   },
-  
+
   async loadSystemSettings() {
     try {
       const settings = await apiClient.getSystemSettings();
-      
+      const currentUser = await apiClient.getMe().catch(() => null);
+
       const html = `
         <div class="admin-page">
           <div class="page-header">
             <h1>System Settings</h1>
           </div>
-          
+
           <form id="settings-form" class="settings-form">
-            <fieldset>
-              <legend>Company Profile</legend>
+            <section class="settings-section">
+              <div class="settings-section-heading">Company Profile</div>
               <div class="form-group">
                 <label for="company-name">Company Name</label>
-                <input type="text" id="company-name" value="${settings.company_name || ''}" required>
+                <input type="text" id="company-name" value="${settings.company_name || ''}" placeholder="Enter company name" required>
+                <div class="field-error" id="company-name-error"></div>
               </div>
               <div class="form-group">
                 <label for="contact-phone">Contact Phone</label>
-                <input type="tel" id="contact-phone" value="${settings.contact_phone || ''}">
+                <input type="tel" id="contact-phone" value="${settings.contact_phone || ''}" placeholder="e.g. +254 700 000 000">
+                <div class="field-error" id="contact-phone-error"></div>
               </div>
               <div class="form-group">
                 <label for="address">Physical Address</label>
-                <textarea id="address" rows="3">${settings.address || ''}</textarea>
+                <textarea id="address" rows="3" placeholder="Enter address">${settings.address || ''}</textarea>
               </div>
-            </fieldset>
-            
-            <fieldset>
-              <legend>Rent Settings</legend>
+            </section>
+
+            <section class="settings-section">
+              <div class="settings-section-heading">Rent Settings</div>
               <div class="form-group">
                 <label for="rent-due-day">Default Rent Due Day (of month)</label>
-                <input type="number" id="rent-due-day" min="1" max="31" value="${settings.rent_due_day || 1}" required>
+                <input type="number" id="rent-due-day" min="1" max="28" value="${settings.rent_due_day || 1}" required>
+                <div class="field-error" id="rent-due-day-error"></div>
               </div>
               <div class="form-group">
                 <label for="grace-period">Grace Period (days)</label>
-                <input type="number" id="grace-period" min="0" max="30" value="${settings.grace_period_days || 5}" required>
+                <input type="number" id="grace-period" min="1" max="30" value="${settings.grace_period_days || 5}" required>
+                <div class="field-error" id="grace-period-error"></div>
               </div>
               <div class="form-group">
                 <label for="currency">Currency</label>
                 <input type="text" id="currency" value="${settings.currency || 'KES'}" maxlength="10" required>
               </div>
-            </fieldset>
-            
-            <div class="form-actions">
+            </section>
+
+            <section class="settings-section">
+              <div class="settings-section-heading">Account Settings</div>
+              <div class="form-group">
+                <label for="display-name">Display Name</label>
+                <input type="text" id="display-name" value="${(currentUser?.first_name || '') + (currentUser?.last_name ? ' ' + currentUser.last_name : '')}" placeholder="Enter display name">
+              </div>
+              <div class="form-group">
+                <label for="account-username">Username</label>
+                <input type="text" id="account-username" value="${currentUser?.username || ''}" placeholder="Enter username">
+              </div>
+              <div class="form-group">
+                <label for="current-password">Current Password</label>
+                <input type="password" id="current-password" placeholder="Required to change password">
+              </div>
+              <div class="form-group">
+                <label for="new-password">New Password</label>
+                <input type="password" id="new-password" placeholder="Leave blank to keep current password">
+              </div>
+              <div class="form-group">
+                <label>Security Questions</label>
+                <button type="button" class="secondary-link" id="security-questions-btn">View / Update Security Questions</button>
+              </div>
+            </section>
+
+            <div class="settings-footer">
               <button type="submit" class="action-button">Save Settings</button>
             </div>
           </form>
         </div>
       `;
-      
+
       document.getElementById('page-content').innerHTML = html;
-      
+
       document.getElementById('settings-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
+        const errors = this.validateSystemSettings();
+        if (Object.keys(errors).length) {
+          Object.entries(errors).forEach(([field, message]) => {
+            const errorEl = document.getElementById(`${field}-error`);
+            if (errorEl) errorEl.textContent = message;
+          });
+          return;
+        }
+
         const updatedSettings = {
-          company_name: document.getElementById('company-name').value,
-          contact_phone: document.getElementById('contact-phone').value,
-          address: document.getElementById('address').value,
-          rent_due_day: parseInt(document.getElementById('rent-due-day').value),
-          grace_period_days: parseInt(document.getElementById('grace-period').value),
-          currency: document.getElementById('currency').value
+          company_name: document.getElementById('company-name').value.trim(),
+          contact_phone: document.getElementById('contact-phone').value.trim(),
+          address: document.getElementById('address').value.trim(),
+          rent_due_day: parseInt(document.getElementById('rent-due-day').value, 10),
+          grace_period_days: parseInt(document.getElementById('grace-period').value, 10),
+          currency: document.getElementById('currency').value.trim()
         };
-        
+
         try {
           await apiClient.updateSystemSettings(updatedSettings);
+          const profileData = {
+            username: document.getElementById('account-username').value.trim(),
+            first_name: document.getElementById('display-name').value.trim().split(' ')[0] || '',
+            last_name: document.getElementById('display-name').value.trim().split(' ').slice(1).join(' ') || ''
+          };
+          if (profileData.username) {
+            await apiClient.updateMe(profileData);
+          }
+          const newPassword = document.getElementById('new-password').value;
+          const currentPassword = document.getElementById('current-password').value;
+          if (newPassword) {
+            await apiClient.changePassword(newPassword, currentPassword || null);
+          }
           alert('Settings saved successfully');
         } catch (error) {
           alert('Failed to save settings: ' + (error.response?.data?.error || error.message));
         }
       });
+
+      document.getElementById('security-questions-btn').addEventListener('click', () => {
+        alert('Security question setup is available from the recovery flow. Use the password recovery option to update it.');
+      });
     } catch (error) {
       console.error('Failed to load settings:', error);
       document.getElementById('page-content').innerHTML = '<div class="error">Failed to load system settings</div>';
     }
+  },
+
+  validateSystemSettings() {
+    const errors = {};
+    const companyName = document.getElementById('company-name').value.trim();
+    const contactPhone = document.getElementById('contact-phone').value.trim();
+    const rentDueDay = parseInt(document.getElementById('rent-due-day').value, 10);
+    const gracePeriod = parseInt(document.getElementById('grace-period').value, 10);
+
+    document.querySelectorAll('.field-error').forEach(errorEl => {
+      errorEl.textContent = '';
+    });
+
+    if (!companyName) errors.company_name = 'Company name is required.';
+    if (contactPhone && !/^\+?[0-9\s()-]{7,15}$/.test(contactPhone)) errors.contact_phone = 'Enter a valid phone number.';
+    if (!Number.isInteger(rentDueDay) || rentDueDay < 1 || rentDueDay > 28) errors['rent-due-day'] = 'Rent due day must be between 1 and 28.';
+    if (!Number.isInteger(gracePeriod) || gracePeriod <= 0) errors['grace-period'] = 'Grace period must be a positive number.';
+
+    return errors;
   }
 };
+
+window.AdminPages = AdminPages;

@@ -303,12 +303,11 @@ function bindManagerFormValidation() {
     createButton.textContent = 'Creating...';
 
     try {
-      await apiClient.registerManager(setupState.fullName, setupState.username, setupState.password);
-      const authResponse = await apiClient.login(setupState.username, setupState.password);
-      AppState.setUserRole(authResponse.user.role);
-      AppState.setUsername(authResponse.user.username);
-      AppState.setAuthToken(authResponse.access);
-      AppState.setMustChangePassword(authResponse.user.must_change_password);
+      const response = await apiClient.registerManager(setupState.fullName, setupState.username, setupState.password);
+      AppState.setUserRole(response.role);
+      AppState.setUsername(response.username);
+      AppState.setAuthToken(null);
+      AppState.setMustChangePassword(response.must_change_password);
       showSecurityQuestionSetup();
     } catch (error) {
       const message = error?.response?.data?.error || 'Unable to create manager account';
