@@ -475,6 +475,78 @@
   pointer-events: auto;
 }
 
+.admin-page,
+.admin-nav-header,
+.subtitle,
+.permissions-table td:first-child,
+.permissions-table .permission-yes,
+.permissions-table .permission-no,
+.role-badge,
+.filter-input,
+.settings-section-heading,
+.form-group label,
+.form-note,
+.role-help-text,
+.account-self-label,
+.secondary-link,
+.modal-card,
+.modal-card h2,
+.confirm-card .confirm-copy,
+.table-container,
+.data-table th,
+.data-table td,
+.empty-state,
+.logout-modal-title,
+.logout-modal-message,
+.logout-button,
+.logout-btn-danger {
+  color: var(--text-primary);
+}
+
+.admin-page,
+.modal-card,
+.table-container,
+.data-table,
+.logout-button,
+.logout-btn-danger,
+.table-action-btn,
+.form-group input,
+.form-group textarea,
+.form-group select {
+  background-color: var(--surface-primary);
+  border-color: var(--border-color);
+}
+
+.permissions-table .permission-no,
+.empty-state,
+.confirm-card .confirm-copy,
+.role-help-text,
+.form-note,
+.account-self-label,
+.logout-modal-message {
+  color: var(--text-secondary);
+}
+
+.role-manager,
+.role-accountant,
+.role-property_officer,
+.role-caretaker,
+.audit-failed {
+  border-color: var(--border-color);
+}
+
+.table-action-btn:hover,
+.logout-button:hover,
+.action-button.secondary:hover,
+.cancel-btn:hover {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.settings-footer {
+  background: linear-gradient(180deg, rgba(23, 26, 33, 0.72), rgba(23, 26, 33, 1));
+}
+
 @media (max-width: 768px) {
   .admin-page {
     padding: 1rem;

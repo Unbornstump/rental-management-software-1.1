@@ -8,7 +8,8 @@
   justify-content: center;
   min-height: 100vh;
   padding: 20px;
-  background: #FFFFFF;
+  background: var(--color-bg);
+  color: var(--color-text);
   text-align: center;
 }
 
@@ -30,7 +31,7 @@
   font-size: 64px;
   font-weight: 700;
   margin-bottom: 8px;
-  color: #1A1A1A;
+  color: var(--color-text);
   letter-spacing: -1px;
 }
 
@@ -38,7 +39,7 @@
   font-size: 18px;
   font-weight: 400;
   margin-bottom: 48px;
-  color: #6B6B6B;
+  color: var(--color-text-secondary);
 }
 
 .progress-container {
@@ -55,7 +56,7 @@
 .progress-bar-track {
   flex: 1;
   height: 7px;
-  background-color: #E5E5E5;
+  background-color: var(--color-border);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -63,7 +64,7 @@
 .progress-bar-fill {
   height: 100%;
   width: 0%;
-  background-color: #1A1A1A;
+  background-color: var(--color-primary);
   border-radius: 4px;
   transition: width 0.4s ease-out;
 }
@@ -71,18 +72,17 @@
 .progress-percentage {
   font-size: 14px;
   font-weight: 600;
-  color: #1A1A1A;
+  color: var(--color-text);
   min-width: 40px;
   text-align: right;
 }
 
 .progress-stage {
   font-size: 13px;
-  color: #A0A0A0;
+  color: var(--color-text-muted);
   text-align: left;
 }
 
-/* Error State */
 .error-state {
   display: none;
   flex-direction: column;
@@ -94,7 +94,7 @@
 .error-icon {
   font-size: 40px;
   margin-bottom: 16px;
-  color: #1A1A1A;
+  color: var(--color-text);
   font-weight: 300;
   line-height: 1;
 }
@@ -103,12 +103,12 @@
   font-size: 20px;
   font-weight: 600;
   margin-bottom: 8px;
-  color: #1A1A1A;
+  color: var(--color-text);
 }
 
 .error-message {
   font-size: 15px;
-  color: #6B6B6B;
+  color: var(--color-text-secondary);
   margin-bottom: 32px;
   line-height: 1.5;
 }
@@ -119,28 +119,27 @@
 }
 
 .error-actions .action-button {
-  background-color: #1A1A1A;
-  color: #FFFFFF;
-  border: 1px solid #1A1A1A;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  border: 1px solid var(--color-primary);
 }
 
 .error-actions .action-button:hover {
-  background-color: #333333;
-  border-color: #333333;
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
 }
 
 .error-actions .cancel-btn {
-  background-color: #FFFFFF;
-  color: #1A1A1A;
-  border: 1px solid #1A1A1A;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
 }
 
 .error-actions .cancel-btn:hover {
-  background-color: #1A1A1A;
-  color: #FFFFFF;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
-/* Transitions */
 #workspace-loading-overlay.fade-out {
   opacity: 0;
   transition: opacity 0.3s ease-out;

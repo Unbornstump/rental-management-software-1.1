@@ -54,16 +54,14 @@ function setupEventListeners() {
 }
 
 function loadSettings() {
-  const theme = localStorage.getItem('theme') || 'light';
-  setTheme(theme, false);
+  if (window.RMSTheme?.initTheme) {
+    window.RMSTheme.initTheme();
+  }
 }
 
 function setTheme(theme, persist = true) {
-  document.querySelectorAll('.theme-toggle-btn').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.theme === theme);
-  });
-  if (persist) {
-    localStorage.setItem('theme', theme);
+  if (window.RMSTheme?.setTheme) {
+    window.RMSTheme.setTheme(theme);
   }
 }
 

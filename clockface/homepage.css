@@ -2,13 +2,13 @@
 
 .homepage-container {
   min-height: 100vh;
-  background: #FAFAFA;
+  background: var(--color-bg);
+  color: var(--color-text);
   display: flex;
   flex-direction: column;
   position: relative;
 }
 
-/* Dot grid pattern on hero */
 .hero-section::before {
   content: '';
   position: absolute;
@@ -16,7 +16,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+  background-image: radial-gradient(circle, var(--color-text-muted) 1px, transparent 1px);
+  opacity: 0.22;
   background-size: 20px 20px;
   pointer-events: none;
   --mouse-x: 50%;
@@ -35,7 +36,6 @@
   );
 }
 
-/* Settings Gear Icon */
 .settings-gear-btn {
   position: fixed;
   top: 20px;
@@ -45,7 +45,7 @@
   background: transparent;
   border: none;
   border-radius: 50%;
-  color: #555;
+  color: var(--color-text-secondary);
   cursor: pointer;
   z-index: 100;
   transition: color 0.2s ease, transform 0.6s ease-in-out;
@@ -55,11 +55,10 @@
 }
 
 .settings-gear-btn:hover {
-  color: #1a1a1a;
+  color: var(--color-text);
   transform: rotate(360deg);
 }
 
-/* Hero Section */
 .hero-section {
   min-height: 55vh;
   display: flex;
@@ -88,7 +87,7 @@
   font-weight: 700;
   margin-bottom: 8px;
   letter-spacing: -1px;
-  color: #1a1a1a;
+  color: var(--color-text);
   opacity: 0;
   animation: heroFadeIn 0.5s ease forwards;
 }
@@ -102,14 +101,14 @@
   font-size: 20px;
   font-weight: 500;
   margin-bottom: 24px;
-  color: #444;
+  color: var(--color-text-secondary);
 }
 
 .hero-description {
   font-size: 18px;
   line-height: 1.6;
   margin-bottom: 40px;
-  color: #777;
+  color: var(--color-text-secondary);
   font-weight: 400;
   min-height: 3.2em;
 }
@@ -119,7 +118,7 @@
   animation: blink 0.8s step-end infinite;
   font-weight: 300;
   margin-left: 1px;
-  color: #777;
+  color: var(--color-text-secondary);
 }
 
 @keyframes blink {
@@ -127,9 +126,9 @@
 }
 
 .hero-cta {
-  background-color: #1a1a1a;
-  color: white;
-  border: 2px solid #1a1a1a;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  border: 2px solid var(--color-primary);
   border-radius: 999px;
   padding: 14px 32px;
   font-size: 16px;
@@ -140,9 +139,9 @@
 }
 
 .hero-cta:hover {
-  background-color: white;
-  color: #1a1a1a;
-  border-color: #1a1a1a;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-primary);
 }
 
 .hero-cta:active {
@@ -170,10 +169,9 @@
   max-width: 460px;
   height: auto;
   transform: rotate(4deg);
-  filter: drop-shadow(0 12px 32px rgba(0, 0, 0, 0.12));
+  filter: drop-shadow(0 12px 32px var(--color-shadow));
 }
 
-/* Skeleton Workspace Preview */
 .skeleton-section {
   padding: 48px 40px 32px;
   display: flex;
@@ -188,7 +186,7 @@
   font-weight: 500;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: #999;
+  color: var(--color-text-muted);
   margin-bottom: 20px;
 }
 
@@ -196,11 +194,11 @@
   position: relative;
   width: 100%;
   max-width: 720px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 24px var(--color-shadow);
   overflow: hidden;
-  background: white;
+  background: var(--color-surface);
 }
 
 .skeleton-preview {
@@ -224,10 +222,10 @@
 }
 
 .skeleton-card {
-  border: 1px solid #eee;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 20px;
-  background: #fafafa;
+  background: var(--color-surface-elevated);
 }
 
 .skeleton-card-top {
@@ -238,7 +236,7 @@
 }
 
 .skeleton-bar {
-  background: linear-gradient(90deg, #e8e8e8 25%, #f0f0f0 50%, #e8e8e8 75%);
+  background: linear-gradient(90deg, var(--color-border) 25%, var(--color-surface-elevated) 50%, var(--color-border) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
   border-radius: 4px;
@@ -288,7 +286,7 @@
   gap: 24px;
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--color-border);
 }
 
 .skeleton-stat {
@@ -304,7 +302,7 @@
 
 .skeleton-stat-label {
   font-size: 10px;
-  color: #ccc;
+  color: var(--color-text-muted);
 }
 
 .skeleton-overlay {
@@ -315,20 +313,19 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--overlay-surface);
   z-index: 2;
 }
 
 .skeleton-lock-icon {
-  color: #aaa;
+  color: var(--color-text-secondary);
 }
 
 .skeleton-overlay span {
   font-size: 13px;
-  color: #888;
+  color: var(--color-text-secondary);
 }
 
-/* Feature Strip */
 .features-section {
   display: flex;
   align-items: center;
@@ -346,10 +343,10 @@
   gap: 8px;
   height: 44px;
   padding: 0 20px;
-  background: #F5F5F5;
+  background: var(--color-surface-elevated);
   border: 1px solid transparent;
   border-radius: 999px;
-  color: #444;
+  color: var(--color-text-secondary);
   font-size: 14px;
   font-weight: 500;
   cursor: default;
@@ -364,8 +361,8 @@
 }
 
 .feature-item:hover {
-  background: #1a1a1a;
-  color: white;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .feature-icon {
@@ -380,15 +377,14 @@
 .coming-soon-label {
   font-size: 11px;
   font-weight: 400;
-  color: #aaa;
+  color: var(--color-text-muted);
   margin-left: 2px;
 }
 
 .feature-item:hover .coming-soon-label {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.7);
 }
 
-/* Settings Popover */
 .settings-popover-overlay {
   position: fixed;
   top: 0;
@@ -408,12 +404,12 @@
   position: absolute;
   top: 68px;
   right: 20px;
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  min-width: 220px;
+  min-width: 240px;
   padding: 14px 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px var(--color-shadow);
   transform: scale(0.9) translateY(-8px);
   opacity: 0;
   transition: transform 0.2s ease, opacity 0.2s ease;
@@ -435,12 +431,12 @@
 .settings-popover-label {
   font-size: 13px;
   font-weight: 500;
-  color: #333;
+  color: var(--color-text-secondary);
 }
 
 .theme-toggle {
   display: flex;
-  background: #f3f4f6;
+  background: var(--color-surface-elevated);
   border-radius: 6px;
   padding: 2px;
   gap: 2px;
@@ -449,10 +445,10 @@
 .theme-toggle-btn {
   border: none;
   background: transparent;
-  color: #666;
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 500;
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-radius: 4px;
   cursor: pointer;
   font-family: inherit;
@@ -460,12 +456,11 @@
 }
 
 .theme-toggle-btn.active {
-  background: white;
-  color: #1a1a1a;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 1px 3px var(--color-shadow);
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .hero-content {
     flex-direction: column;

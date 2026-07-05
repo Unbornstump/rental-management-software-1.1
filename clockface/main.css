@@ -1,19 +1,4 @@
-/* Main Dashboard Styles — White & Black Theme */
-
-:root {
-  --color-bg: #FAFAFA;
-  --color-surface: #FFFFFF;
-  --color-text: #1A1A1A;
-  --color-text-secondary: #6B6B6B;
-  --color-text-muted: #A0A0A0;
-  --color-border: #E5E5E5;
-  --color-primary: #1A1A1A;
-  --color-primary-hover: #333333;
-  --color-status-paid: #16A34A;
-  --color-status-unpaid: #DC2626;
-  --color-status-partial: #D97706;
-  --color-status-overpaid: #2563EB;
-}
+/* Main Dashboard Styles — Shared theme-aware surfaces */
 
 body {
   background-color: var(--color-bg);
@@ -47,8 +32,8 @@ body {
 .sidebar {
   width: 200px;
   min-width: 200px;
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
@@ -176,8 +161,8 @@ body {
 /* Content Area */
 .content-area {
   flex: 1;
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 24px;
   overflow-y: auto;
@@ -200,8 +185,8 @@ body {
 }
 
 .stat-card {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -288,8 +273,8 @@ body {
 
 /* Quick Actions Panel */
 .quick-actions-panel {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -302,9 +287,9 @@ body {
 }
 
 .quick-action-btn {
-  background: white;
-  color: #374151;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 12px 16px;
   text-align: left;
@@ -1468,8 +1453,8 @@ body {
 
 .view-toggle {
   display: flex;
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -1498,8 +1483,8 @@ body {
 
 /* Units Overview + Table */
 .units-overview-panel {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
@@ -1566,8 +1551,8 @@ body {
 
 /* Units Table */
 .units-table-container {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -1578,7 +1563,7 @@ body {
 }
 
 .units-table thead {
-  background-color: #f9fafb;
+  background-color: var(--color-surface-elevated);
 }
 
 .units-table th {
@@ -1586,15 +1571,15 @@ body {
   text-align: left;
   font-size: 13px;
   font-weight: 600;
-  color: #6b7280;
-  border-bottom: 1px solid #e5e7eb;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .units-table td {
   padding: 12px 16px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
   font-size: 14px;
-  color: #111827;
+  color: var(--color-text);
 }
 
 .units-table tbody tr:last-child td {
@@ -1602,7 +1587,7 @@ body {
 }
 
 .units-table tbody tr:hover {
-  background-color: #f9fafb;
+  background-color: var(--color-hover-bg);
   cursor: pointer;
 }
 
@@ -1856,11 +1841,12 @@ body {
 .tenants-search-input {
   width: 100%;
   padding: 10px 16px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-input-border);
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
-  background-color: white;
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
   transition: all 0.2s ease;
 }
 
@@ -1871,7 +1857,7 @@ body {
 }
 
 .tenants-search-input::placeholder {
-  color: #9ca3af;
+  color: var(--color-input-placeholder);
 }
 
 /* Filter Pills */
@@ -2161,8 +2147,8 @@ body {
   gap: 10px;
   margin-bottom: 20px;
   padding: 12px 16px;
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
 }
 
@@ -2189,8 +2175,8 @@ body {
 }
 
 .metric-card {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 14px 16px;
 }
@@ -2235,8 +2221,8 @@ body {
 
 /* Payment Grid */
 .payment-grid-panel {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 20px;
 }
@@ -2345,7 +2331,7 @@ body {
   right: -420px;
   width: 400px;
   height: 100vh;
-  background: white;
+  background: var(--color-surface);
   box-shadow: -4px 0 20px rgba(0, 0, 0, 0.12);
   z-index: 1000;
   transition: right 0.3s ease;
@@ -2369,10 +2355,10 @@ body.panel-open::before {
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
-  background: white;
+  background: var(--color-surface);
   z-index: 1;
 }
 
@@ -2627,6 +2613,138 @@ body.panel-open::before {
   margin-bottom: 20px;
 }
 
+.sidebar,
+.content-area,
+.stat-card,
+.quick-actions-panel,
+.recent-activity-panel,
+.property-card,
+.property-card-menu,
+.add-property-card,
+.app-toast,
+.modal-card,
+.table-container,
+.data-table,
+.property-card-footer,
+.property-card-menu,
+.delete-warning-box,
+.delete-confirm-name,
+.delete-confirm-input,
+.logout-button,
+.logout-modal-content {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.sidebar-header h2,
+.page-title,
+.panel-title,
+.property-space-title,
+.property-space-subtitle,
+.property-card-title,
+.property-card-location,
+.property-card-stat .stat-value,
+.property-card-stat .stat-label,
+.guard-title,
+.guard-text,
+.delete-property-summary,
+.delete-property-summary strong,
+.delete-warning-title,
+.delete-confirm-instructions,
+.delete-confirm-name,
+.logout-modal-title,
+.logout-modal-message,
+.property-context-name,
+.property-context-label,
+.stat-card-title,
+.stat-card-value,
+.stat-card-subtitle,
+.activity-text,
+.activity-time,
+.quick-action-btn,
+.property-menu-item,
+.property-list-subtitle,
+.nav-button,
+.back-to-properties-btn,
+.property-card-badge,
+.property-card-footer,
+.property-card-icon,
+.add-property-label,
+.add-property-icon,
+.page-title,
+.table-action-btn {
+  color: var(--color-text);
+}
+
+.nav-button {
+  color: var(--color-text-secondary);
+}
+
+.nav-button:hover,
+.back-to-properties-btn:hover,
+.quick-action-btn:hover,
+.property-menu-item:hover,
+.property-gear-btn:hover {
+  background-color: var(--color-hover-bg);
+}
+
+.nav-button.active {
+  color: var(--color-text);
+  border-left-color: var(--color-primary);
+}
+
+.property-card-badge {
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.property-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 8px 12px var(--color-shadow);
+}
+
+.property-menu-item.danger,
+.delete-error-msg {
+  color: var(--color-danger-text);
+}
+
+.property-menu-item.danger:hover {
+  background-color: var(--color-danger-bg);
+}
+
+.app-toast {
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.table-container {
+  background-color: var(--color-surface);
+}
+
+.data-table thead {
+  background-color: var(--color-surface-elevated);
+}
+
+.data-table th,
+.data-table td {
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.delete-warning-box {
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border-color: var(--color-warning-text);
+}
+
+.delete-confirm-input {
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  border-color: var(--color-input-border);
+}
+
 @media (max-width: 768px) {
   .tenant-payment-columns {
     grid-template-columns: 1fr;
@@ -2635,8 +2753,8 @@ body.panel-open::before {
 
 .record-payment-card,
 .payment-feedback-card {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 20px;
 }
@@ -3046,8 +3164,8 @@ body.panel-open::before {
 
 .dashboard-payment-status-panel,
 .dashboard-alerts-panel {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 20px;
 }
@@ -3139,8 +3257,8 @@ body.panel-open::before {
 }
 
 .snapshot-card {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 20px;
 }
@@ -3179,7 +3297,7 @@ body.panel-open::before {
 
 /* Logout Button - Icon + Label Pill */
 .logout-button {
-  background-color: white;
+  background-color: var(--color-surface);
   border: 1px solid #6B6B6B;
   color: #6B6B6B;
   border-radius: 9999px;
@@ -3214,7 +3332,95 @@ body.panel-open::before {
   outline-offset: 2px;
 }
 
-/* Logout Modal */
+/* Shared dark-mode surface overrides */
+.sidebar,
+.content-area,
+.stat-card,
+.quick-actions-panel,
+.recent-activity-panel,
+.dashboard-payment-status-panel,
+.dashboard-alerts-panel,
+.snapshot-card,
+.property-card,
+.property-card-menu,
+.add-property-card,
+.payment-side-panel,
+.panel-header,
+.panel-body,
+.panel-section,
+.record-payment-card,
+.payment-feedback-card,
+.billing-cycle-selector,
+.metric-card,
+.payment-grid-panel,
+.view-toggle,
+.units-overview-panel,
+.units-table-container,
+.unit-selector-grid,
+.tenant-card-minimal,
+.info-strip-card,
+.tenant-info-summary,
+.tenant-info-summary h3,
+.lease-summary,
+.table-container,
+.data-table,
+.modal-card,
+.logout-modal-content,
+.payment-status-row,
+.alert-item,
+.quick-action-btn,
+.financials-tab,
+.secondary-btn,
+.table-action-btn,
+.form-section,
+.tenant-card-minimal,
+.tenant-card-minimal .tenant-name,
+.tenant-card-minimal .tenant-unit-rent,
+.tenant-card-minimal .tenant-lease-status,
+.tenant-card-minimal .payment-status {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.units-table thead,
+.data-table thead,
+.units-table th,
+.data-table th {
+  background-color: var(--color-surface-elevated);
+  color: var(--color-text);
+}
+
+.units-table td,
+.data-table td,
+.snapshot-row,
+.payment-grid-tenant,
+.payment-grid-amount,
+.psr-unit,
+.psr-amount,
+.summary-text,
+.stat-item,
+.tenant-unit-rent,
+.tenant-info-summary p,
+.panel-section p,
+.metric-card-label,
+.metric-card-value,
+.quick-action-btn,
+.financials-tab,
+.secondary-btn {
+  color: var(--color-text-secondary);
+}
+
+.tenants-search-input,
+.billing-cycle-selector select,
+.delete-confirm-input,
+.amount-input-row input,
+.filter-input {
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  border-color: var(--color-input-border);
+}
+
 .logout-modal {
   max-width: 400px;
   animation: logoutModalIn 220ms ease both;
@@ -3318,5 +3524,111 @@ body.panel-open::before {
 .logout-overlay.active {
   opacity: 1;
   pointer-events: all;
+}
+
+/* Dark theme surface hardening */
+[data-theme="dark"] .collection-glance,
+[data-theme="dark"] .credit-arrears-bar,
+[data-theme="dark"] .payment-breakdown,
+[data-theme="dark"] .empty-history,
+[data-theme="dark"] .receipt-preview-card,
+[data-theme="dark"] .snapshot-card,
+[data-theme="dark"] .dashboard-payment-status-panel,
+[data-theme="dark"] .dashboard-alerts-panel,
+[data-theme="dark"] .payment-status-row,
+[data-theme="dark"] .alert-item,
+[data-theme="dark"] .record-payment-card,
+[data-theme="dark"] .payment-feedback-card,
+[data-theme="dark"] .quick-actions-panel,
+[data-theme="dark"] .recent-activity-panel,
+[data-theme="dark"] .amount-input-row,
+[data-theme="dark"] .currency-prefix,
+[data-theme="dark"] .mini-occupancy-bar,
+[data-theme="dark"] .collection-progress-track,
+[data-theme="dark"] .logout-modal-actions .action-button.secondary,
+[data-theme="dark"] .logout-btn-danger,
+[data-theme="dark"] .logout-modal-content,
+[data-theme="dark"] .delete-warning-box,
+[data-theme="dark"] .delete-confirm-input,
+[data-theme="dark"] .tenants-search-input,
+[data-theme="dark"] .filter-input,
+[data-theme="dark"] .billing-cycle-selector select,
+[data-theme="dark"] .property-card,
+[data-theme="dark"] .add-property-card,
+[data-theme="dark"] .property-card-menu,
+[data-theme="dark"] .modal-card {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .collection-progress-track,
+[data-theme="dark"] .mini-occupancy-bar {
+  background-color: var(--color-surface-elevated);
+}
+
+[data-theme="dark"] .amount-input-row input,
+[data-theme="dark"] .currency-prefix,
+[data-theme="dark"] .tenants-search-input,
+[data-theme="dark"] .filter-input,
+[data-theme="dark"] .billing-cycle-selector select,
+[data-theme="dark"] .delete-confirm-input {
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  border-color: var(--color-input-border);
+}
+
+[data-theme="dark"] .payment-status-row.clickable:hover,
+[data-theme="dark"] .activity-item.clickable:hover {
+  background-color: var(--color-hover-bg);
+}
+
+[data-theme="dark"] .payment-status-row {
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .receipt-preview-card {
+  background-color: var(--color-surface-elevated);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .empty-history {
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .link-btn {
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .summary-pill {
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .snapshot-row {
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+[data-theme="dark"] .snapshot-row strong {
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .logout-modal-actions .action-button.secondary {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .logout-modal-actions .action-button.secondary:hover {
+  background-color: var(--color-hover-bg);
+}
+
+[data-theme="dark"] .logout-btn-danger {
+  background-color: var(--color-surface);
+  color: var(--color-danger-text);
+  border-color: var(--color-danger-text);
 }
 
