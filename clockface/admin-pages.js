@@ -107,6 +107,7 @@ const AdminPages = {
             <button class="table-action-btn" onclick="AdminPages.editStaff(${member.id}, '${member.role}')">Edit</button>
             <button class="table-action-btn" onclick="AdminPages.resetPassword(${member.id}, '${member.username}')">Reset Pwd</button>
             <button class="table-action-btn danger" onclick="AdminPages.deactivateStaff(${member.id}, '${member.username}')">Deactivate</button>
+            <button class="table-action-btn danger" onclick="AdminPages.showDeleteStaffModal(${member.id}, '${member.username}')">Delete</button>
           `}
         </td>
       `;
@@ -123,10 +124,12 @@ const AdminPages = {
             <div class="form-group">
               <label for="staff-name">Full Name</label>
               <input type="text" id="staff-name" required placeholder="Enter full name">
+              <div id="staff-name-error" class="field-error"></div>
             </div>
             <div class="form-group">
               <label for="staff-username">Username</label>
               <input type="text" id="staff-username" required placeholder="Enter username">
+              <div id="staff-username-error" class="field-error"></div>
             </div>
             <div class="form-group">
               <label for="staff-role">Role</label>
@@ -137,11 +140,21 @@ const AdminPages = {
                 <option value="caretaker">Caretaker</option>
               </select>
               <div id="staff-role-help" class="role-help-text">Select a role to see the access level.</div>
+              <div id="staff-role-error" class="field-error"></div>
             </div>
-            <div class="form-note">A temporary password will be generated and shown after the account is created.</div>
+            <div class="form-group">
+              <label for="staff-password">Password</label>
+              <div class="password-input-row">
+                <input type="text" id="staff-password" value="" autocomplete="off">
+                <button type="button" id="staff-password-toggle" class="icon-btn" title="Hide password">👁</button>
+                <button type="button" id="staff-password-refresh" class="icon-btn" title="Generate password">🔄</button>
+              </div>
+              <div class="field-hint">Auto-generated. You can edit this if you prefer a custom password.</div>
+              <div id="staff-password-error" class="field-error"></div>
+            </div>
             <div class="form-actions">
               <button type="button" class="cancel-btn" onclick="document.getElementById('staff-modal').remove()">Cancel</button>
-              <button type="submit" class="action-button">Create Staff Member</button>
+              <button type="submit" id="create-staff-submit" class="action-button" disabled>Create Staff Member</button>
             </div>
           </form>
         </div>
@@ -150,23 +163,159 @@ const AdminPages = {
 
     document.body.insertAdjacentHTML('beforeend', html);
     this.updateRoleHelp('');
+    this.generatePasswordField();
+    this.attachStaffFormValidation();
+  },
 
-    document.getElementById('add-staff-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
+  generatePasswordField() {
+    const input = document.getElementById('staff-password');
+    if (!input) return;
+    const password = this.generateStrongPassword();
+    input.value = password;
+    input.type = 'text';
+    const toggle = document.getElementById('staff-password-toggle');
+    const refresh = document.getElementById('staff-password-refresh');
+    if (toggle) {
+      toggle.addEventListener('click', () => {
+        if (input.type === 'password') {
+          input.type = 'text';
+          toggle.textContent = '👁';
+          toggle.title = 'Hide password';
+        } else {
+          input.type = 'password';
+          toggle.textContent = '🙈';
+          toggle.title = 'Show password';
+        }
+      });
+    }
+    if (refresh) {
+      refresh.addEventListener('click', () => {
+        input.value = this.generateStrongPassword();
+      });
+    }
+  },
 
-      const fullName = document.getElementById('staff-name').value;
-      const username = document.getElementById('staff-username').value;
+  generateStrongPassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+    let password = '';
+    while (password.length < 12) {
+      password += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return password;
+  },
+
+  attachStaffFormValidation() {
+    const form = document.getElementById('add-staff-form');
+    if (!form) return;
+
+    const inputs = [
+      document.getElementById('staff-name'),
+      document.getElementById('staff-username'),
+      document.getElementById('staff-role'),
+      document.getElementById('staff-password')
+    ];
+
+    const validate = async () => {
+      const fullName = document.getElementById('staff-name').value.trim();
+      const username = document.getElementById('staff-username').value.trim();
       const role = document.getElementById('staff-role').value;
+      const password = document.getElementById('staff-password').value;
+      let hasError = false;
+
+      document.getElementById('staff-name-error').textContent = '';
+      document.getElementById('staff-username-error').textContent = '';
+      document.getElementById('staff-role-error').textContent = '';
+      document.getElementById('staff-password-error').textContent = '';
+
+      if (!fullName) {
+        document.getElementById('staff-name-error').textContent = 'Full name is required';
+        hasError = true;
+      }
+      if (!username) {
+        document.getElementById('staff-username-error').textContent = 'Username is required';
+        hasError = true;
+      } else if (username.includes(' ')) {
+        document.getElementById('staff-username-error').textContent = 'Username cannot contain spaces';
+        hasError = true;
+      } else {
+        try {
+          const result = await apiClient.checkUsernameAvailability(username);
+          if (!result.available) {
+            document.getElementById('staff-username-error').textContent = 'This username is already in use';
+            hasError = true;
+          }
+        } catch (error) {
+          console.error('Username availability check failed', error);
+        }
+      }
+      if (!role) {
+        document.getElementById('staff-role-error').textContent = 'Please select a role';
+        hasError = true;
+      }
+      if (!password || password.length < 8) {
+        document.getElementById('staff-password-error').textContent = 'Password must be at least 8 characters';
+        hasError = true;
+      }
+
+      document.getElementById('create-staff-submit').disabled = hasError;
+    };
+
+    inputs.forEach(input => input.addEventListener('input', () => validate()));
+    document.getElementById('staff-username').addEventListener('blur', () => validate());
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await validate();
+      const submitButton = document.getElementById('create-staff-submit');
+      if (submitButton.disabled) return;
+
+      const fullName = document.getElementById('staff-name').value.trim();
+      const username = document.getElementById('staff-username').value.trim();
+      const role = document.getElementById('staff-role').value;
+      const password = document.getElementById('staff-password').value;
 
       try {
-        const result = await apiClient.createStaff(username, fullName, role);
-        alert(`Staff member created.\nUsername: ${username}\nTemporary Password: ${result.temp_password}\n\nShare this password with them.`);
+        const result = await apiClient.createStaff(username, fullName, role, password);
         document.getElementById('staff-modal').remove();
+        this.showStaffCreatedModal(username, result.temporary_password || result.temp_password || result.password || password, fullName);
         this.loadStaffManagement();
       } catch (error) {
-        alert('Failed to create staff: ' + (error.response?.data?.error || error.message));
+        const formError = document.getElementById('staff-form-error') || document.createElement('div');
+        formError.id = 'staff-form-error';
+        formError.className = 'field-error';
+        formError.textContent = 'Something went wrong. Please try again.';
+        form.appendChild(formError);
       }
     });
+  },
+
+  showStaffCreatedModal(username, password, fullName) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-card">
+        <h2>Staff Member Created</h2>
+        <p>${fullName} has been added successfully.</p>
+        <div class="staff-created-details">
+          <div><strong>Username:</strong> ${username}</div>
+          <div><strong>Password:</strong></div>
+          <div class="password-box">${password}</div>
+          <button type="button" id="copy-created-password" class="action-button">Copy to Clipboard</button>
+          <p class="helper-text">Share these credentials with ${fullName}. They can change their password after logging in.</p>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="close-created-staff-modal" class="action-button">Done</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('copy-created-password').addEventListener('click', async () => {
+      await navigator.clipboard.writeText(`Username: ${username} | Password: ${password}`);
+      const button = document.getElementById('copy-created-password');
+      button.textContent = 'Copied ✓';
+      setTimeout(() => { button.textContent = 'Copy to Clipboard'; }, 2000);
+    });
+    document.getElementById('close-created-staff-modal').addEventListener('click', () => modal.remove());
   },
 
   updateRoleHelp(role) {
@@ -288,16 +437,76 @@ const AdminPages = {
       try {
         await apiClient.deactivateStaff(staffId);
         document.getElementById('deactivate-staff-modal').remove();
-        alert(`${username} has been deactivated`);
+        SharedComponents.showToast(`${username} has been deactivated`);
         this.loadStaffManagement();
       } catch (error) {
-        alert('Failed to deactivate: ' + (error.response?.data?.error || error.message));
+        SharedComponents.showToast('Failed to deactivate staff');
       }
     });
   },
 
   async deactivateStaff(staffId, username) {
     this.showDeactivateStaffModal(staffId, username);
+  },
+
+  showDeleteStaffModal(staffId, username) {
+    const html = `
+      <div id="delete-staff-modal" class="modal-overlay">
+        <div class="modal-card confirm-card">
+          <h2>Delete Staff Member</h2>
+          <p class="confirm-title">⚠ This will permanently delete ${username}'s account.</p>
+          <p class="confirm-copy">Their audit log history will also be removed. This cannot be undone.</p>
+          <div class="form-actions">
+            <button type="button" class="cancel-btn" id="delete-staff-cancel-btn">Cancel</button>
+            <button type="button" class="action-button danger" id="delete-staff-continue-btn">Continue</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    document.getElementById('delete-staff-cancel-btn').addEventListener('click', () => document.getElementById('delete-staff-modal').remove());
+    document.getElementById('delete-staff-continue-btn').addEventListener('click', () => this.showDeleteStaffConfirmStep(staffId, username));
+  },
+
+  showDeleteStaffConfirmStep(staffId, username) {
+    const modal = document.getElementById('delete-staff-modal');
+    if (!modal) return;
+    modal.innerHTML = `
+      <div class="modal-card confirm-card">
+        <h2>Delete Staff Member</h2>
+        <p class="confirm-copy">Type the username to confirm:</p>
+        <div class="delete-confirm-name">${username}</div>
+        <input type="text" id="delete-staff-confirm-input" class="delete-confirm-input" autocomplete="off" spellcheck="false">
+        <div class="form-actions">
+          <button type="button" class="cancel-btn" id="delete-staff-cancel-btn">Cancel</button>
+          <button type="button" class="action-button delete-confirm-btn" id="delete-staff-final-btn" disabled>Delete Permanently</button>
+        </div>
+      </div>
+    `;
+
+    const input = document.getElementById('delete-staff-confirm-input');
+    const button = document.getElementById('delete-staff-final-btn');
+    const cancel = document.getElementById('delete-staff-cancel-btn');
+
+    cancel.addEventListener('click', () => modal.remove());
+
+    input.addEventListener('input', () => {
+      const matched = input.value === username;
+      button.disabled = !matched;
+      button.classList.toggle('active', matched);
+    });
+
+    button.addEventListener('click', async () => {
+      try {
+        await apiClient.deleteStaff(staffId);
+        modal.remove();
+        SharedComponents.showToast(`${username} has been permanently deleted`);
+        this.loadStaffManagement();
+      } catch (error) {
+        SharedComponents.showToast('Failed to delete staff');
+      }
+    });
   },
 
   async loadRolesPermissions() {

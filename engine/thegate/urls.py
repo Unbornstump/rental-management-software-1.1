@@ -11,6 +11,7 @@ urlpatterns = [
     # Authentication
     path('auth/setup-status/', setup_status, name='setup_status'),
     path('auth/username-availability/', check_username_availability, name='check_username_availability'),
+    path('admin/check-username/', check_username_availability, name='check_staff_username_availability'),
     path('auth/register/', register_manager, name='register_manager'),
     path('auth/login/', LoginView.as_view(), name='login'),
     path('auth/me/', get_current_user, name='get_current_user'),

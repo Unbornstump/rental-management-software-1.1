@@ -12,30 +12,61 @@ class StaffSerializer(serializers.ModelSerializer):
     role_display = serializers.CharField(source='get_role_display', read_only=True)
     last_login = serializers.DateTimeField(read_only=True)
     date_joined = serializers.DateTimeField(read_only=True)
+    full_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = User
         fields = [
             'id', 'username', 'first_name', 'last_name', 'email', 'role', 'role_display',
             'is_active', 'must_change_password', 'created_by', 'created_by_username',
-            'last_login', 'date_joined'
+            'last_login', 'date_joined', 'full_name', 'password'
         ]
         read_only_fields = ['id', 'date_joined', 'last_login', 'created_by']
 
+    def validate_username(self, value):
+        username = (value or '').strip()
+        if not username:
+            raise serializers.ValidationError('Username is required')
+        if any(char.isspace() for char in username):
+            raise serializers.ValidationError('Username cannot contain spaces')
+        if User.objects.filter(username__iexact=username).exists():
+            raise serializers.ValidationError('This username is already in use')
+        return username
+
+    def validate_password(self, value):
+        password = value or ''
+        if password and len(password) < 8:
+            raise serializers.ValidationError('Password must be at least 8 characters')
+        return password
+
     def create(self, validated_data):
         from django.utils.crypto import get_random_string
-        import secrets
-        
-        # Generate temporary password
-        temp_password = secrets.token_urlsafe(12)
-        validated_data['password'] = temp_password
+
+        full_name = (validated_data.pop('full_name', '') or '').strip()
+        temp_password = validated_data.pop('password', None) or get_random_string(12)
+        first_name = (validated_data.get('first_name') or '').strip()
+        last_name = (validated_data.get('last_name') or '').strip()
+
+        if full_name:
+            name_parts = full_name.split()
+            first_name = name_parts[0]
+            last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
+
+        validated_data['first_name'] = first_name
+        validated_data['last_name'] = last_name
         validated_data['must_change_password'] = True
-        
-        user = User(**validated_data)
-        user.set_password(temp_password)
-        user.save()
-        
-        # Log the action
+
+        user = User.objects.create_user(
+            username=validated_data.get('username'),
+            password=temp_password,
+            first_name=first_name,
+            last_name=last_name,
+            role=validated_data.get('role'),
+            must_change_password=True,
+            created_by=validated_data.get('created_by'),
+        )
+
         request = self.context.get('request')
         if request and request.user:
             AuditLog.objects.create(
@@ -49,8 +80,7 @@ class StaffSerializer(serializers.ModelSerializer):
                     'created_by': request.user.username
                 }
             )
-        
-        # Store temporary password in instance for response
+
         user.temp_password = temp_password
         return user
 

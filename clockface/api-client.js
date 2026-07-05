@@ -147,16 +147,18 @@ class ApiClient {
     return this.get('/api/admin/staff/');
   }
 
-  async createStaff(username, fullName, role) {
-    const nameParts = fullName.split(' ');
-    const firstName = nameParts[0];
+  async createStaff(username, fullName, role, password = '') {
+    const nameParts = (fullName || '').split(' ');
+    const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
-    
+
     return this.post('/api/admin/staff/', {
       username,
       first_name: firstName,
       last_name: lastName,
-      role
+      full_name: fullName,
+      role,
+      password
     });
   }
 
@@ -169,7 +171,15 @@ class ApiClient {
   }
 
   async deactivateStaff(staffId) {
+    return this.post(`/api/admin/staff/${staffId}/deactivate/`, {});
+  }
+
+  async deleteStaff(staffId) {
     return this.delete(`/api/admin/staff/${staffId}/`);
+  }
+
+  async checkUsernameAvailability(username) {
+    return this.get(`/api/admin/check-username/?username=${encodeURIComponent(username)}`);
   }
 
   // Audit log endpoints (manager only) - via thegate

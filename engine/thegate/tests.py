@@ -86,6 +86,52 @@ class SecurityQuestionFlowTests(TestCase):
         self.assertTrue(RecoveryCode.objects.filter(user=self.manager, used=True).exists())
 
 
+class StaffManagementTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.manager = User.objects.create_user(
+            username='manager_user',
+            password='securepass123',
+            role=User.MANAGER,
+            must_change_password=False,
+        )
+        self.client.force_authenticate(user=self.manager)
+
+    def test_create_staff_returns_temporary_password_in_response(self):
+        response = self.client.post('/api/admin/staff/', {
+            'username': 'staff1',
+            'first_name': 'Jose',
+            'last_name': 'Martinez',
+            'role': User.CARETAKER,
+        })
+
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('temporary_password', response.data)
+        self.assertEqual(response.data['username'], 'staff1')
+        created_user = User.objects.get(username='staff1')
+        self.assertTrue(created_user.check_password(response.data['temporary_password']))
+
+    def test_delete_staff_removes_user_and_related_audit_logs(self):
+        staff_user = User.objects.create_user(
+            username='staff_to_delete',
+            password='securepass123',
+            role=User.CARETAKER,
+        )
+        AuditLog.objects.create(
+            user=self.manager,
+            action='Created staff account',
+            target_model='CustomUser',
+            target_id=staff_user.id,
+            details={'username': staff_user.username},
+        )
+
+        response = self.client.delete(f'/api/admin/staff/{staff_user.id}/')
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(User.objects.filter(id=staff_user.id).exists())
+        self.assertFalse(AuditLog.objects.filter(target_id=staff_user.id).exists())
+
+
 class AdminAuditAndSettingsTests(TestCase):
     def test_audit_log_serializer_generates_human_readable_details(self):
         manager = User.objects.create_user(

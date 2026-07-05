@@ -1,7 +1,7 @@
 import re
 
 from rest_framework import generics, status, permissions
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -325,8 +325,31 @@ class StaffListView(generics.ListCreateAPIView):
             return User.objects.all().order_by('-date_joined')
         return User.objects.none()
 
-    def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+    def create(self, request, *args, **kwargs):
+        if request.user.role != User.MANAGER:
+            return Response({'error': 'Only managers can create staff accounts.'}, status=status.HTTP_403_FORBIDDEN)
+
+        payload = request.data.copy()
+        full_name = (payload.get('full_name') or '').strip()
+        if full_name:
+            payload['full_name'] = full_name
+        elif payload.get('first_name') or payload.get('last_name'):
+            first_name = (payload.get('first_name') or '').strip()
+            last_name = (payload.get('last_name') or '').strip()
+            payload['full_name'] = f"{first_name} {last_name}".strip()
+
+        serializer = self.get_serializer(data=payload)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save(created_by=request.user)
+
+        return Response({
+            'id': user.id,
+            'username': user.username,
+            'full_name': f"{user.first_name} {user.last_name}".strip() or user.username,
+            'role': user.role,
+            'temporary_password': getattr(user, 'temp_password', None),
+            'message': 'Staff member created. Share this temporary password with them.'
+        }, status=status.HTTP_201_CREATED)
 
 
 class StaffDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -341,10 +364,24 @@ class StaffDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
+        if instance.role == User.MANAGER:
+            return Response({'error': 'Cannot delete manager account.'}, status=status.HTTP_403_FORBIDDEN)
+
+        AuditLog.objects.filter(user=instance).delete()
+        AuditLog.objects.filter(target_model='CustomUser', target_id=instance.id).delete()
+        instance.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post'])
+    def deactivate(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.role == User.MANAGER:
+            return Response({'error': 'Cannot deactivate manager account.'}, status=status.HTTP_403_FORBIDDEN)
+
         instance.is_active = False
         instance.save()
-        
-        # Log deactivation
+
         AuditLog.objects.create(
             user=request.user,
             action='Deactivated staff account',
@@ -352,7 +389,7 @@ class StaffDetailView(generics.RetrieveUpdateDestroyAPIView):
             target_id=instance.id,
             details={'username': instance.username, 'deactivated_by': request.user.username}
         )
-        
+
         return Response({'message': 'Staff account deactivated'})
 
 
