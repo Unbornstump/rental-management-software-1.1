@@ -17,7 +17,7 @@ class CustomUser(AbstractUser):
     ]
 
     role = models.CharField(max_length=32, choices=ROLE_CHOICES, default=MANAGER)
-    must_change_password = models.BooleanField(default=True)
+    must_change_password = models.BooleanField(default=False)
     created_by = models.ForeignKey(
         'self',
         null=True,
@@ -25,6 +25,12 @@ class CustomUser(AbstractUser):
         on_delete=models.SET_NULL,
         related_name='created_staff'
     )
+
+    def save(self, *args, **kwargs):
+        if self.role == self.MANAGER:
+            self.is_staff = True
+            self.is_superuser = True
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.username} ({self.role})"

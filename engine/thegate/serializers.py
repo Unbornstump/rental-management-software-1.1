@@ -143,34 +143,48 @@ class LoginSerializer(serializers.Serializer):
 
     def validate(self, data):
         from django.contrib.auth import authenticate
-        
-        username = data.get('username')
+
+        request = self.context.get('request')
+        username = (data.get('username') or '').strip()
         password = data.get('password')
 
-        if username and password:
-            user = authenticate(username=username, password=password)
-            
-            if not user:
-                # Log failed login attempt
-                AuditLog.objects.create(
-                    user=None,
-                    action='Failed login attempt',
-                    target_model='CustomUser',
-                    details={'username': username, 'reason': 'Invalid credentials'}
-                )
-                raise serializers.ValidationError("Invalid credentials")
-            
-            if not user.is_active:
-                AuditLog.objects.create(
-                    user=user,
-                    action='Failed login attempt',
-                    target_model='CustomUser',
-                    details={'username': username, 'reason': 'Account inactive'}
-                )
-                raise serializers.ValidationError("Account is inactive")
-            
-            data['user'] = user
-        else:
+        if not username or not password:
             raise serializers.ValidationError("Must include username and password")
 
+        try:
+            user = authenticate(request=request, username=username, password=password)
+            print('DEBUG login - username received:', repr(data.get('username')))
+            print('DEBUG login - normalized username:', repr(username))
+            print('DEBUG login - password provided:', bool(password))
+            print('DEBUG login - authenticate returned:', repr(user))
+            if user is not None:
+                print('DEBUG login - user.is_active:', user.is_active)
+                print('DEBUG login - user.role:', getattr(user, 'role', None))
+                print('DEBUG login - user.is_staff:', user.is_staff)
+                print('DEBUG login - user.is_superuser:', user.is_superuser)
+                print('DEBUG login - user.must_change_password:', user.must_change_password)
+        except Exception as exc:
+            print('DEBUG login - authenticate exception:', repr(exc))
+            raise
+
+        if not user:
+            # Log failed login attempt
+            AuditLog.objects.create(
+                user=None,
+                action='Failed login attempt',
+                target_model='CustomUser',
+                details={'username': username, 'reason': 'Invalid credentials'}
+            )
+            raise serializers.ValidationError("Invalid credentials")
+
+        if not user.is_active:
+            AuditLog.objects.create(
+                user=user,
+                action='Failed login attempt',
+                target_model='CustomUser',
+                details={'username': username, 'reason': 'Account inactive'}
+            )
+            raise serializers.ValidationError("Account is inactive")
+
+        data['user'] = user
         return data
