@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Q, Sum, F
+from django.db.models import Q, Sum, F, Count, Case, When
 from django.db import transaction
 from django.utils import timezone
 from datetime import date, timedelta
@@ -19,7 +19,7 @@ from .serializers import (
     TenantPaymentDashboardSerializer, BulkRentDashboardSerializer,
     PaymentGridSerializer, PaymentTransactionSerializer,
 )
-from core.models import Lease, Unit, Tenant, CustomUser
+from core.models import Lease, Unit, Tenant, CustomUser, Property
 from core.permissions import RolePermission
 from calendar import monthrange
 
@@ -337,8 +337,9 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), RolePermission([CustomUser.MANAGER])()]
         if self.action in ['record_payment', 'record_for_tenant']:
             return [IsAuthenticated(), RolePermission([CustomUser.MANAGER, CustomUser.ACCOUNTANT])()]
+        # Make summary/payment grid and related dashboard endpoints broadly accessible to any authenticated user
         if self.action in ['tenant_dashboard', 'payment_grid', 'summary', 'tenant_history', 'bulk_dashboard']:
-            return [IsAuthenticated(), RolePermission([CustomUser.MANAGER, CustomUser.ACCOUNTANT])()]
+            return [IsAuthenticated()]
         if self.action == 'generate_billing_cycle':
             return [IsAuthenticated(), RolePermission([CustomUser.MANAGER])()]
         return [IsAuthenticated(), RolePermission([CustomUser.MANAGER])()]
@@ -707,6 +708,118 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
 
         serializer = BulkRentDashboardSerializer(data)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def global_summary(self, request):
+        """Global financials summary across all properties for the logged-in manager."""
+        today = date.today()
+        month = int(request.query_params.get('month', today.month))
+        year = int(request.query_params.get('year', today.year))
+
+        # Get all properties (assuming manager has access to all properties)
+        properties = Property.objects.filter(is_active=True).order_by('name')
+
+        # Get all active leases for these properties
+        active_leases = Lease.objects.filter(
+            status=Lease.ACTIVE,
+            unit__property__in=properties
+        ).select_related('tenant', 'unit', 'unit__property')
+
+        # Get rent payments for the selected month/year
+        rent_payments = RentPayment.objects.filter(
+            billing_month=month,
+            billing_year=year,
+            unit__property__in=properties
+        ).select_related('tenant', 'unit', 'unit__property')
+
+        # Build payment lookup by unit
+        payment_by_unit = {p.unit_id: p for p in rent_payments}
+
+        # Calculate per-property data
+        property_data = []
+        total_expected = Decimal('0.00')
+        total_collected = Decimal('0.00')
+        total_commission = Decimal('0.00')
+        total_units = 0
+        total_occupied = 0
+
+        for property_obj in properties:
+            # Get units for this property
+            property_units = Unit.objects.filter(property=property_obj)
+            unit_count = property_units.count()
+            total_units += unit_count
+
+            # Get active leases for this property
+            property_leases = active_leases.filter(unit__property=property_obj)
+            occupied_count = property_leases.count()
+            total_occupied += occupied_count
+
+            # Calculate expected rent from active leases
+            property_expected = sum(lease.rent_amount for lease in property_leases)
+            total_expected += property_expected
+
+            # Calculate collected rent from actual payments
+            property_collected = Decimal('0.00')
+            for lease in property_leases:
+                payment = payment_by_unit.get(lease.unit_id)
+                if payment:
+                    property_collected += payment.amount_paid
+
+            total_collected += property_collected
+
+            # Calculate commission
+            commission_pct = property_obj.commission_percent or Decimal('0.00')
+            commission_amt = property_collected * (commission_pct / Decimal('100'))
+            total_commission += commission_amt
+
+            # Calculate net to owner
+            net_to_owner = property_collected - commission_amt
+
+            # Determine status
+            if occupied_count == 0:
+                status = 'no_tenants'
+            elif property_collected >= property_expected:
+                status = 'full'
+            elif property_collected > 0:
+                status = 'partial'
+            else:
+                status = 'no_collection'
+
+            property_data.append({
+                'id': property_obj.id,
+                'name': property_obj.name,
+                'property_type': property_obj.property_type,
+                'location': property_obj.location,
+                'units': unit_count,
+                'occupied': occupied_count,
+                'expected': property_expected,
+                'collected': property_collected,
+                'commission_percent': commission_pct,
+                'commission_amount': commission_amt,
+                'net_to_owner': net_to_owner,
+                'outstanding': property_expected - property_collected,
+                'status': status
+            })
+
+        # Calculate collection rate
+        collection_rate = round(float(total_collected / total_expected * 100), 1) if total_expected > 0 else 0.0
+
+        # Build summary
+        summary = {
+            'total_properties': len(properties),
+            'total_units': total_units,
+            'total_occupied': total_occupied,
+            'occupancy_rate': round(float(total_occupied / total_units * 100), 1) if total_units > 0 else 0.0,
+            'total_expected': total_expected,
+            'total_collected': total_collected,
+            'collection_rate': collection_rate,
+            'total_commission': total_commission,
+            'net_to_owners': total_collected - total_commission,
+            'total_outstanding': total_expected - total_collected,
+            'properties': property_data
+        }
+
+        return Response(summary)
 
     @action(detail=False, methods=['post'])
     def generate_billing_cycle(self, request):

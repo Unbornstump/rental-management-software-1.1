@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from decimal import Decimal
 
 
 def format_audit_log_details(action, details=None):
@@ -126,6 +127,7 @@ class Property(models.Model):
     owner_details = models.TextField(blank=True)
     date_added = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('10.00'))
 
     def __str__(self):
         return self.name

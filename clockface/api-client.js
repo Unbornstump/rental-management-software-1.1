@@ -76,9 +76,10 @@ class ApiClient {
     return response.data;
   }
 
-  async get(path) {
+  async get(path, params = {}) {
     const response = await axios.get(`${this.baseURL}${path}`, {
-      headers: this.getHeaders()
+      headers: this.getHeaders(),
+      params
     });
     return response.data;
   }
@@ -215,8 +216,8 @@ class ApiClient {
     return this.get('/api/landlord-properties/');
   }
 
-  async getTenants() {
-    return this.get('/api/tenants/');
+  async getTenants(params = {}) {
+    return this.get('/api/tenants/', params);
   }
 
   async getTenantUnits() {
@@ -382,6 +383,11 @@ class ApiClient {
   async getBulkRentDashboard(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     return this.get(`/api/financials/rent-payments/bulk_dashboard/?${queryString}`);
+  }
+
+  async getGlobalFinancialsSummary(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/api/financials/rent-payments/global_summary/?${queryString}`);
   }
 
   async generateBillingCycle(data) {

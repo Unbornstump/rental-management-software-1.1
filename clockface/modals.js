@@ -34,7 +34,12 @@ const Modals = {
           </div>
           <div class="form-group">
             <label for="property-description">Description</label>
-            <textarea id="property-description" name="description">${property?.description || ''}</textarea>
+            <textarea id="property-description" name="owner_details">${property?.owner_details || property?.description || ''}</textarea>
+          </div>
+          <div class="form-group">
+            <label for="property-commission">Commission (%)</label>
+            <input type="number" id="property-commission" name="commission_percent" min="0" max="100" step="0.01" value="${property?.commission_percent ?? 10.00}">
+            <small class="form-hint">Percentage of rent collected retained as commission.</small>
           </div>
           <div class="modal-footer">
             <button type="button" class="action-button cancel-btn">Cancel</button>
@@ -68,7 +73,8 @@ const Modals = {
         name: formData.get('name'),
         property_type: formData.get('property_type'),
         location: formData.get('location'),
-        description: formData.get('description')
+        owner_details: formData.get('owner_details'),
+        commission_percent: parseFloat(formData.get('commission_percent') || 0)
       };
 
       try {

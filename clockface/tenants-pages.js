@@ -61,6 +61,48 @@ const TenantsPages = {
     }
   },
 
+  getTenantCardState(tenant, leases = [], tenantUnits = [], propertyUnits = []) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const tenantLeases = (leases || []).filter(l => l.tenant == tenant.id);
+    const activeLease = tenantLeases.find(l => {
+      if (l.status !== 'active') return false;
+      const startDate = new Date(l.start_date);
+      const endDate = new Date(l.end_date);
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(0, 0, 0, 0);
+      return startDate <= today && today <= endDate;
+    });
+
+    if (activeLease) {
+      const endDate = new Date(activeLease.end_date);
+      endDate.setHours(0, 0, 0, 0);
+      const diffDays = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+      const isExpiring = diffDays <= 14;
+      return {
+        tab: isExpiring ? 'expiring' : 'active',
+        badge: null,
+        lease: activeLease,
+        expiryDays: diffDays,
+        isExpiring
+      };
+    }
+
+    const legacyLease = tenantLeases.find(l => l.status !== 'active' || new Date(l.end_date) < today);
+    if (legacyLease) {
+      return { tab: 'inactive', badge: null, lease: legacyLease, expiryDays: null, isExpiring: false };
+    }
+
+    return {
+      tab: 'inactive',
+      badge: tenantLeases.length > 0 ? null : 'No lease assigned',
+      lease: null,
+      expiryDays: null,
+      isExpiring: false
+    };
+  },
+
   // Get lease expiry info
   getLeaseExpiry(lease) {
     if (!lease || lease.status !== 'active') {
@@ -77,7 +119,7 @@ const TenantsPages = {
     
     if (diffDays < 0) {
       return { text: 'Lease expired', color: '#e74c3c', days: diffDays };
-    } else if (diffDays <= 7) {
+    } else if (diffDays <= 14) {
       return { text: `Lease ends in ${diffDays} days`, color: '#f39c12', days: diffDays, isExpiringSoon: true };
     } else {
       return { text: `Lease ends in ${diffDays} days`, color: '#27ae60', days: diffDays };
@@ -163,7 +205,7 @@ const TenantsPages = {
       const [allUnits, allLeases, allTenants, allTenantUnits, rentPayments] = await Promise.all([
         apiClient.getUnits(),
         apiClient.getLeases(),
-        apiClient.getTenants(),
+        apiClient.getTenants({ property: property.id }),
         apiClient.getTenantUnits(),
         apiClient.getRentPayments({ property: property.id })
       ]);
@@ -196,11 +238,10 @@ const TenantsPages = {
     const propertyLeases = allLeases.filter(l => propertyUnits.some(u => u.id == l.unit));
     const propertyTenantUnits = allTenantUnits.filter(tu => propertyUnits.some(u => u.id == tu.unit));
     
-    const allPropertyTenantIds = [...new Set([...propertyLeases.map(l => l.tenant), ...propertyTenantUnits.map(tu => tu.tenant)])];
-    const allPropertyTenants = allTenants.filter(t => allPropertyTenantIds.includes(t.id));
+    const allPropertyTenants = [...allTenants];
     
-    const activeCount = allPropertyTenants.filter(t => t.status === 'active').length;
-    const inactiveCount = allPropertyTenants.filter(t => t.status === 'inactive').length;
+    const activeCount = allPropertyTenants.filter(t => this.getTenantCardState(t, propertyLeases, propertyTenantUnits).tab === 'active').length;
+    const inactiveCount = allPropertyTenants.filter(t => this.getTenantCardState(t, propertyLeases, propertyTenantUnits).tab === 'inactive').length;
     
     // Calculate unpaid count for current month
     const now = new Date();
@@ -234,12 +275,11 @@ const TenantsPages = {
     const propertyLeases = allLeases.filter(l => propertyUnits.some(u => u.id == l.unit));
     const propertyTenantUnits = allTenantUnits.filter(tu => propertyUnits.some(u => u.id == tu.unit));
     
-    const allPropertyTenantIds = [...new Set([...propertyLeases.map(l => l.tenant), ...propertyTenantUnits.map(tu => tu.tenant)])];
-    const allPropertyTenants = allTenants.filter(t => allPropertyTenantIds.includes(t.id));
+    const allPropertyTenants = [...allTenants];
     
     const totalCount = allPropertyTenants.length;
-    const activeCount = allPropertyTenants.filter(t => t.status === 'active').length;
-    const inactiveCount = allPropertyTenants.filter(t => t.status === 'inactive').length;
+    const activeCount = allPropertyTenants.filter(t => this.getTenantCardState(t, propertyLeases, propertyTenantUnits).tab === 'active').length;
+    const inactiveCount = allPropertyTenants.filter(t => this.getTenantCardState(t, propertyLeases, propertyTenantUnits).tab === 'inactive').length;
     
     let unpaidCount = 0;
     let expiringCount = 0;
@@ -298,8 +338,7 @@ const TenantsPages = {
     const propertyLeases = allLeases.filter(l => propertyUnits.some(u => u.id == l.unit));
     const propertyTenantUnits = allTenantUnits.filter(tu => propertyUnits.some(u => u.id == tu.unit));
     
-    const allPropertyTenantIds = [...new Set([...propertyLeases.map(l => l.tenant), ...propertyTenantUnits.map(tu => tu.tenant)])];
-    const allPropertyTenants = allTenants.filter(t => allPropertyTenantIds.includes(t.id));
+    const allPropertyTenants = [...allTenants];
     
     const totalCount = allPropertyTenants.length;
     let paidCount = 0;
@@ -350,8 +389,7 @@ const TenantsPages = {
     const activeLeases = propertyLeases.filter(l => l.status === 'active');
     const propertyTenantUnits = allTenantUnits.filter(tu => propertyUnits.some(u => u.id == tu.unit));
 
-    const allPropertyTenantIds = [...new Set([...propertyLeases.map(l => l.tenant), ...propertyTenantUnits.map(tu => tu.tenant)])];
-    const allPropertyTenants = allTenants.filter(t => allPropertyTenantIds.includes(t.id));
+    const allPropertyTenants = [...allTenants];
 
     const filteredTenants = allPropertyTenants.filter(t => {
       // Apply search filter
@@ -365,25 +403,17 @@ const TenantsPages = {
       
       // Apply status filter
       if (filter === 'expiring') {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const cutoff = new Date(today);
-        cutoff.setDate(cutoff.getDate() + 7);
-        return propertyLeases.some(l => {
-          if (l.tenant != t.id || l.status !== 'active') return false;
-          const end = new Date(l.end_date);
-          return end >= today && end <= cutoff;
-        });
+        return this.getTenantCardState(t, propertyLeases, propertyTenantUnits).tab === 'expiring';
       }
       if (filter === 'unpaid') {
         const paymentStatus = this.getPaymentStatus(t.id, rentPayments);
         return paymentStatus.status === 'unpaid';
       }
       if (filter === 'active') {
-        return t.status === 'active';
+        return this.getTenantCardState(t, propertyLeases, propertyTenantUnits).tab === 'active';
       }
       if (filter === 'inactive') {
-        return t.status === 'inactive';
+        return this.getTenantCardState(t, propertyLeases, propertyTenantUnits).tab === 'inactive';
       }
       return true; // 'all' filter
     });
@@ -437,7 +467,10 @@ const TenantsPages = {
     }
 
     tenantsGrid.innerHTML = filteredTenants.map(tenant => {
-      const tenantLease = activeLeases.find(l => l.tenant == tenant.id);
+      const tenantState = this.getTenantCardState(tenant, propertyLeases, propertyTenantUnits, propertyUnits);
+      const tenantLease = tenantState.lease && tenantState.lease.status === 'active'
+        ? tenantState.lease
+        : activeLeases.find(l => l.tenant == tenant.id);
       const tenantUnitRecords = propertyTenantUnits.filter(tu => tu.tenant == tenant.id);
       const tenantUnitRecord = tenantUnitRecords.find(tu => tu.is_active)
         || tenantUnitRecords.sort((a, b) => new Date(b.move_in_date) - new Date(a.move_in_date))[0];
@@ -498,6 +531,7 @@ const TenantsPages = {
           <p class="tenant-lease-status" style="color: ${leaseExpiry.color}">
             ${leaseExpiry.isExpiringSoon ? '<span class="expiring-dot">●</span> ' : ''}${leaseExpiry.text}
           </p>
+          ${tenantState.badge ? `<div class="tenant-no-lease-badge">${tenantState.badge}</div>` : ''}
         </div>
       `;
     }).join('');
@@ -761,3 +795,7 @@ const TenantsPages = {
     }
   }
 };
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { TenantsPages };
+}

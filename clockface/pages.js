@@ -465,7 +465,7 @@ const PageLoaders = {
     }
 
     // Property space pages - require property context
-    const propertySpacePages = ['property-dashboard', 'property-units', 'property-tenants', 'financials', 'financials-tenant-detail'];
+    const propertySpacePages = ['property-dashboard', 'property-units', 'property-tenants', 'financials-tenant-detail'];
     if (propertySpacePages.includes(pageName) && !AppState.getPropertyContext()) {
       AppState.setCurrentPage('properties');
       this.loadProperties(contentDiv);
@@ -499,7 +499,17 @@ const PageLoaders = {
         this.loadLeases(contentDiv);
         break;
       case 'financials':
-        FinancialsPages.loadFinancials(contentDiv, AppState.getPageParams());
+        // Load financials with an error fallback so failures show a clear message
+        try {
+          const p = FinancialsPages.loadFinancials(contentDiv, AppState.getPageParams());
+          if (p && typeof p.then === 'function') {
+            p.catch(err => {
+              contentDiv.innerHTML = `<p class="error-text">Couldn't load financials — try again (${err.message})</p>`;
+            });
+          }
+        } catch (err) {
+          contentDiv.innerHTML = `<p class="error-text">Couldn't load financials — try again (${err.message})</p>`;
+        }
         break;
       case 'financials-tenant-detail':
         FinancialsPages.loadTenantDetail(contentDiv, AppState.getPageParams());

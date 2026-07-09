@@ -9,6 +9,27 @@ const FinancialsPages = {
     return `KES ${parseFloat(amount || 0).toLocaleString()}`;
   },
 
+  buildPaymentPreviewState(data, amountValue = '') {
+    const currentPaid = parseFloat(data.current_month_paid || 0);
+    const expected = parseFloat(data.current_month_expected || data.rent_amount || 0);
+    const enteredAmount = parseFloat(amountValue || 0);
+    const previewPaid = currentPaid + enteredAmount;
+    const status = previewPaid >= expected
+      ? (previewPaid > expected ? 'overpaid' : 'paid')
+      : (previewPaid > 0 ? 'partial' : 'unpaid');
+    const owed = Math.max(expected - previewPaid, 0);
+    const surplus = Math.max(previewPaid - expected, 0);
+
+    return {
+      current_month_paid: previewPaid,
+      current_month_expected: expected,
+      current_month_status: status,
+      owed,
+      surplus,
+      rent_amount: parseFloat(data.rent_amount || 0)
+    };
+  },
+
   statusDotClass(status) {
     const map = { paid: 'paid', partial: 'partial', unpaid: 'unpaid', overpaid: 'paid', vacant: 'vacant-payment' };
     return map[status] || 'unpaid';
@@ -42,7 +63,181 @@ const FinancialsPages = {
   async loadFinancials(container, params = {}) {
     const property = AppState.getPropertyContext();
     if (!property) {
-      container.innerHTML = '<p>Please select a property to view financials.</p>';
+      // Global Financials overview (rollup across all properties)
+      container.innerHTML = `
+        <div class="property-space-header">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button class="back-link" id="back-to-properties">← Back to Properties</button>
+            <div>
+              <h1 class="page-title">Financials</h1>
+              <p class="property-list-subtitle">Overview across all properties</p>
+            </div>
+          </div>
+          <button class="action-button secondary-btn" id="print-report-btn">Print Monthly Report</button>
+        </div>
+        <div class="financials-global-controls">
+          <label>Month:</label>
+          <select id="global-month"></select>
+          <label>Year:</label>
+          <select id="global-year"></select>
+          <button class="action-button" id="global-load-btn">Load</button>
+        </div>
+        <div class="financials-overhead" id="financials-overhead">Loading...</div>
+        <div class="financials-per-property" id="financials-per-property">Loading...</div>
+      `;
+
+      const today = new Date();
+      const monthSelect = container.querySelector('#global-month');
+      const yearSelect = container.querySelector('#global-year');
+      const currentMonth = params.month || (today.getMonth() + 1);
+      const currentYear = params.year || today.getFullYear();
+      monthSelect.innerHTML = this.generateMonthOptions(currentMonth);
+      yearSelect.innerHTML = this.generateYearOptions(currentYear);
+
+      const loadOverview = async () => {
+        const month = parseInt(monthSelect.value);
+        const year = parseInt(yearSelect.value);
+        const overheadDiv = container.querySelector('#financials-overhead');
+        const perPropDiv = container.querySelector('#financials-per-property');
+        overheadDiv.innerHTML = '<p class="loading-text">Loading...</p>';
+        perPropDiv.innerHTML = '';
+
+        try {
+          const data = await apiClient.getGlobalFinancialsSummary({ month, year });
+
+          const collectionRate = parseFloat(data.collection_rate || 0);
+          const collectionColorClass = collectionRate < 50 ? 'rate-red' : (collectionRate < 80 ? 'rate-amber' : 'rate-green');
+
+          overheadDiv.innerHTML = `
+            <div class="financials-summary-strip">
+              <div class="summary-card">
+                <div class="summary-card-label">Total Expected</div>
+                <div class="summary-card-value">${this.formatKES(data.total_expected)}</div>
+                <div class="summary-card-subtitle">Across ${data.total_properties} props</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-card-label">Total Collected</div>
+                <div class="summary-card-value">${this.formatKES(data.total_collected)}</div>
+                <div class="summary-card-subtitle ${collectionColorClass}">${collectionRate}% collected</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-card-label">Total Commission</div>
+                <div class="summary-card-value">${this.formatKES(data.total_commission)}</div>
+                <div class="summary-card-subtitle">Avg ${(data.total_commission / data.total_collected * 100).toFixed(1)}%</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-card-label">Net to Owners</div>
+                <div class="summary-card-value">${this.formatKES(data.net_to_owners)}</div>
+                <div class="summary-card-subtitle"></div>
+              </div>
+            </div>
+            <div class="collection-progress-section">
+              <div class="progress-label">${this.MONTHS[month - 1]} ${year} — Overall Collection</div>
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill ${collectionRate < 50 ? 'bar-red' : (collectionRate < 80 ? 'bar-amber' : 'bar-green')}" style="width: ${collectionRate}%"></div>
+              </div>
+              <div class="progress-stats">${collectionRate}%   ${this.formatKES(data.total_collected)} of ${this.formatKES(data.total_expected)}</div>
+            </div>
+          `;
+
+          if (data.properties.length === 0) {
+            perPropDiv.innerHTML = '<p class="empty-state-text">No properties found</p>';
+            return;
+          }
+
+          const statusBadgeClass = (status) => {
+            const map = {
+              'full': 'status-full',
+              'partial': 'status-partial',
+              'no_collection': 'status-no-collection',
+              'no_tenants': 'status-no-tenants'
+            };
+            return map[status] || '';
+          };
+
+          const statusLabel = (status) => {
+            const map = {
+              'full': 'Full Collection',
+              'partial': 'Partial',
+              'no_collection': 'No Collection',
+              'no_tenants': 'No Tenants'
+            };
+            return map[status] || status;
+          };
+
+          perPropDiv.innerHTML = `
+            <table class="data-table financials-table">
+              <thead>
+                <tr>
+                  <th>Property</th>
+                  <th>Units</th>
+                  <th>Occupied</th>
+                  <th>Expected</th>
+                  <th>Collected</th>
+                  <th>Commission %</th>
+                  <th>Commission Amt</th>
+                  <th>Net to Owner</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${data.properties.map(p => `
+                  <tr class="clickable-row" data-property-id="${p.id}">
+                    <td>${SharedComponents.escapeHtml(p.name)}</td>
+                    <td>${p.units}</td>
+                    <td>${p.occupied}</td>
+                    <td>${this.formatKES(p.expected)}</td>
+                    <td>${this.formatKES(p.collected)}</td>
+                    <td>${p.commission_percent}%</td>
+                    <td>${this.formatKES(p.commission_amount)}</td>
+                    <td>${this.formatKES(p.net_to_owner)}</td>
+                    <td><span class="status-badge ${statusBadgeClass(p.status)}">${statusLabel(p.status)}</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <div class="outstanding-summary">
+              <h4>Outstanding — ${this.MONTHS[month - 1]} ${year}</h4>
+              <div class="outstanding-total">${this.formatKES(data.total_outstanding)} uncollected across ${data.properties.length} properties</div>
+              <div class="outstanding-details">
+                ${data.properties.filter(p => p.outstanding > 0).map(p => `
+                  <div class="outstanding-item">
+                    <span>${SharedComponents.escapeHtml(p.name)}</span>
+                    <span>${this.formatKES(p.outstanding)} ${p.status === 'no_collection' ? '— no payments recorded' : 'still owed'}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+
+          // Add click handlers for property rows
+          perPropDiv.querySelectorAll('.clickable-row').forEach(row => {
+            row.addEventListener('click', () => {
+              const propertyId = parseInt(row.dataset.propertyId);
+              const property = data.properties.find(p => p.id === propertyId);
+              if (property) {
+                AppState.setPropertyContext({ id: property.id, name: property.name });
+                PageLoaders.navigate('financials', { month, year });
+              }
+            });
+          });
+
+        } catch (error) {
+          overheadDiv.innerHTML = `<p class="error-text">Error loading financials: ${error.message}</p>`;
+        }
+      };
+
+      container.querySelector('#global-load-btn').addEventListener('click', loadOverview);
+      const backBtn = container.querySelector('#back-to-properties');
+      if (backBtn) backBtn.addEventListener('click', () => PageLoaders.loadPage('properties'));
+
+      container.querySelector('#print-report-btn').addEventListener('click', () => {
+        const month = parseInt(monthSelect.value);
+        const year = parseInt(yearSelect.value);
+        this.printMonthlyReport(month, year);
+      });
+
+      await loadOverview();
       return;
     }
 
@@ -415,10 +610,13 @@ const FinancialsPages = {
 
     const amountInput = container.querySelector('#payment-amount');
     const submitBtn = container.querySelector('#submit-payment-btn');
+    const syncPreview = () => {
+      const hasPositiveAmount = parseFloat(amountInput.value || 0) > 0;
+      submitBtn.disabled = !hasPositiveAmount;
+      this.renderPaymentFeedbackColumn(container, data, amountInput.value);
+    };
 
-    amountInput.addEventListener('input', () => {
-      submitBtn.disabled = !(parseFloat(amountInput.value) > 0);
-    });
+    amountInput.addEventListener('input', syncPreview);
 
     container.querySelector('#pay-exact-btn').addEventListener('click', () => {
       const remaining = Math.max(
@@ -427,6 +625,7 @@ const FinancialsPages = {
       );
       amountInput.value = remaining;
       submitBtn.disabled = !(remaining > 0);
+      syncPreview();
     });
 
     submitBtn.addEventListener('click', () => {
@@ -436,15 +635,13 @@ const FinancialsPages = {
     const headerPrint = container.querySelector('#header-print-receipt');
     if (headerPrint) {
       headerPrint.addEventListener('click', () => {
-        this.printReceiptFromPreview(this.buildReceiptData(data));
+        this.printReceiptFromPreview(this.buildReceiptData(data, this.buildPaymentPreviewState(data, amountInput.value)));
       });
     }
 
     this.attachHistorySortHandler(container);
 
-    if (hasPayment) {
-      this.renderPaymentFeedbackColumn(container, data);
-    }
+    this.renderPaymentFeedbackColumn(container, data, amountInput.value);
   },
 
   renderCreditArrearsBar(data) {
@@ -499,10 +696,9 @@ const FinancialsPages = {
     `;
   },
 
-  renderPaymentBreakdown(data) {
+  renderPaymentBreakdown(data, previewState = null) {
     const monthLabel = `${this.MONTHS[data.billing_month - 1]} ${data.billing_year}`;
     const txs = data.month_transactions || [];
-    if (txs.length === 0) return '';
 
     const lines = txs.map(tx => {
       const ref = tx.reference_number ? `  ${tx.reference_number}` : '';
@@ -510,10 +706,10 @@ const FinancialsPages = {
       return `<div class="breakdown-line"><span>${this.formatDateShort(tx.payment_date)}</span><span>${this.formatKES(tx.amount)}</span><span>${method}${ref}</span></div>`;
     }).join('');
 
-    const paid = parseFloat(data.current_month_paid || 0);
-    const expected = parseFloat(data.current_month_expected || 0);
-    const surplus = Math.max(paid - expected, 0);
-    const owed = Math.max(expected - paid, 0);
+    const paid = previewState ? previewState.current_month_paid : parseFloat(data.current_month_paid || 0);
+    const expected = previewState ? previewState.current_month_expected : parseFloat(data.current_month_expected || 0);
+    const surplus = previewState ? previewState.surplus : Math.max(paid - expected, 0);
+    const owed = previewState ? previewState.owed : Math.max(expected - paid, 0);
 
     let totalsHtml = `
       <div class="breakdown-totals">
@@ -533,7 +729,7 @@ const FinancialsPages = {
     return `
       <div class="payment-breakdown">
         <h4>Payment breakdown — ${monthLabel}</h4>
-        <div class="breakdown-lines">${lines}</div>
+        <div class="breakdown-lines">${lines || '<div class="breakdown-line"><span>No transactions yet</span><span>—</span><span>—</span></div>'}</div>
         <div class="breakdown-divider"></div>
         ${totalsHtml}
       </div>`;
@@ -544,11 +740,11 @@ const FinancialsPages = {
     return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   },
 
-  buildReceiptData(data) {
-    const paid = parseFloat(data.current_month_paid || 0);
-    const expected = parseFloat(data.current_month_expected || data.rent_amount || 0);
-    const owed = Math.max(expected - paid, 0);
-    const surplus = Math.max(paid - expected, 0);
+  buildReceiptData(data, previewState = null) {
+    const paid = previewState ? previewState.current_month_paid : parseFloat(data.current_month_paid || 0);
+    const expected = previewState ? previewState.current_month_expected : parseFloat(data.current_month_expected || data.rent_amount || 0);
+    const owed = previewState ? previewState.owed : Math.max(expected - paid, 0);
+    const surplus = previewState ? previewState.surplus : Math.max(paid - expected, 0);
     const breakdown = this.computeSurplusBreakdown(paid, expected, data.rent_amount);
     const txs = data.month_transactions || [];
     const latestTx = txs.length ? txs[txs.length - 1] : null;
@@ -568,7 +764,7 @@ const FinancialsPages = {
       totalPaid: paid,
       methods: data.payment_methods_summary || '—',
       references: data.references_summary || '—',
-      status: data.current_month_status,
+      status: previewState ? previewState.current_month_status : data.current_month_status,
       owed,
       surplus,
       creditDays: breakdown.remainingDays,
@@ -616,12 +812,160 @@ const FinancialsPages = {
       </div>`;
   },
 
-  renderPaymentStatusSummary(data) {
+  async printMonthlyReport(month, year) {
+    try {
+      const [financialsData, settings] = await Promise.all([
+        apiClient.getGlobalFinancialsSummary({ month, year }),
+        apiClient.getSystemSettings()
+      ]);
+
+      const monthLabel = this.MONTHS[month - 1];
+      const today = new Date();
+      const generatedDate = today.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+      const managerName = apiClient.user?.full_name || apiClient.user?.username || 'Manager';
+
+      const companyName = settings.company_name || 'Company Name';
+      const contactPhone = settings.contact_phone || '';
+      const address = settings.address || '';
+
+      const statusLabel = (status) => {
+        const map = {
+          'full': 'Full Collection',
+          'partial': 'Partial',
+          'no_collection': 'No Collection',
+          'no_tenants': 'No Tenants'
+        };
+        return map[status] || status;
+      };
+
+      // Build shortfalls section
+      const shortfalls = financialsData.properties
+        .filter(p => p.outstanding > 0)
+        .map(p => {
+          const shortfallDetails = [];
+          if (p.status === 'no_collection') {
+            shortfallDetails.push(`  ${p.name} → No payments recorded → KES ${p.outstanding.toLocaleString()} owed`);
+          } else {
+            shortfallDetails.push(`  ${p.name} → Partial collection → KES ${p.outstanding.toLocaleString()} still owed`);
+          }
+          return shortfallDetails.join('\n');
+        })
+        .join('\n');
+
+      const reportHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Monthly Financial Report - ${monthLabel} ${year}</title>
+  <style>
+    @media print {
+      body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.4; color: #000; }
+      .page-break { page-break-before: always; }
+      .no-print { display: none; }
+    }
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    .report-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 20px; }
+    .company-name { font-size: 18pt; font-weight: bold; margin-bottom: 5px; }
+    .company-contact { font-size: 11pt; margin-bottom: 5px; }
+    .report-title { font-size: 16pt; font-weight: bold; margin: 30px 0 10px 0; text-align: center; }
+    .report-meta { font-size: 10pt; text-align: center; color: #666; margin-bottom: 20px; }
+    .section-title { font-size: 12pt; font-weight: bold; margin: 20px 0 10px 0; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+    .summary-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dotted #ccc; }
+    .summary-label { font-weight: bold; }
+    .summary-value { text-align: right; }
+    .property-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+    .property-name { font-size: 13pt; font-weight: bold; margin-bottom: 10px; }
+    .property-detail { display: flex; justify-content: space-between; padding: 3px 0; }
+    .property-detail-label { font-weight: bold; }
+    .shortfalls-section { margin: 20px 0; }
+    .shortfall-item { padding: 5px 0; border-bottom: 1px dotted #ccc; }
+    .notes-section { margin: 30px 0; }
+    .notes-area { border: 1px solid #ccc; padding: 20px; min-height: 100px; background: #fafafa; }
+    .report-footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #000; font-size: 9pt; text-align: center; color: #666; }
+    .print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .print-btn:hover { background: #0056b3; }
+  </style>
+</head>
+<body>
+  <button class="print-btn no-print" onclick="window.print()">Print Report</button>
+
+  <div class="report-header">
+    <div class="company-name">${SharedComponents.escapeHtml(companyName)}</div>
+    <div class="company-contact">${contactPhone ? SharedComponents.escapeHtml(contactPhone) + ' · ' : ''}${SharedComponents.escapeHtml(address)}</div>
+  </div>
+
+  <div class="report-title">MONTHLY FINANCIAL REPORT</div>
+  <div class="report-title">${monthLabel} ${year}</div>
+  <div class="report-meta">Generated: ${generatedDate} · Prepared by: ${SharedComponents.escapeHtml(managerName)}</div>
+
+  <div class="section-title">PORTFOLIO SUMMARY</div>
+  <div class="summary-row"><span class="summary-label">Total Properties:</span><span class="summary-value">${financialsData.total_properties}</span></div>
+  <div class="summary-row"><span class="summary-label">Total Units:</span><span class="summary-value">${financialsData.total_units}</span></div>
+  <div class="summary-row"><span class="summary-label">Occupied Units:</span><span class="summary-value">${financialsData.total_occupied}</span></div>
+  <div class="summary-row"><span class="summary-label">Occupancy Rate:</span><span class="summary-value">${financialsData.occupancy_rate}%</span></div>
+  <div class="summary-row"><span class="summary-label">Total Rent Expected:</span><span class="summary-value">${this.formatKES(financialsData.total_expected)}</span></div>
+  <div class="summary-row"><span class="summary-label">Total Rent Collected:</span><span class="summary-value">${this.formatKES(financialsData.total_collected)}</span></div>
+  <div class="summary-row"><span class="summary-label">Collection Rate:</span><span class="summary-value">${financialsData.collection_rate}%</span></div>
+  <div class="summary-row"><span class="summary-label">Total Commission Earned:</span><span class="summary-value">${this.formatKES(financialsData.total_commission)}</span></div>
+  <div class="summary-row"><span class="summary-label">Net Payable to Owners:</span><span class="summary-value">${this.formatKES(financialsData.net_to_owners)}</span></div>
+  <div class="summary-row"><span class="summary-label">Total Outstanding:</span><span class="summary-value">${this.formatKES(financialsData.total_outstanding)}</span></div>
+
+  <div class="section-title">PER-PROPERTY BREAKDOWN</div>
+  ${financialsData.properties.map((p, index) => `
+    <div class="property-section ${index > 0 && index % 3 === 0 ? 'page-break' : ''}">
+      <div class="property-name">${SharedComponents.escapeHtml(p.name)} — ${p.property_type} — ${SharedComponents.escapeHtml(p.location)}</div>
+      <div class="property-detail"><span class="property-detail-label">Units:</span><span>${p.units} total · ${p.occupied} occupied · ${p.units - p.occupied} vacant</span></div>
+      <div class="property-detail"><span class="property-detail-label">Expected:</span><span>${this.formatKES(p.expected)}</span></div>
+      <div class="property-detail"><span class="property-detail-label">Collected:</span><span>${this.formatKES(p.collected)}</span></div>
+      ${p.commission_percent > 0 ? `
+      <div class="property-detail"><span class="property-detail-label">Commission (${p.commission_percent}%):</span><span>− ${this.formatKES(p.commission_amount)}</span></div>
+      ` : ''}
+      <div class="property-detail"><span class="property-detail-label">Net to Owner:</span><span>${this.formatKES(p.net_to_owner)}</span></div>
+      <div class="property-detail"><span class="property-detail-label">Outstanding:</span><span>${this.formatKES(p.outstanding)}</span></div>
+      <div class="property-detail"><span class="property-detail-label">Status:</span><span>${statusLabel(p.status)}</span></div>
+    </div>
+  `).join('')}
+
+  ${shortfalls ? `
+  <div class="section-title">SHORTFALLS</div>
+  <div class="shortfalls-section">
+    ${shortfalls.split('\n').map(line => `<div class="shortfall-item">${line}</div>`).join('')}
+  </div>
+  ` : ''}
+
+  <div class="section-title">NOTES</div>
+  <div class="notes-section">
+    <div class="notes-area"></div>
+  </div>
+
+  <div class="report-footer">
+    This report was generated by RMS on ${generatedDate}.<br>
+    Confidential — for internal use only.
+  </div>
+</body>
+</html>
+      `;
+
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(reportHtml);
+        printWindow.document.close();
+        printWindow.focus();
+      } else {
+        alert('Please allow popups to print the report');
+      }
+    } catch (error) {
+      alert('Error generating report: ' + error.message);
+    }
+  },
+
+  renderPaymentStatusSummary(data, previewState = null) {
     const monthLabel = `${this.MONTHS[data.billing_month - 1]} ${data.billing_year}`;
-    const paid = parseFloat(data.current_month_paid || 0);
-    const expected = parseFloat(data.current_month_expected || 0);
-    const owed = Math.max(expected - paid, 0);
-    const status = data.current_month_status;
+    const paid = previewState ? previewState.current_month_paid : parseFloat(data.current_month_paid || 0);
+    const expected = previewState ? previewState.current_month_expected : parseFloat(data.current_month_expected || 0);
+    const owed = previewState ? previewState.owed : Math.max(expected - paid, 0);
+    const status = previewState ? previewState.current_month_status : data.current_month_status;
     const statusClass = `feedback-${status === 'overpaid' ? 'overpaid' : status}`;
 
     let message = '';
@@ -643,14 +987,15 @@ const FinancialsPages = {
       </div>`;
   },
 
-  renderPaymentFeedbackColumn(container, data) {
+  renderPaymentFeedbackColumn(container, data, amountValue = '') {
     const feedback = container.querySelector('#payment-feedback');
     if (!feedback) return;
 
-    const receipt = this.buildReceiptData(data);
+    const previewState = this.buildPaymentPreviewState(data, amountValue);
+    const receipt = this.buildReceiptData(data, previewState);
     feedback.innerHTML = `
-      ${this.renderPaymentStatusSummary(data)}
-      ${this.renderPaymentBreakdown(data)}
+      ${this.renderPaymentStatusSummary(data, previewState)}
+      ${this.renderPaymentBreakdown(data, previewState)}
       ${this.renderReceiptPreviewHtml(receipt)}
       <button class="action-button primary-btn full-width-btn" id="feedback-print-receipt">Print Receipt</button>
     `;
@@ -711,7 +1056,7 @@ const FinancialsPages = {
       payExactBtn.textContent = `Pay Remaining (${this.formatKES(remaining)})`;
     }
 
-    this.renderPaymentFeedbackColumn(container, data);
+    this.renderPaymentFeedbackColumn(container, data, '');
     this.attachHistorySortHandler(container);
   },
 
@@ -973,3 +1318,7 @@ Property Management
     });
   }
 };
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { FinancialsPages };
+}

@@ -41,7 +41,7 @@ class UserSerializer(serializers.ModelSerializer):
 class PropertySerializer(serializers.ModelSerializer):
     class Meta:
         model = Property
-        fields = ['id', 'name', 'location', 'property_type', 'owner_details', 'date_added', 'is_active']
+        fields = ['id', 'name', 'location', 'property_type', 'owner_details', 'commission_percent', 'date_added', 'is_active']
         read_only_fields = ['id', 'date_added']
 
 

@@ -5,6 +5,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Q
 from django.utils.crypto import get_random_string
 from financials.models import RentPayment
 from .permissions import RolePermission
@@ -317,6 +318,17 @@ class LandlordPayoutViewSet(viewsets.ModelViewSet):
 class TenantViewSet(viewsets.ModelViewSet):
     queryset = Tenant.objects.all().order_by('-date_added')
     serializer_class = TenantSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        property_id = self.request.query_params.get('property')
+        if property_id:
+            property_unit_ids = Unit.objects.filter(property_id=property_id).values_list('id', flat=True)
+            queryset = queryset.filter(
+                Q(tenant_units__unit_id__in=property_unit_ids) |
+                Q(leases__unit_id__in=property_unit_ids)
+            ).distinct()
+        return queryset
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:

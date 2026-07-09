@@ -852,6 +852,232 @@ body {
   margin-bottom: 16px;
 }
 
+/* Financials Summary Strip */
+.financials-summary-strip {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  flex: 1;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 16px;
+  min-width: 0;
+}
+
+.summary-card-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summary-card-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.summary-card-subtitle {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+/* Collection Progress Section */
+.collection-progress-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.progress-label {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--color-text);
+}
+
+.progress-bar-container {
+  height: 8px;
+  background: var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.bar-red {
+  background: #ef4444;
+}
+
+.bar-amber {
+  background: #f59e0b;
+}
+
+.bar-green {
+  background: #10b981;
+}
+
+.progress-stats {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+/* Financials Table */
+.financials-table {
+  margin-bottom: 24px;
+}
+
+.financials-table th {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-secondary);
+  padding: 12px 16px;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.financials-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.clickable-row:hover {
+  background-color: var(--color-bg-hover);
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-full {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-partial {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-no-collection {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-no-tenants {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Outstanding Summary */
+.outstanding-summary {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.outstanding-summary h4 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: var(--color-text);
+}
+
+.outstanding-total {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 12px;
+}
+
+.outstanding-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.outstanding-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 12px;
+}
+
+.outstanding-item:last-child {
+  border-bottom: none;
+}
+
+/* Financials Global Controls */
+.financials-global-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.financials-global-controls label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.financials-global-controls select {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+/* Rate Color Classes */
+.rate-red {
+  color: #ef4444;
+}
+
+.rate-amber {
+  color: #f59e0b;
+}
+
+.rate-green {
+  color: #10b981;
+}
+
 .tab-button {
   background-color: #e8eef5;
   color: #333;
@@ -958,6 +1184,135 @@ body {
 /* Page Header */
 .page-header {
   margin-bottom: 12px;
+}
+
+/* Kebab (more) button and dropdown */
+.property-list-header .header-actions {
+  position: relative; /* anchor for dropdown */
+}
+
+.kebab-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 18px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
+  transition: background 0.12s ease, color 0.12s ease, opacity 0.12s ease, transform 0.12s ease;
+}
+
+.kebab-btn:hover {
+  background: rgba(0,0,0,0.03);
+  color: #6b7280;
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.kebab-btn:focus {
+  outline: 2px solid rgba(59,130,246,0.16);
+}
+
+.kebab-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(2,6,23,0.12);
+  min-width: 160px;
+  z-index: 1200;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kebab-divider {
+  height: 1px;
+  background: var(--color-border, #e6e6e6);
+  margin: 6px 0;
+}
+
+.kebab-theme-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  gap: 8px;
+}
+
+.kebab-row-label {
+  font-size: 13px;
+  color: var(--color-text-secondary, #6b7280);
+  margin-right: 8px;
+}
+
+.kebab-item {
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #374151;
+}
+
+.kebab-item:hover {
+  background: #f3f4f6;
+}
+
+.kebab-item:active {
+  background: #e5e7eb;
+}
+
+/* keep kebab visually lighter/smaller than .action-button */
+.header-actions .action-button {
+  font-weight: 600;
+}
+
+.kebab-btn.small {
+  font-size: 16px;
+  padding: 4px 6px;
+}
+
+/* Theme toggle (small group for header) */
+.theme-toggle {
+  display: inline-flex;
+  background: var(--color-surface-elevated, #fff);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+  align-items: center;
+}
+
+.theme-toggle-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 0.12s, color 0.12s;
+}
+
+.theme-toggle-btn.active {
+  background: var(--color-surface, #f3f4f6);
+  color: var(--color-text, #111827);
+  box-shadow: 0 1px 3px rgba(2,6,23,0.06);
+}
+
+@media (max-width: 720px) {
+  .theme-toggle { display: none; }
 }
 
 /* Data Items */
@@ -2021,6 +2376,18 @@ body {
   font-size: 12px;
   font-weight: 500;
   margin: 0;
+}
+
+.tenant-no-lease-badge {
+  display: inline-block;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .expiring-dot {

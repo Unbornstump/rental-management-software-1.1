@@ -128,6 +128,20 @@ const PropertyPages = {
         <div class="stat-card-title">Rent Collected</div>
         <div class="stat-card-value ${this.collectionColor(collRate)}">${this.formatKES(s.rent_collected)}</div>
         <div class="stat-card-subtitle">${collRate}% collected this month</div>
+        ${(() => {
+          try {
+            const prop = (container && container.dashboardData && container.dashboardData.property) || null;
+            if (!prop) return '';
+            const commissionPct = parseFloat(prop.commission_percent || 0);
+            const rentCollected = parseFloat(s.rent_collected || 0);
+            const commissionAmt = (rentCollected * (commissionPct / 100));
+            const net = rentCollected - commissionAmt;
+            return `
+              <div class="stat-card-small">Commission (${commissionPct}%): − ${this.formatKES(commissionAmt)}</div>
+              <div class="stat-card-small">Net: ${this.formatKES(net)}</div>
+            `;
+          } catch (err) { return ''; }
+        })()}
       </div>
       <div class="stat-card">
         <div class="stat-card-title">Outstanding</div>
@@ -443,6 +457,7 @@ const PropertyPages = {
             Exit
           </button>
           <button type="button" class="action-button" id="add-property-header-btn">+ Add Property</button>
+          <button type="button" class="kebab-btn small" id="properties-kebab-btn" aria-label="More options">⋮</button>
         </div>
       </div>
       <div class="properties-grid" id="properties-grid"></div>
@@ -468,6 +483,97 @@ const PropertyPages = {
     document.getElementById('add-property-header-btn').addEventListener('click', () => {
       Modals.showPropertyModal();
     });
+
+    // Theme toggle handlers
+    const themeToggle = document.getElementById('header-theme-toggle');
+    if (themeToggle && window.RMSTheme) {
+      themeToggle.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const theme = btn.dataset.theme;
+          try { window.RMSTheme.setTheme(theme); } catch (e) { console.error(e); }
+        });
+      });
+      // Reflect current preference
+      const current = window.RMSTheme ? window.RMSTheme.getTheme() : null;
+      if (current) {
+        document.querySelectorAll('.theme-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === current));
+      }
+    }
+
+    // Kebab menu for Financials + Admin
+    const kebabBtn = document.getElementById('properties-kebab-btn');
+    let kebabMenu = null;
+    const onEscape = (e) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        closeKebab();
+      }
+    };
+    const closeKebab = () => {
+      if (kebabMenu) kebabMenu.remove();
+      kebabMenu = null;
+      document.removeEventListener('click', outsideKebabClick);
+      document.removeEventListener('keydown', onEscape);
+    };
+    const outsideKebabClick = (e) => {
+      if (!kebabMenu) return;
+      if (kebabMenu.contains(e.target) || e.target === kebabBtn) return;
+      closeKebab();
+    };
+    kebabBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (kebabMenu) {
+        closeKebab();
+        return;
+      }
+      closeKebab();
+      kebabMenu = document.createElement('div');
+      kebabMenu.className = 'kebab-menu';
+      kebabMenu.innerHTML = `
+        <button type="button" class="kebab-item" data-action="financials">Financials</button>
+        <button type="button" class="kebab-item" data-action="admin">Admin</button>
+        <div class="kebab-divider"></div>
+        <div class="kebab-theme-row" aria-label="Theme selector">
+          <span class="kebab-row-label">Theme</span>
+          <div class="theme-toggle">
+            <button type="button" class="theme-toggle-btn" data-theme="light">Light</button>
+            <button type="button" class="theme-toggle-btn" data-theme="dark">Dark</button>
+            <button type="button" class="theme-toggle-btn" data-theme="system">System</button>
+          </div>
+        </div>
+      `;
+
+      kebabMenu.querySelector('[data-action="financials"]').addEventListener('click', () => {
+        closeKebab();
+        PageLoaders.navigate('financials');
+      });
+
+      kebabMenu.querySelector('[data-action="admin"]').addEventListener('click', () => {
+        closeKebab();
+        AppState.clearPropertyContext();
+        PageLoaders.navigate('admin-staff');
+      });
+
+      const themeRow = kebabMenu.querySelector('.kebab-theme-row');
+      if (themeRow && window.RMSTheme) {
+        themeRow.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const theme = btn.dataset.theme;
+            try { window.RMSTheme.setTheme(theme); } catch (e) { console.error(e); }
+            themeRow.querySelectorAll('.theme-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
+            closeKebab();
+          });
+        });
+        const currentTheme = window.RMSTheme.getTheme();
+        themeRow.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.theme === currentTheme);
+        });
+      }
+
+      kebabBtn.parentElement.appendChild(kebabMenu);
+      setTimeout(() => document.addEventListener('click', outsideKebabClick), 0);
+      document.addEventListener('keydown', onEscape);
+    });
+
 
     const propertiesGrid = document.getElementById('properties-grid');
 
