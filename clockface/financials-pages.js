@@ -69,7 +69,7 @@ const FinancialsPages = {
           <div style="display:flex;align-items:center;gap:12px;">
             <button class="back-link" id="back-to-properties">← Back to Properties</button>
             <div>
-              <h1 class="page-title">Financials</h1>
+              <h1 class="page-title">Treasury</h1>
               <p class="property-list-subtitle">Overview across all properties</p>
             </div>
           </div>
@@ -109,34 +109,50 @@ const FinancialsPages = {
           const collectionColorClass = collectionRate < 50 ? 'rate-red' : (collectionRate < 80 ? 'rate-amber' : 'rate-green');
 
           overheadDiv.innerHTML = `
-            <div class="financials-summary-strip">
-              <div class="summary-card">
-                <div class="summary-card-label">Total Expected</div>
-                <div class="summary-card-value">${this.formatKES(data.total_expected)}</div>
-                <div class="summary-card-subtitle">Across ${data.total_properties} props</div>
+            <div class="treasury-snapshot">
+              <div class="treasury-snapshot-header">
+                <h2>Treasury Snapshot</h2>
+                <p class="treasury-snapshot-subtitle">Summary across ${data.total_properties} propert${data.total_properties !== 1 ? 'ies' : 'y'}</p>
               </div>
-              <div class="summary-card">
-                <div class="summary-card-label">Total Collected</div>
-                <div class="summary-card-value">${this.formatKES(data.total_collected)}</div>
-                <div class="summary-card-subtitle ${collectionColorClass}">${collectionRate}% collected</div>
+              
+              <div class="treasury-metrics-grid">
+                <div class="treasury-metric-card">
+                  <div class="treasury-metric-label">Total Expected</div>
+                  <div class="treasury-metric-value">${this.formatKES(data.total_expected)}</div>
+                </div>
+                <div class="treasury-metric-card">
+                  <div class="treasury-metric-label">Total Collected</div>
+                  <div class="treasury-metric-value ${collectionColorClass}">${this.formatKES(data.total_collected)}</div>
+                  <div class="treasury-metric-subtitle">${collectionRate}% collected</div>
+                </div>
+                <div class="treasury-metric-card">
+                  <div class="treasury-metric-label">Total Commission</div>
+                  <div class="treasury-metric-value">${this.formatKES(data.total_commission)}</div>
+                  <div class="treasury-metric-subtitle">Avg ${(data.total_commission / data.total_collected * 100).toFixed(1)}%</div>
+                </div>
+                <div class="treasury-metric-card">
+                  <div class="treasury-metric-label">Net to Owners</div>
+                  <div class="treasury-metric-value">${this.formatKES(data.net_to_owners)}</div>
+                </div>
               </div>
-              <div class="summary-card">
-                <div class="summary-card-label">Total Commission</div>
-                <div class="summary-card-value">${this.formatKES(data.total_commission)}</div>
-                <div class="summary-card-subtitle">Avg ${(data.total_commission / data.total_collected * 100).toFixed(1)}%</div>
+
+              <div class="treasury-progress-section">
+                <div class="progress-label">${this.MONTHS[month - 1]} ${year} — Overall Collection</div>
+                <div class="progress-bar-container">
+                  <div class="progress-bar-fill ${collectionRate < 50 ? 'bar-red' : (collectionRate < 80 ? 'bar-amber' : 'bar-green')}" style="width: ${collectionRate}%"></div>
+                </div>
+                <div class="progress-stats">${collectionRate}%   ${this.formatKES(data.total_collected)} of ${this.formatKES(data.total_expected)}</div>
               </div>
-              <div class="summary-card">
-                <div class="summary-card-label">Net to Owners</div>
-                <div class="summary-card-value">${this.formatKES(data.net_to_owners)}</div>
-                <div class="summary-card-subtitle"></div>
+
+              <div class="treasury-outstanding-section">
+                <h4>Outstanding Balance</h4>
+                <div class="treasury-outstanding-total">${this.formatKES(data.total_outstanding)} uncollected</div>
               </div>
-            </div>
-            <div class="collection-progress-section">
-              <div class="progress-label">${this.MONTHS[month - 1]} ${year} — Overall Collection</div>
-              <div class="progress-bar-container">
-                <div class="progress-bar-fill ${collectionRate < 50 ? 'bar-red' : (collectionRate < 80 ? 'bar-amber' : 'bar-green')}" style="width: ${collectionRate}%"></div>
+
+              <div class="treasury-actions">
+                <button class="action-button" id="view-property-details">View Property Details</button>
+                <button class="action-button secondary-btn" id="view-archives">📁 Archives</button>
               </div>
-              <div class="progress-stats">${collectionRate}%   ${this.formatKES(data.total_collected)} of ${this.formatKES(data.total_expected)}</div>
             </div>
           `;
 
@@ -145,6 +161,7 @@ const FinancialsPages = {
             return;
           }
 
+          // Show property details on demand
           const statusBadgeClass = (status) => {
             const map = {
               'full': 'status-full',
@@ -166,49 +183,65 @@ const FinancialsPages = {
           };
 
           perPropDiv.innerHTML = `
-            <table class="data-table financials-table">
-              <thead>
-                <tr>
-                  <th>Property</th>
-                  <th>Units</th>
-                  <th>Occupied</th>
-                  <th>Expected</th>
-                  <th>Collected</th>
-                  <th>Commission %</th>
-                  <th>Commission Amt</th>
-                  <th>Net to Owner</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${data.properties.map(p => `
-                  <tr class="clickable-row" data-property-id="${p.id}">
-                    <td>${SharedComponents.escapeHtml(p.name)}</td>
-                    <td>${p.units}</td>
-                    <td>${p.occupied}</td>
-                    <td>${this.formatKES(p.expected)}</td>
-                    <td>${this.formatKES(p.collected)}</td>
-                    <td>${p.commission_percent}%</td>
-                    <td>${this.formatKES(p.commission_amount)}</td>
-                    <td>${this.formatKES(p.net_to_owner)}</td>
-                    <td><span class="status-badge ${statusBadgeClass(p.status)}">${statusLabel(p.status)}</span></td>
+            <div class="treasury-property-details hidden" id="treasury-property-details">
+              <h3>Property Details</h3>
+              <table class="data-table financials-table">
+                <thead>
+                  <tr>
+                    <th>Property</th>
+                    <th>Units</th>
+                    <th>Occupied</th>
+                    <th>Expected</th>
+                    <th>Collected</th>
+                    <th>Commission %</th>
+                    <th>Commission Amt</th>
+                    <th>Net to Owner</th>
+                    <th>Status</th>
                   </tr>
-                `).join('')}
-              </tbody>
-            </table>
-            <div class="outstanding-summary">
-              <h4>Outstanding — ${this.MONTHS[month - 1]} ${year}</h4>
-              <div class="outstanding-total">${this.formatKES(data.total_outstanding)} uncollected across ${data.properties.length} properties</div>
-              <div class="outstanding-details">
-                ${data.properties.filter(p => p.outstanding > 0).map(p => `
-                  <div class="outstanding-item">
-                    <span>${SharedComponents.escapeHtml(p.name)}</span>
-                    <span>${this.formatKES(p.outstanding)} ${p.status === 'no_collection' ? '— no payments recorded' : 'still owed'}</span>
-                  </div>
-                `).join('')}
+                </thead>
+                <tbody>
+                  ${data.properties.map(p => `
+                    <tr class="clickable-row" data-property-id="${p.id}">
+                      <td>${SharedComponents.escapeHtml(p.name)}</td>
+                      <td>${p.units}</td>
+                      <td>${p.occupied}</td>
+                      <td>${this.formatKES(p.expected)}</td>
+                      <td>${this.formatKES(p.collected)}</td>
+                      <td>${p.commission_percent}%</td>
+                      <td>${this.formatKES(p.commission_amount)}</td>
+                      <td>${this.formatKES(p.net_to_owner)}</td>
+                      <td><span class="status-badge ${statusBadgeClass(p.status)}">${statusLabel(p.status)}</span></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+              <div class="outstanding-summary">
+                <h4>Outstanding — ${this.MONTHS[month - 1]} ${year}</h4>
+                <div class="outstanding-total">${this.formatKES(data.total_outstanding)} uncollected across ${data.properties.length} properties</div>
+                <div class="outstanding-details">
+                  ${data.properties.filter(p => p.outstanding > 0).map(p => `
+                    <div class="outstanding-item">
+                      <span>${SharedComponents.escapeHtml(p.name)}</span>
+                      <span>${this.formatKES(p.outstanding)} ${p.status === 'no_collection' ? '— no payments recorded' : 'still owed'}</span>
+                    </div>
+                  `).join('')}
+                </div>
               </div>
             </div>
           `;
+
+          // Toggle property details visibility
+          container.querySelector('#view-property-details').addEventListener('click', () => {
+            const detailsDiv = container.querySelector('#treasury-property-details');
+            detailsDiv.classList.toggle('hidden');
+            const btn = container.querySelector('#view-property-details');
+            btn.textContent = detailsDiv.classList.contains('hidden') ? 'View Property Details' : 'Hide Property Details';
+          });
+
+          // Show archives panel
+          container.querySelector('#view-archives').addEventListener('click', () => {
+            this.showArchivesPanel(container, month, year);
+          });
 
           // Add click handlers for property rows
           perPropDiv.querySelectorAll('.clickable-row').forEach(row => {
@@ -217,7 +250,7 @@ const FinancialsPages = {
               const property = data.properties.find(p => p.id === propertyId);
               if (property) {
                 AppState.setPropertyContext({ id: property.id, name: property.name });
-                PageLoaders.navigate('financials', { month, year });
+                PageLoaders.navigate('treasury', { month, year });
               }
             });
           });
@@ -251,7 +284,7 @@ const FinancialsPages = {
     };
 
     container.innerHTML = `
-      ${SharedComponents.renderPropertySpaceHeader('Financials', property.name, `
+      ${SharedComponents.renderPropertySpaceHeader('Treasury', property.name, `
         <div class="header-actions">
           <button class="action-button secondary-btn" id="generate-billing-btn">Generate Billing Cycle</button>
           <button class="action-button secondary-btn" id="export-grid-btn">Export CSV</button>
@@ -458,6 +491,113 @@ const FinancialsPages = {
       month: billingMonth,
       year: billingYear
     });
+  },
+
+  showArchivesPanel(container, currentMonth, currentYear) {
+    const archivesPanel = document.createElement('div');
+    archivesPanel.className = 'archives-panel';
+    archivesPanel.innerHTML = `
+      <div class="archives-overlay">
+        <div class="archives-modal">
+          <div class="archives-header">
+            <h2>📁 Treasury Archives</h2>
+            <button class="close-archives-btn" id="close-archives">✕</button>
+          </div>
+          <div class="archives-content">
+            <p class="archives-subtitle">Browse monthly reports by year and month</p>
+            <div class="archives-year-selector">
+              <label for="archive-year">Year:</label>
+              <select id="archive-year"></select>
+            </div>
+            <div class="archives-month-grid" id="archives-month-grid">
+              <!-- Months will be populated here -->
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(archivesPanel);
+
+    // Populate year selector (current year and 2 years back)
+    const yearSelect = archivesPanel.querySelector('#archive-year');
+    const today = new Date();
+    for (let y = today.getFullYear(); y >= today.getFullYear() - 2; y--) {
+      const option = document.createElement('option');
+      option.value = y;
+      option.textContent = y;
+      if (y === currentYear) option.selected = true;
+      yearSelect.appendChild(option);
+    }
+
+    // Populate months for selected year
+    const populateMonths = (year) => {
+      const monthGrid = archivesPanel.querySelector('#archives-month-grid');
+      monthGrid.innerHTML = '';
+
+      this.MONTHS.forEach((monthName, index) => {
+        const monthNum = index + 1;
+        const isFuture = year > today.getFullYear() || (year === today.getFullYear() && monthNum > today.getMonth() + 1);
+        const isCurrent = year === currentYear && monthNum === currentMonth;
+
+        const monthCard = document.createElement('button');
+        monthCard.className = `archive-month-card ${isFuture ? 'future' : ''} ${isCurrent ? 'current' : ''}`;
+        monthCard.disabled = isFuture;
+        monthCard.innerHTML = `
+          <div class="archive-month-name">${monthName}</div>
+          <div class="archive-month-status">${isCurrent ? 'Current' : (isFuture ? 'Future' : 'View Report')}</div>
+        `;
+
+        if (!isFuture) {
+          monthCard.addEventListener('click', () => {
+            this.loadArchivedReport(container, monthNum, parseInt(year));
+            archivesPanel.remove();
+          });
+        }
+
+        monthGrid.appendChild(monthCard);
+      });
+    };
+
+    populateMonths(parseInt(yearSelect.value));
+
+    yearSelect.addEventListener('change', () => {
+      populateMonths(parseInt(yearSelect.value));
+    });
+
+    // Close button
+    archivesPanel.querySelector('#close-archives').addEventListener('click', () => {
+      archivesPanel.remove();
+    });
+
+    // Close on backdrop click
+    archivesPanel.querySelector('.archives-overlay').addEventListener('click', (e) => {
+      if (e.target === archivesPanel.querySelector('.archives-overlay')) {
+        archivesPanel.remove();
+      }
+    });
+
+    // Close on Escape key
+    const escapeHandler = (e) => {
+      if (e.key === 'Escape') {
+        archivesPanel.remove();
+        document.removeEventListener('keydown', escapeHandler);
+      }
+    };
+    document.addEventListener('keydown', escapeHandler);
+  },
+
+  async loadArchivedReport(container, month, year) {
+    // Update the month/year selectors and reload the overview
+    const monthSelect = container.querySelector('#global-month');
+    const yearSelect = container.querySelector('#global-year');
+
+    if (monthSelect) monthSelect.value = month;
+    if (yearSelect) yearSelect.value = year;
+
+    // Trigger the load button click
+    const loadBtn = container.querySelector('#global-load-btn');
+    if (loadBtn) loadBtn.click();
   },
 
   formatDate(d) {

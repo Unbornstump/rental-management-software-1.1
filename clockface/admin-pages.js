@@ -7,6 +7,68 @@ const AdminPages = {
     caretaker: 'View only'
   },
 
+  async loadAdminHub() {
+    const html = `
+      <div class="admin-page">
+        <div class="page-header">
+          <button class="back-link" id="admin-back-btn">← Back to Properties</button>
+          <div>
+            <h1>Admin</h1>
+            <p class="subtitle">Control room for people, roles, and system settings</p>
+          </div>
+        </div>
+
+        <div class="admin-hub-grid">
+          <button class="admin-hub-card" id="admin-staff-card">
+            <div class="admin-hub-icon">👥</div>
+            <div class="admin-hub-title">Staff Management</div>
+            <div class="admin-hub-subtitle">Add, edit, and manage staff accounts</div>
+          </button>
+
+          <button class="admin-hub-card" id="admin-roles-card">
+            <div class="admin-hub-icon">🔐</div>
+            <div class="admin-hub-title">Roles & Permissions</div>
+            <div class="admin-hub-subtitle">View access levels for each role</div>
+          </button>
+
+          <button class="admin-hub-card" id="admin-audit-card">
+            <div class="admin-hub-icon">📋</div>
+            <div class="admin-hub-title">Audit Log</div>
+            <div class="admin-hub-subtitle">Track system actions and changes</div>
+          </button>
+
+          <button class="admin-hub-card" id="admin-settings-card">
+            <div class="admin-hub-icon">⚙️</div>
+            <div class="admin-hub-title">System Settings</div>
+            <div class="admin-hub-subtitle">Configure company profile and defaults</div>
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('page-content').innerHTML = html;
+
+    document.getElementById('admin-back-btn').addEventListener('click', () => {
+      PageLoaders.loadPage('properties');
+    });
+
+    document.getElementById('admin-staff-card').addEventListener('click', () => {
+      PageLoaders.navigate('admin-staff');
+    });
+
+    document.getElementById('admin-roles-card').addEventListener('click', () => {
+      PageLoaders.navigate('admin-roles');
+    });
+
+    document.getElementById('admin-audit-card').addEventListener('click', () => {
+      PageLoaders.navigate('admin-audit');
+    });
+
+    document.getElementById('admin-settings-card').addEventListener('click', () => {
+      PageLoaders.navigate('admin-settings');
+    });
+  },
+
   formatDate(value) {
     if (!value) return 'Never';
     return new Intl.DateTimeFormat('en-GB', {

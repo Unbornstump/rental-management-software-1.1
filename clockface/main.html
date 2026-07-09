@@ -68,6 +68,37 @@
     </div>
   </div>
   <div class="main-container no-sidebar">
+    <!-- Command Center Header -->
+    <header class="command-center-header">
+      <button class="command-center-hamburger" id="command-center-btn" aria-label="Open Command Center">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+      </button>
+    </header>
+
+    <!-- Command Center Overlay -->
+    <div class="command-center-overlay" id="command-center-overlay" aria-hidden="true">
+      <div class="command-center-backdrop" id="command-center-backdrop"></div>
+      <div class="command-center-panel">
+        <div class="command-center-content">
+          <h2 class="command-center-title">Command Center</h2>
+          <div class="command-center-doors">
+            <button class="command-door admin-door" id="admin-door-btn">
+              <div class="door-icon">🏛️</div>
+              <div class="door-label">Admin</div>
+              <div class="door-subtitle">People, roles, permissions</div>
+            </button>
+            <button class="command-door treasury-door" id="treasury-door-btn">
+              <div class="door-icon">💰</div>
+              <div class="door-label">Treasury</div>
+              <div class="door-subtitle">Money across all properties</div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <aside class="sidebar" aria-hidden="true">
       <nav class="sidebar-nav">
         <!-- Property Space Navigation -->
@@ -113,6 +144,7 @@
   <script src="state.js"></script>
   <script src="modals.js"></script>
   <script src="shared-components.js"></script>
+  <script src="command-center.js"></script>
   <script src="property-pages.js"></script>
   <script src="units-pages.js"></script>
   <script src="tenants-pages.js"></script>

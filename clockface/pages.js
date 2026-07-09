@@ -499,19 +499,21 @@ const PageLoaders = {
         this.loadLeases(contentDiv);
         break;
       case 'financials':
-        // Load financials with an error fallback so failures show a clear message
+      case 'treasury':
+        // Load treasury (formerly financials) with an error fallback so failures show a clear message
         try {
           const p = FinancialsPages.loadFinancials(contentDiv, AppState.getPageParams());
           if (p && typeof p.then === 'function') {
             p.catch(err => {
-              contentDiv.innerHTML = `<p class="error-text">Couldn't load financials — try again (${err.message})</p>`;
+              contentDiv.innerHTML = `<p class="error-text">Couldn't load treasury — try again (${err.message})</p>`;
             });
           }
         } catch (err) {
-          contentDiv.innerHTML = `<p class="error-text">Couldn't load financials — try again (${err.message})</p>`;
+          contentDiv.innerHTML = `<p class="error-text">Couldn't load treasury — try again (${err.message})</p>`;
         }
         break;
       case 'financials-tenant-detail':
+      case 'treasury-tenant-detail':
         FinancialsPages.loadTenantDetail(contentDiv, AppState.getPageParams());
         break;
       case 'maintenance':
@@ -519,6 +521,9 @@ const PageLoaders = {
         break;
       case 'reports':
         this.loadReports(contentDiv);
+        break;
+      case 'admin-hub':
+        AdminPages.loadAdminHub();
         break;
       case 'admin-staff':
         AdminPages.loadStaffManagement();
