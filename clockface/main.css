@@ -1976,6 +1976,279 @@ body {
   color: #10b981;
 }
 
+/* Treasury Trend Section */
+.treasury-trend-section {
+  margin-bottom: 24px;
+}
+
+.treasury-trend-chart {
+  margin-top: 12px;
+  padding: 16px;
+  background: var(--color-bg);
+  border-radius: 8px;
+}
+
+.treasury-trend-chart.hidden {
+  display: none;
+}
+
+.trend-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.trend-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.legend-color.rate {
+  background: #10b981;
+}
+
+.legend-color.net {
+  background: #3b82f6;
+}
+
+.trend-chart {
+  width: 100%;
+}
+
+.trend-chart-bars {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.trend-bar-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.trend-bar-label {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.trend-bar-container {
+  height: 120px;
+  width: 100%;
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.trend-bar {
+  border-radius: 2px;
+  transition: height 0.3s ease;
+}
+
+.trend-bar.rate-bar {
+  background: #10b981;
+}
+
+.trend-bar.net-bar {
+  background: #3b82f6;
+}
+
+.trend-bar-values {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.trend-bar-values .rate-value {
+  color: #10b981;
+}
+
+.trend-bar-values .net-value {
+  color: #3b82f6;
+}
+
+.trend-charts-container {
+  display: flex;
+  gap: 24px;
+}
+
+.trend-chart-section {
+  flex: 1;
+}
+
+.trend-chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--color-text-primary);
+}
+
+.trend-bar.no-data-bar {
+  background: var(--color-border);
+  opacity: 0.3;
+  width: 100%;
+  height: 4px;
+}
+
+.no-data-text {
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+/* Arrears Aging Breakdown */
+.arrears-aging-breakdown {
+  margin-top: 12px;
+}
+
+.arrears-aging-breakdown h5 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-secondary);
+  margin: 0 0 12px 0;
+}
+
+.aging-buckets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.aging-bucket {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bucket-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.bucket-amount {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.bucket-count {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+/* Owner Statement Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 400px;
+  max-width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.modal-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-body .form-group {
+  margin-bottom: 0;
+}
+
+.modal-body .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.modal-body .form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.form-hint {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+
 .tab-button {
   background-color: #e8eef5;
   color: #333;

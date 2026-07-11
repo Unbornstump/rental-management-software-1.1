@@ -499,10 +499,46 @@ const PageLoaders = {
         this.loadLeases(contentDiv);
         break;
       case 'financials':
-      case 'treasury':
-        // Load treasury (formerly financials) with an error fallback so failures show a clear message
+        // Load per-property financials
         try {
           const p = FinancialsPages.loadFinancials(contentDiv, AppState.getPageParams());
+          if (p && typeof p.then === 'function') {
+            p.catch(err => {
+              contentDiv.innerHTML = `<p class="error-text">Couldn't load financials — try again (${err.message})</p>`;
+            });
+          }
+        } catch (err) {
+          contentDiv.innerHTML = `<p class="error-text">Couldn't load financials — try again (${err.message})</p>`;
+        }
+        break;
+      case 'treasury':
+        // Load global treasury overview
+        contentDiv.innerHTML = `
+          <div class="property-space-header">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <button class="back-link" id="back-to-properties">← Back to Properties</button>
+              <div>
+                <h1 class="page-title">Treasury</h1>
+                <p class="property-list-subtitle">Overview across all properties</p>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="action-button secondary-btn" id="export-csv-btn">Export CSV</button>
+              <button class="action-button secondary-btn" id="print-report-btn">Print Monthly Report</button>
+            </div>
+          </div>
+          <div class="financials-global-controls">
+            <label>Month:</label>
+            <select id="global-month"></select>
+            <label>Year:</label>
+            <select id="global-year"></select>
+            <button class="action-button" id="global-load-btn">Load</button>
+          </div>
+          <div class="financials-overhead" id="financials-overhead">Loading...</div>
+          <div class="financials-per-property" id="financials-per-property">Loading...</div>
+        `;
+        try {
+          const p = TreasuryPages.loadTreasury(contentDiv, AppState.getPageParams());
           if (p && typeof p.then === 'function') {
             p.catch(err => {
               contentDiv.innerHTML = `<p class="error-text">Couldn't load treasury — try again (${err.message})</p>`;
