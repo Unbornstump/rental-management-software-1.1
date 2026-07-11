@@ -334,9 +334,10 @@ const PropertyPages = {
 
   renderQuickActions(container, summary, alerts) {
     const hasExpiring = alerts.some(a => a.type === 'expiring_lease');
+    const hasUnits = summary.total_units > 0;
     const actions = [
       { id: 'add-unit', label: '+ Add Unit' },
-      { id: 'register-tenant', label: '+ Register Tenant' },
+      { id: 'register-tenant', label: '+ Register Tenant', disabled: !hasUnits },
       { id: 'record-payment', label: '+ Record Payment' },
       { id: 'view-financials', label: '→ View Financials' },
     ];
@@ -346,12 +347,13 @@ const PropertyPages = {
 
     const list = document.getElementById('dashboard-quick-actions');
     list.innerHTML = actions.map(a =>
-      `<button class="quick-action-btn" data-action="${a.id}">${a.label}</button>`
+      `<button class="quick-action-btn ${a.disabled ? 'disabled' : ''}" data-action="${a.id}" ${a.disabled ? 'disabled title="Add a unit first."' : ''}>${a.label}</button>`
     ).join('');
 
     list.querySelectorAll('.quick-action-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const action = btn.dataset.action;
+        if (btn.disabled) return;
         if (action === 'view-financials') {
           PageLoaders.navigate('financials', { month: summary.month, year: summary.year });
         } else if (action === 'expiring-leases') {
@@ -512,11 +514,10 @@ const PropertyPages = {
 
       if (properties.length === 0) {
         propertiesGrid.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">🏢</div>
+          <div class="empty-state centered-empty">
             <h3 class="empty-state-title">No Properties Yet</h3>
-            <p class="empty-state-text">Create your first property to get started managing your rentals.</p>
-            <button class="action-button" onclick="Modals.showPropertyModal()">+ Add Property</button>
+            <p class="empty-state-text">Start building your rental portfolio.</p>
+            <button class="action-button" onclick="Modals.showPropertyModal()">Add Your First Property</button>
           </div>
         `;
         return;

@@ -2,8 +2,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
 
-from core.models import CustomUser
+from core.models import CustomUser, Property
 from core.permissions import RolePermission
 
 from .dashboard import (
@@ -96,3 +97,57 @@ class DashboardSnapshotView(PropertyDashboardMixin, APIView):
             request.query_params.get('year'),
         )
         return Response(data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, RolePermission([CustomUser.MANAGER])])
+def financial_hub_stats(request):
+    """Return real statistics for the Financial Hub card in Control Center.
+    
+    If property query param is provided, returns stats scoped to that property.
+    Otherwise, returns global stats across all properties.
+    """
+    from datetime import date
+    from decimal import Decimal
+    
+    property_id = request.query_params.get('property')
+    month = request.query_params.get('month', date.today().month)
+    year = request.query_params.get('year', date.today().year)
+    
+    if property_id:
+        # Property-scoped stats
+        try:
+            property_id = int(property_id)
+            summary = build_dashboard_summary(property_id, month, year)
+            return Response({
+                'revenue': float(summary['rent_collected']),
+                'outstanding': float(summary['outstanding']),
+                'transactions': summary['paid_count'] + summary['partial_count'] + summary['unpaid_count']
+            })
+        except (ValueError, Property.DoesNotExist):
+            return Response({'error': 'Invalid property ID'}, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        # Global stats across all properties
+        from core.models import Unit, Lease
+        from .models import RentPayment
+        
+        all_properties = Property.objects.filter(is_active=True)
+        total_revenue = Decimal('0.00')
+        total_outstanding = Decimal('0.00')
+        total_transactions = 0
+        
+        for prop in all_properties:
+            try:
+                summary = build_dashboard_summary(prop.id, month, year)
+                total_revenue += summary['rent_collected']
+                total_outstanding += summary['outstanding']
+                total_transactions += summary['paid_count'] + summary['partial_count'] + summary['unpaid_count']
+            except:
+                # Skip properties that error out
+                continue
+        
+        return Response({
+            'revenue': float(total_revenue),
+            'outstanding': float(total_outstanding),
+            'transactions': total_transactions
+        })

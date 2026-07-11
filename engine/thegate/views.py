@@ -498,3 +498,25 @@ def reset_all_staff_passwords(request):
         'message': f'Reset passwords for {len(reset_data)} staff members',
         'reset_data': reset_data
     })
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def administration_stats(request):
+    """Return real statistics for the Administration card in Control Center."""
+    user_count = User.objects.count()
+    
+    # Count unique roles (based on CustomUser.ROLE_CHOICES)
+    role_count = len(User.ROLE_CHOICES)
+    
+    # Count active staff accounts (non-manager users with roles)
+    permission_count = User.objects.filter(
+        role__in=[User.ACCOUNTANT, User.PROPERTY_OFFICER, User.CARETAKER],
+        is_active=True
+    ).count()
+    
+    return Response({
+        'users': user_count,
+        'roles': role_count,
+        'permissions': permission_count
+    })

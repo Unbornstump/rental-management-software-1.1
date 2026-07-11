@@ -184,6 +184,7 @@ const TenantsPages = {
     const createTenantButton = document.getElementById('create-tenant-btn');
     if (AppState.isManager()) {
       createTenantButton.addEventListener('click', () => {
+        if (createTenantButton.disabled) return;
         Modals.showTenantModal(null, property.id);
       });
     } else {
@@ -218,6 +219,17 @@ const TenantsPages = {
         allTenantUnits,
         rentPayments
       };
+
+      const propertyUnits = allUnits.filter(u => u.property == property.id);
+      const hasUnits = propertyUnits.length > 0;
+
+      // Disable register tenant button if no units exist
+      if (createTenantButton && AppState.isManager()) {
+        createTenantButton.disabled = !hasUnits;
+        createTenantButton.title = hasUnits ? '' : 'Add a unit first.';
+        createTenantButton.style.opacity = hasUnits ? '1' : '0.5';
+        createTenantButton.style.cursor = hasUnits ? 'pointer' : 'not-allowed';
+      }
 
       this.renderSummaryBar(container);
       this.renderFilterPills(container, currentFilter);
@@ -390,6 +402,7 @@ const TenantsPages = {
     const propertyTenantUnits = allTenantUnits.filter(tu => propertyUnits.some(u => u.id == tu.unit));
 
     const allPropertyTenants = [...allTenants];
+    const hasUnits = propertyUnits.length > 0;
 
     const filteredTenants = allPropertyTenants.filter(t => {
       // Apply search filter
@@ -427,9 +440,15 @@ const TenantsPages = {
         emptyTitle = `No tenants match '${searchQuery}'`;
         emptyMessage = `<a href="#" class="clear-search-link">Clear search</a>`;
       } else if (allPropertyTenants.length === 0) {
-        emptyTitle = 'No tenants yet';
-        emptyMessage = 'Register one to get started';
-        showButton = true;
+        if (!hasUnits) {
+          emptyTitle = 'No units to assign tenants to yet';
+          emptyMessage = 'Add at least one unit before registering tenants';
+          showButton = true;
+        } else {
+          emptyTitle = 'No tenants yet';
+          emptyMessage = 'Register one to get started';
+          showButton = true;
+        }
       } else if (filter === 'active') {
         emptyTitle = 'No Active Tenants';
         emptyMessage = 'No active tenants. Register your first tenant to get started.';
@@ -446,11 +465,10 @@ const TenantsPages = {
       }
       
       tenantsGrid.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">👥</div>
+        <div class="empty-state centered-empty">
           <h3 class="empty-state-title">${emptyTitle}</h3>
           <p class="empty-state-text">${emptyMessage}</p>
-          ${showButton && AppState.isManager() ? `<button class="action-button" onclick="Modals.showTenantModal(null, ${property.id})">+ Register Tenant</button>` : ''}
+          ${showButton && AppState.isManager() ? `<button class="action-button" id="empty-state-action-btn">${!hasUnits ? 'Go to Units' : 'Register Your First Tenant'}</button>` : ''}
         </div>
       `;
       
@@ -461,6 +479,26 @@ const TenantsPages = {
           e.preventDefault();
           container.querySelector('#tenants-search').value = '';
           this.renderTenantsGrid(container, property, filter, '');
+        });
+      }
+
+      // Add empty state button handler
+      const emptyStateBtn = tenantsGrid.querySelector('#empty-state-action-btn');
+      if (emptyStateBtn) {
+        emptyStateBtn.addEventListener('click', () => {
+          if (!hasUnits) {
+            // Navigate to Units page
+            const unitsNavBtn = document.querySelector('.nav-button[data-page="property-units"]');
+            if (unitsNavBtn) {
+              unitsNavBtn.click();
+            } else {
+              // Fallback: load units page directly
+              PageLoaders.loadPage('property-units');
+            }
+          } else {
+            // Open tenant registration modal
+            Modals.showTenantModal(null, property.id);
+          }
         });
       }
       return;

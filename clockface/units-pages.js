@@ -62,11 +62,10 @@ const UnitsPages = {
       if (filteredUnits.length === 0) {
         const canManageUnits = AppState.isManager() || AppState.isPropertyOfficer();
         unitsContainer.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">🚪</div>
+          <div class="empty-state centered-empty">
             <h3 class="empty-state-title">No Units Yet</h3>
-            <p class="empty-state-text">Bulk create your first units to get started.</p>
-            ${canManageUnits ? `<button class="action-button" onclick="Modals.showBulkUnitModal(${property.id})">+ Bulk Create Units</button>` : ''}
+            <p class="empty-state-text">Organize your property into rentable spaces.</p>
+            ${canManageUnits ? `<button class="action-button" onclick="Modals.showBulkUnitModal(${property.id})">Create Your First Units</button>` : ''}
           </div>
         `;
         return;

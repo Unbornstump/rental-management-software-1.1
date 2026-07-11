@@ -4,7 +4,7 @@ from .views import (
     verify_security_questions, login_with_recovery_code, setup_status,
     check_username_availability, register_manager, StaffListView,
     StaffDetailView, reset_staff_password, AuditLogListView,
-    SystemSettingsView, reset_all_staff_passwords
+    SystemSettingsView, reset_all_staff_passwords, administration_stats
 )
 
 urlpatterns = [
@@ -31,4 +31,7 @@ urlpatterns = [
     
     # System Settings (Manager only)
     path('admin/settings/', SystemSettingsView.as_view(), name='system_settings'),
+    
+    # Control Center Stats
+    path('admin/administration-stats/', administration_stats, name='administration_stats'),
 ]

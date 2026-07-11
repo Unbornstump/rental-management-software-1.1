@@ -43,6 +43,9 @@
   --primary-color: var(--color-primary);
   --primary-color-hover: var(--color-primary-hover);
   --error-color: #ef4444;
+  --color-gold: #d4af37;
+  --color-gold-light: #f4e4bc;
+  --color-gold-dark: #b8960c;
 }
 
 [data-theme="dark"] {

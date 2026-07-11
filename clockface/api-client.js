@@ -420,6 +420,16 @@ class ApiClient {
     return this.get(`/api/dashboard/snapshot/?${queryString}`);
   }
 
+  // Control Center Stats
+  async getAdministrationStats() {
+    return this.get('/api/admin/administration-stats/');
+  }
+
+  async getFinancialHubStats(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/api/dashboard/financial-hub-stats/?${queryString}`);
+  }
+
   // Financials - Credit Ledgers
   async getCreditLedgers() {
     return this.get('/api/financials/credit-ledgers/');

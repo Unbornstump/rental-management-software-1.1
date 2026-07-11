@@ -68,31 +68,90 @@
     </div>
   </div>
   <div class="main-container no-sidebar">
-    <!-- Command Center Header -->
-    <header class="command-center-header">
-      <button class="command-center-hamburger" id="command-center-btn" aria-label="Open Command Center">
-        <span class="hamburger-line"></span>
-        <span class="hamburger-line"></span>
-        <span class="hamburger-line"></span>
+    <!-- Control Center Header -->
+    <header class="control-center-header">
+      <button class="dynamic-island-nav" id="control-center-btn" aria-label="Open Control Center">
+        <div class="hamburger-icon">
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+        </div>
+        <div class="close-icon">
+          <span class="close-line"></span>
+          <span class="close-line"></span>
+        </div>
       </button>
     </header>
 
-    <!-- Command Center Overlay -->
-    <div class="command-center-overlay" id="command-center-overlay" aria-hidden="true">
-      <div class="command-center-backdrop" id="command-center-backdrop"></div>
-      <div class="command-center-panel">
-        <div class="command-center-content">
-          <h2 class="command-center-title">Command Center</h2>
-          <div class="command-center-doors">
-            <button class="command-door admin-door" id="admin-door-btn">
-              <div class="door-icon">🏛️</div>
-              <div class="door-label">Admin</div>
-              <div class="door-subtitle">People, roles, permissions</div>
+    <!-- Control Center Overlay -->
+    <div class="control-center-overlay" id="control-center-overlay" aria-hidden="true">
+      <div class="control-center-backdrop" id="control-center-backdrop"></div>
+      <div class="control-center-panel">
+        <div class="control-center-content">
+          <h2 class="control-center-title">Control Center</h2>
+          <div class="control-center-workspaces">
+            <button class="workspace-card administration-card" id="administration-card-btn">
+              <div class="workspace-card-icon">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M24 4L6 12V24C6 33.94 13.94 42.92 24 46C34.06 42.92 42 33.94 42 24V12L24 4Z" stroke="currentColor" stroke-width="2" fill="none"/>
+                  <path d="M24 14V34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M14 24H34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="workspace-card-title">Administration</div>
+              <div class="workspace-card-description">Manage users, roles, permissions and system access</div>
+              <div class="workspace-card-stats">
+                <div class="workspace-stat">
+                  <span class="workspace-stat-value" data-stat="users">--</span>
+                  <span class="workspace-stat-label">Users</span>
+                </div>
+                <div class="workspace-stat">
+                  <span class="workspace-stat-value" data-stat="roles">--</span>
+                  <span class="workspace-stat-label">Roles</span>
+                </div>
+                <div class="workspace-stat">
+                  <span class="workspace-stat-value" data-stat="permissions">--</span>
+                  <span class="workspace-stat-label">Groups</span>
+                </div>
+              </div>
+              <div class="workspace-card-footer">
+                <span class="workspace-card-action">Manage</span>
+                <svg class="workspace-card-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
             </button>
-            <button class="command-door treasury-door" id="treasury-door-btn">
-              <div class="door-icon">💰</div>
-              <div class="door-label">Treasury</div>
-              <div class="door-subtitle">Money across all properties</div>
+            <button class="workspace-card financial-hub-card" id="financial-hub-card-btn">
+              <div class="workspace-card-icon">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="8" y="8" width="32" height="32" rx="4" stroke="currentColor" stroke-width="2" fill="none"/>
+                  <path d="M16 20H32M16 28H28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <circle cx="32" cy="32" r="6" stroke="currentColor" stroke-width="2" fill="none"/>
+                  <path d="M32 29V35M29 32H35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="workspace-card-title">Financial Hub</div>
+              <div class="workspace-card-description">Track revenue, rent payments, balances and financial reports</div>
+              <div class="workspace-card-stats">
+                <div class="workspace-stat">
+                  <span class="workspace-stat-value" data-stat="revenue">--</span>
+                  <span class="workspace-stat-label">Revenue</span>
+                </div>
+                <div class="workspace-stat">
+                  <span class="workspace-stat-value" data-stat="outstanding">--</span>
+                  <span class="workspace-stat-label">Outstanding</span>
+                </div>
+                <div class="workspace-stat">
+                  <span class="workspace-stat-value" data-stat="transactions">--</span>
+                  <span class="workspace-stat-label">Transactions</span>
+                </div>
+              </div>
+              <div class="workspace-card-footer">
+                <span class="workspace-card-action">Open</span>
+                <svg class="workspace-card-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
             </button>
           </div>
         </div>
@@ -123,7 +182,10 @@
               <button class="nav-button" data-page="property-tenants">
                 Tenants
               </button>
-              
+              <button class="nav-button" data-page="financials">
+                Financials
+              </button>
+
             </div>
 
             
@@ -144,7 +206,8 @@
   <script src="state.js"></script>
   <script src="modals.js"></script>
   <script src="shared-components.js"></script>
-  <script src="command-center.js"></script>
+  <script src="empty-state-illustrations.js"></script>
+  <script src="control-center.js"></script>
   <script src="property-pages.js"></script>
   <script src="units-pages.js"></script>
   <script src="tenants-pages.js"></script>

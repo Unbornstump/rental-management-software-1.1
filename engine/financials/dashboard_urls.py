@@ -5,6 +5,7 @@ from .dashboard_views import (
     DashboardAlertsView,
     DashboardActivityView,
     DashboardSnapshotView,
+    financial_hub_stats,
 )
 
 urlpatterns = [
@@ -13,4 +14,5 @@ urlpatterns = [
     path('alerts/', DashboardAlertsView.as_view(), name='dashboard-alerts'),
     path('activity/', DashboardActivityView.as_view(), name='dashboard-activity'),
     path('snapshot/', DashboardSnapshotView.as_view(), name='dashboard-snapshot'),
+    path('financial-hub-stats/', financial_hub_stats, name='financial-hub-stats'),
 ]
