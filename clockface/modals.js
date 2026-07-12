@@ -485,17 +485,29 @@ const Modals = {
   },
 
   // Unit Edit Modal (for individual unit editing)
-  showUnitEditModal(unit) {
+  async showUnitEditModal(unit, isOccupied = false) {
     if (!(AppState.isManager() || AppState.isPropertyOfficer())) {
       alert('You do not have permission to edit units.');
       return;
     }
+
+    // Show different modal based on occupancy
+    if (isOccupied) {
+      await this.showOccupiedUnitModal(unit);
+    } else {
+      this.showVacantUnitModal(unit);
+    }
+  },
+
+  // Vacant Unit Modal - Edit Unit without Status field
+  showVacantUnitModal(unit) {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `
-      <div class="modal">
+      <div class="modal vacant-unit-modal">
         <div class="modal-header">
           <h2>Edit Unit</h2>
+          <span class="status-pill status-pill-vacant">Vacant</span>
           <button class="modal-close">&times;</button>
         </div>
         <form class="modal-form" id="unit-edit-form">
@@ -516,13 +528,6 @@ const Modals = {
           <div class="form-group">
             <label for="rent-amount">Rent Amount</label>
             <input type="number" id="rent-amount" name="rent_amount" value="${unit?.rent_amount || ''}" required>
-          </div>
-          <div class="form-group">
-            <label for="unit-status">Status</label>
-            <select id="unit-status" name="status" required>
-              <option value="vacant" ${unit?.status === 'vacant' ? 'selected' : ''}>Vacant</option>
-              <option value="occupied" ${unit?.status === 'occupied' ? 'selected' : ''}>Occupied</option>
-            </select>
           </div>
           <div class="modal-footer">
             <button type="button" class="action-button cancel-btn">Cancel</button>
@@ -546,8 +551,7 @@ const Modals = {
       const data = {
         unit_number: formData.get('unit_number'),
         unit_type: formData.get('unit_type'),
-        rent_amount: parseFloat(formData.get('rent_amount')),
-        status: formData.get('status')
+        rent_amount: parseFloat(formData.get('rent_amount'))
       };
 
       try {
@@ -558,6 +562,102 @@ const Modals = {
         alert('Error updating unit: ' + error.message);
       }
     });
+  },
+
+  // Occupied Unit Modal - Read-only with tenant info
+  async showOccupiedUnitModal(unit) {
+    // Fetch tenant information for this unit
+    let tenant = null;
+    let tenantInitials = '??';
+    let tenantColor = '#2f80ed';
+    
+    try {
+      const [leases, tenants] = await Promise.all([
+        apiClient.getLeases(),
+        apiClient.getTenants()
+      ]);
+      
+      const activeLease = leases.find(l => l.unit == unit.id && l.status === 'active');
+      if (activeLease) {
+        tenant = tenants.find(t => t.id == activeLease.tenant);
+        if (tenant) {
+          const tenantName = tenant.full_name || tenant.name || '';
+          tenantInitials = tenantName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+          // Simple hash for color
+          let hash = 0;
+          for (let i = 0; i < tenantName.length; i++) {
+            hash = tenantName.charCodeAt(i) + ((hash << 5) - hash);
+          }
+          const colors = ['#2f80ed', '#27ae60', '#f39c12', '#e74c3c', '#9b59b6', '#1abc9c'];
+          tenantColor = colors[Math.abs(hash) % colors.length];
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching tenant info:', error);
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal occupied-unit-modal">
+        <div class="modal-header">
+          <h2>Unit Occupied</h2>
+          <span class="status-pill status-pill-occupied">Occupied</span>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          ${tenant ? `
+            <div class="occupant-info">
+              <div class="occupant-avatar" style="background-color: ${tenantColor}">
+                ${tenantInitials}
+              </div>
+              <div class="occupant-details">
+                <h3 class="occupant-name">${tenant.full_name || tenant.name || 'Unknown'}</h3>
+                <p class="occupant-phone">${tenant.phone || 'N/A'}</p>
+              </div>
+            </div>
+          ` : `
+            <div class="occupant-info">
+              <p class="no-occupant">Tenant information not available</p>
+            </div>
+          `}
+          <div class="unit-details-readonly">
+            <div class="readonly-field">
+              <label>Unit Number</label>
+              <div class="readonly-value">${unit?.unit_number || 'N/A'}</div>
+            </div>
+            <div class="readonly-field">
+              <label>Unit Type</label>
+              <div class="readonly-value">${unit?.unit_type || 'N/A'}</div>
+            </div>
+            <div class="readonly-field">
+              <label>Rent Amount</label>
+              <div class="readonly-value">KES ${parseFloat(unit?.rent_amount || 0).toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          ${tenant ? `<button type="button" class="action-button primary-btn" id="view-tenant-btn">View Tenant</button>` : ''}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+
+    const viewTenantBtn = modal.querySelector('#view-tenant-btn');
+    if (viewTenantBtn && tenant) {
+      viewTenantBtn.addEventListener('click', () => {
+        modal.remove();
+        // Open tenant details modal
+        const property = AppState.getPropertyContext();
+        TenantsPages.showTenantDetailModal(tenant, unit.unit_number, property, 'active');
+      });
+    }
   },
 
   // Landlord Modal

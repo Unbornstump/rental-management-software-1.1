@@ -158,7 +158,7 @@ const TenantsPages = {
   },
   // Property Tenants (Property Space - Tenants module)
   async loadPropertyTenants(container, params = {}) {
-    const initialFilter = typeof params === 'string' ? params : (params.filter || 'all');
+    const initialFilter = typeof params === 'string' ? params : (params.filter || 'active');
     const property = AppState.getPropertyContext();
 
     if (!property) {
@@ -170,14 +170,10 @@ const TenantsPages = {
       ${SharedComponents.renderPropertySpaceHeader('Tenants', property.name, `
         <button class="action-button" id="create-tenant-btn">+ Register Tenant</button>
       `)}
-      <div class="tenants-summary-bar" id="tenants-summary-bar">
-        <span class="summary-text">Loading...</span>
-      </div>
       <div class="tenants-search-wrapper">
         <input type="text" class="tenants-search-input" id="tenants-search" placeholder="Search tenants...">
       </div>
       <div class="tenant-filter-pills" id="tenant-filter-pills"></div>
-      <div class="tenants-stats-bar" id="tenants-stats-bar"></div>
       <div class="tenants-grid" id="tenants-grid"></div>
     `;
 
@@ -231,50 +227,11 @@ const TenantsPages = {
         createTenantButton.style.cursor = hasUnits ? 'pointer' : 'not-allowed';
       }
 
-      this.renderSummaryBar(container);
       this.renderFilterPills(container, currentFilter);
-      this.renderStatsBar(container);
       this.renderTenantsGrid(container, property, currentFilter, searchQuery);
     } catch (error) {
       tenantsGrid.innerHTML = `<p>Error loading tenants: ${error.message}</p>`;
     }
-  },
-
-  renderSummaryBar(container) {
-    const data = container.tenantData;
-    if (!data) return;
-
-    const { property, allTenants, allUnits, allLeases, allTenantUnits, rentPayments } = data;
-    
-    const propertyUnits = allUnits.filter(u => u.property == property.id);
-    const propertyLeases = allLeases.filter(l => propertyUnits.some(u => u.id == l.unit));
-    const propertyTenantUnits = allTenantUnits.filter(tu => propertyUnits.some(u => u.id == tu.unit));
-    
-    const allPropertyTenants = [...allTenants];
-    
-    const activeCount = allPropertyTenants.filter(t => this.getTenantCardState(t, propertyLeases, propertyTenantUnits).tab === 'active').length;
-    const inactiveCount = allPropertyTenants.filter(t => this.getTenantCardState(t, propertyLeases, propertyTenantUnits).tab === 'inactive').length;
-    
-    // Calculate unpaid count for current month
-    const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const currentYear = now.getFullYear();
-    
-    let unpaidCount = 0;
-    allPropertyTenants.forEach(tenant => {
-      const paymentStatus = this.getPaymentStatus(tenant.id, rentPayments);
-      if (paymentStatus.status === 'unpaid') {
-        unpaidCount++;
-      }
-    });
-    
-    const summaryBar = container.querySelector('#tenants-summary-bar');
-    const unpaidColor = unpaidCount > 0 ? '#e74c3c' : '#27ae60';
-    const unpaidText = unpaidCount > 0 ? `${unpaidCount} unpaid this month` : 'All paid this month';
-    
-    summaryBar.innerHTML = `
-      <span class="summary-text">${activeCount} active · ${inactiveCount} inactive · <span style="color: ${unpaidColor}">${unpaidText}</span></span>
-    `;
   },
 
   renderFilterPills(container, activeFilter) {
@@ -316,7 +273,6 @@ const TenantsPages = {
     });
     
     const filters = [
-      { id: 'all', label: 'All', count: totalCount },
       { id: 'active', label: 'Active', count: activeCount },
       { id: 'inactive', label: 'Inactive', count: inactiveCount },
       { id: 'unpaid', label: 'Unpaid', count: unpaidCount },
@@ -340,54 +296,6 @@ const TenantsPages = {
     });
   },
 
-  renderStatsBar(container) {
-    const data = container.tenantData;
-    if (!data) return;
-
-    const { property, allTenants, allUnits, allLeases, allTenantUnits, rentPayments } = data;
-    
-    const propertyUnits = allUnits.filter(u => u.property == property.id);
-    const propertyLeases = allLeases.filter(l => propertyUnits.some(u => u.id == l.unit));
-    const propertyTenantUnits = allTenantUnits.filter(tu => propertyUnits.some(u => u.id == tu.unit));
-    
-    const allPropertyTenants = [...allTenants];
-    
-    const totalCount = allPropertyTenants.length;
-    let paidCount = 0;
-    let unpaidCount = 0;
-    let partialCount = 0;
-    
-    allPropertyTenants.forEach(tenant => {
-      const paymentStatus = this.getPaymentStatus(tenant.id, rentPayments);
-      if (paymentStatus.status === 'paid') paidCount++;
-      else if (paymentStatus.status === 'unpaid') unpaidCount++;
-      else if (paymentStatus.status === 'partial') partialCount++;
-    });
-    
-    const statsBar = container.querySelector('#tenants-stats-bar');
-    statsBar.innerHTML = `
-      <div class="stats-bar">
-        <span class="stat-item" data-filter="all">Total ${totalCount}</span>
-        <span class="stat-item" data-filter="paid">Paid ${paidCount}</span>
-        <span class="stat-item" data-filter="unpaid">Unpaid ${unpaidCount}</span>
-        <span class="stat-item" data-filter="partial">Partial ${partialCount}</span>
-      </div>
-    `;
-    
-    statsBar.querySelectorAll('.stat-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const filter = item.dataset.filter;
-        const searchQuery = container.querySelector('#tenants-search').value.toLowerCase();
-        
-        // Map stat filter to pill filter
-        let pillFilter = 'all';
-        if (filter === 'unpaid') pillFilter = 'unpaid';
-        
-        this.renderFilterPills(container, pillFilter);
-        this.renderTenantsGrid(container, property, pillFilter, searchQuery);
-      });
-    });
-  },
 
   renderTenantsGrid(container, property, filter, searchQuery = '') {
     const data = container.tenantData;
@@ -428,7 +336,7 @@ const TenantsPages = {
       if (filter === 'inactive') {
         return this.getTenantCardState(t, propertyLeases, propertyTenantUnits).tab === 'inactive';
       }
-      return true; // 'all' filter
+      return true;
     });
 
     if (filteredTenants.length === 0) {
@@ -584,7 +492,7 @@ const TenantsPages = {
         if (!tenant) return;
         
         // Navigate to tenant profile (for now, show detail modal)
-        this.showTenantDetailModal(tenant, unitNumber, property);
+        this.showTenantDetailModal(tenant, unitNumber, property, filter);
       });
     });
   },
@@ -628,38 +536,94 @@ const TenantsPages = {
     });
 
     modal.querySelector('#remove-tenant-btn').addEventListener('click', async () => {
-      if (confirm(`Are you sure you want to remove ${tenant.full_name} from unit ${unitNumber}? This will vacate the unit and deactivate the tenant.`)) {
+      const confirmModal = document.createElement('div');
+      confirmModal.className = 'modal-overlay';
+      
+      const tenantName = tenant.full_name || tenant.name;
+      
+      confirmModal.innerHTML = `
+        <div class="modal">
+          <div class="modal-header">
+            <h2>Remove Tenant</h2>
+            <button class="modal-close">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="tenant-info-summary">
+              <h3>${tenantName}</h3>
+              <p>Unit: ${unitNumber}</p>
+            </div>
+            <p class="confirmation-text">Are you sure you want to remove ${tenantName} from unit ${unitNumber}? This will vacate the unit and deactivate the tenant.</p>
+            <div class="action-buttons">
+              <button class="action-button cancel-btn" id="cancel-remove-btn">Cancel</button>
+              <button class="action-button danger-btn" id="confirm-remove-btn">Remove</button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(confirmModal);
+      
+      confirmModal.querySelector('.modal-close').addEventListener('click', () => confirmModal.remove());
+      confirmModal.addEventListener('click', (e) => { if (e.target === confirmModal) confirmModal.remove(); });
+      
+      confirmModal.querySelector('#cancel-remove-btn').addEventListener('click', () => confirmModal.remove());
+      
+      confirmModal.querySelector('#confirm-remove-btn').addEventListener('click', async () => {
         try {
           await this.vacateTenant(tenant.id, unitId);
+          confirmModal.remove();
           modal.remove();
           this.loadPropertyTenants(document.getElementById('page-content'));
         } catch (error) {
           alert('Error removing tenant: ' + error.message);
         }
-      }
+      });
     });
   },
 
-  showTenantDetailModal(tenant, unitNumber, property) {
+  showTenantDetailModal(tenant, unitNumber, property, currentFilter = 'active') {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
+    
+    const isInactiveTenant = tenant.status === 'inactive' || currentFilter === 'inactive';
+    const tenantName = tenant.full_name || tenant.name;
+    
+    let actionButtons = '';
+    if (AppState.isManager()) {
+      if (isInactiveTenant) {
+        actionButtons = `
+          <button class="action-button danger-btn" id="delete-tenant-btn">Delete Tenant</button>
+        `;
+      } else {
+        actionButtons = `
+          <button class="action-button secondary-btn" id="vacate-tenant-btn">Vacate</button>
+          <button class="action-button danger-btn" id="vacate-delete-tenant-btn">Vacate & Delete</button>
+        `;
+      }
+    } else {
+      actionButtons = '<p class="action-note">Only managers can manage tenant actions.</p>';
+    }
+    
     modal.innerHTML = `
-      <div class="modal">
+      <div class="modal tenant-detail-modal">
         <div class="modal-header">
           <h2>Tenant Details</h2>
           <button class="modal-close">&times;</button>
         </div>
         <div class="modal-body">
           <div class="tenant-info-summary">
-            <h3>${tenant.full_name || tenant.name}</h3>
+            <h3>${tenantName}</h3>
             <p><strong>Phone:</strong> ${tenant.phone || 'N/A'}</p>
             <p><strong>Email:</strong> ${tenant.email || 'N/A'}</p>
             <p><strong>Unit:</strong> ${unitNumber}</p>
             <p><strong>Status:</strong> ${tenant.status === 'active' ? 'Active' : 'Inactive'}</p>
           </div>
-          <div class="action-buttons">
-            ${AppState.isManager() ? `<button class="action-button danger-btn" id="vacate-tenant-btn">Vacate Tenant</button>` : '<p class="action-note">Only managers can vacate tenants.</p>'}
+          <div class="tenant-detail-buttons">
+            ${actionButtons}
           </div>
+          ${!isInactiveTenant && AppState.isManager() ? `
+            <p class="destructive-warning">This will permanently remove ${tenantName}'s record. This can't be undone.</p>
+          ` : ''}
         </div>
       </div>
     `;
@@ -669,15 +633,194 @@ const TenantsPages = {
     modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 
-    modal.querySelector('#vacate-tenant-btn').addEventListener('click', async () => {
-      if (confirm(`Are you sure you want to vacate ${tenant.full_name} from unit ${unitNumber}? This will mark the unit as vacant and terminate their lease.`)) {
+    if (isInactiveTenant) {
+      modal.querySelector('#delete-tenant-btn').addEventListener('click', async () => {
+        this.showDeleteConfirmationModal(tenant, modal, async () => {
+          await apiClient.deleteTenant(tenant.id);
+        });
+      });
+    } else {
+      modal.querySelector('#vacate-tenant-btn').addEventListener('click', () => {
+        this.showVacateConfirmationModal(tenant, unitNumber, property, modal, false);
+      });
+      
+      modal.querySelector('#vacate-delete-tenant-btn').addEventListener('click', () => {
+        this.showVacateConfirmationModal(tenant, unitNumber, property, modal, true);
+      });
+    }
+  },
+
+  showVacateConfirmationModal(tenant, unitNumber, property, parentModal, shouldDelete = false) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    
+    const tenantName = tenant.full_name || tenant.name;
+    
+    if (shouldDelete) {
+      modal.innerHTML = `
+        <div class="modal">
+          <div class="modal-header">
+            <h2>Vacate & Delete Tenant</h2>
+            <button class="modal-close">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="tenant-info-summary">
+              <h3>${tenantName}</h3>
+              <p>Unit: ${unitNumber}</p>
+            </div>
+            <p class="confirmation-text">This will mark ${tenantName} as inactive and end their active lease, then permanently remove their record.</p>
+            <p class="warning-text">This action cannot be undone.</p>
+            <div class="action-buttons">
+              <button class="action-button cancel-btn" id="cancel-vacate-delete-btn">Cancel</button>
+              <button class="action-button" id="vacate-only-btn">Vacate Only</button>
+              <button class="action-button danger-btn" id="vacate-delete-confirm-btn">Vacate & Delete</button>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      modal.innerHTML = `
+        <div class="modal">
+          <div class="modal-header">
+            <h2>Vacate Tenant</h2>
+            <button class="modal-close">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="tenant-info-summary">
+              <h3>${tenantName}</h3>
+              <p>Unit: ${unitNumber}</p>
+            </div>
+            <p class="confirmation-text">This will mark ${tenantName} as inactive and end their active lease.</p>
+            <div class="action-buttons">
+              <button class="action-button cancel-btn" id="cancel-vacate-btn">Cancel</button>
+              <button class="action-button" id="vacate-confirm-btn">Vacate</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+    if (shouldDelete) {
+      modal.querySelector('#cancel-vacate-delete-btn').addEventListener('click', () => modal.remove());
+      
+      modal.querySelector('#vacate-only-btn').addEventListener('click', async () => {
         try {
           await this.vacateTenant(tenant.id, null, unitNumber);
           modal.remove();
+          parentModal.remove();
           this.loadPropertyTenants(document.getElementById('page-content'));
         } catch (error) {
           alert('Error vacating tenant: ' + error.message);
         }
+      });
+      
+      modal.querySelector('#vacate-delete-confirm-btn').addEventListener('click', async () => {
+        // Secondary confirmation for destructive action
+        const confirmModal = document.createElement('div');
+        confirmModal.className = 'modal-overlay';
+        
+        confirmModal.innerHTML = `
+          <div class="modal">
+            <div class="modal-header">
+              <h2>Confirm Delete</h2>
+              <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div class="tenant-info-summary">
+                <h3>${tenantName}</h3>
+              </div>
+              <p class="confirmation-text">Are you absolutely sure you want to permanently delete ${tenantName}?</p>
+              <p class="warning-text">This cannot be undone.</p>
+              <div class="action-buttons">
+                <button class="action-button cancel-btn" id="cancel-final-delete-btn">Cancel</button>
+                <button class="action-button danger-btn" id="confirm-final-delete-btn">Delete</button>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(confirmModal);
+        
+        confirmModal.querySelector('.modal-close').addEventListener('click', () => confirmModal.remove());
+        confirmModal.addEventListener('click', (e) => { if (e.target === confirmModal) confirmModal.remove(); });
+        
+        confirmModal.querySelector('#cancel-final-delete-btn').addEventListener('click', () => confirmModal.remove());
+        
+        confirmModal.querySelector('#confirm-final-delete-btn').addEventListener('click', async () => {
+          try {
+            await this.vacateTenant(tenant.id, null, unitNumber);
+            await apiClient.deleteTenant(tenant.id);
+            confirmModal.remove();
+            modal.remove();
+            parentModal.remove();
+            this.loadPropertyTenants(document.getElementById('page-content'));
+          } catch (error) {
+            alert('Error vacating and deleting tenant: ' + error.message);
+          }
+        });
+      });
+    } else {
+      modal.querySelector('#cancel-vacate-btn').addEventListener('click', () => modal.remove());
+      
+      modal.querySelector('#vacate-confirm-btn').addEventListener('click', async () => {
+        try {
+          await this.vacateTenant(tenant.id, null, unitNumber);
+          modal.remove();
+          parentModal.remove();
+          this.loadPropertyTenants(document.getElementById('page-content'));
+        } catch (error) {
+          alert('Error vacating tenant: ' + error.message);
+        }
+      });
+    }
+  },
+
+  showDeleteConfirmationModal(tenant, parentModal, onConfirm) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    
+    const tenantName = tenant.full_name || tenant.name;
+    
+    modal.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Delete Tenant</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="tenant-info-summary">
+            <h3>${tenantName}</h3>
+          </div>
+          <p class="confirmation-text">Are you sure you want to delete ${tenantName}?</p>
+          <p class="warning-text">This action cannot be undone.</p>
+          <div class="action-buttons">
+            <button class="action-button cancel-btn" id="cancel-delete-btn">Cancel</button>
+            <button class="action-button danger-btn" id="confirm-delete-btn">Delete</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+    
+    modal.querySelector('#cancel-delete-btn').addEventListener('click', () => modal.remove());
+    
+    modal.querySelector('#confirm-delete-btn').addEventListener('click', async () => {
+      try {
+        await onConfirm();
+        modal.remove();
+        if (parentModal) parentModal.remove();
+        this.loadPropertyTenants(document.getElementById('page-content'));
+      } catch (error) {
+        alert('Error deleting tenant: ' + error.message);
       }
     });
   },
@@ -743,15 +886,9 @@ const TenantsPages = {
     });
 
     modal.querySelector('#delete-tenant-btn').addEventListener('click', async () => {
-      if (confirm(`Are you sure you want to delete ${tenant.full_name}? This action cannot be undone.`)) {
-        try {
-          await apiClient.deleteTenant(tenant.id);
-          modal.remove();
-          this.loadPropertyTenants(document.getElementById('page-content'));
-        } catch (error) {
-          alert('Error deleting tenant: ' + error.message);
-        }
-      }
+      this.showDeleteConfirmationModal(tenant, modal, async () => {
+        await apiClient.deleteTenant(tenant.id);
+      });
     });
   },
 
@@ -818,14 +955,50 @@ const TenantsPages = {
       document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           const id = e.target.dataset.id;
-          if (confirm('Are you sure you want to delete this tenant?')) {
+          const tenant = filteredTenants.find(t => t.id == id);
+          if (!tenant) return;
+          
+          const confirmModal = document.createElement('div');
+          confirmModal.className = 'modal-overlay';
+          
+          const tenantName = tenant.full_name || tenant.name || 'this tenant';
+          
+          confirmModal.innerHTML = `
+            <div class="modal">
+              <div class="modal-header">
+                <h2>Delete Tenant</h2>
+                <button class="modal-close">&times;</button>
+              </div>
+              <div class="modal-body">
+                <div class="tenant-info-summary">
+                  <h3>${tenantName}</h3>
+                </div>
+                <p class="confirmation-text">Are you sure you want to delete ${tenantName}?</p>
+                <p class="warning-text">This action cannot be undone.</p>
+                <div class="action-buttons">
+                  <button class="action-button cancel-btn" id="cancel-delete-legacy-btn">Cancel</button>
+                  <button class="action-button danger-btn" id="confirm-delete-legacy-btn">Delete</button>
+                </div>
+              </div>
+            </div>
+          `;
+          
+          document.body.appendChild(confirmModal);
+          
+          confirmModal.querySelector('.modal-close').addEventListener('click', () => confirmModal.remove());
+          confirmModal.addEventListener('click', (e) => { if (e.target === confirmModal) confirmModal.remove(); });
+          
+          confirmModal.querySelector('#cancel-delete-legacy-btn').addEventListener('click', () => confirmModal.remove());
+          
+          confirmModal.querySelector('#confirm-delete-legacy-btn').addEventListener('click', async () => {
             try {
               await apiClient.deleteTenant(id);
+              confirmModal.remove();
               this.loadTenants(container);
             } catch (error) {
               alert('Error deleting tenant: ' + error.message);
             }
-          }
+          });
         });
       });
     } catch (error) {

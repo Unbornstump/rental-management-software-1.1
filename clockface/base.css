@@ -310,3 +310,58 @@ textarea {
   padding: 16px;
   border-top: 1px solid var(--color-border);
 }
+
+/* Tenant Detail Modal */
+.tenant-detail-modal {
+  max-width: 420px;
+  width: 90%;
+  min-width: auto;
+  padding: 24px;
+}
+
+.tenant-detail-modal .modal-body {
+  padding: 0;
+}
+
+.tenant-info-summary {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tenant-info-summary h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--color-text);
+}
+
+.tenant-info-summary p {
+  font-size: 14px;
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.tenant-detail-buttons {
+  display: flex;
+  gap: 12px;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+.tenant-detail-buttons .action-button {
+  width: auto;
+  padding: 10px 20px;
+}
+
+.destructive-warning {
+  font-size: 13px;
+  color: var(--color-danger-text);
+  background-color: var(--color-danger-bg);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin: 0;
+  line-height: 1.4;
+}

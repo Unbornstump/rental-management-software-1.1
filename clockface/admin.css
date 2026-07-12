@@ -276,6 +276,24 @@
   border-color: #b91c1c;
 }
 
+.action-button.danger:hover {
+  background-color: #991b1b;
+}
+
+.confirmation-text {
+  margin: 1rem 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.warning-text {
+  margin: 0.5rem 0 1rem;
+  color: #b91c1c;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
 .cancel-btn {
   background-color: #FFFFFF;
   color: #1A1A1A;

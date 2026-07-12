@@ -110,7 +110,7 @@ const UnitsPages = {
         const unitId = tile.dataset.unitId;
         const unit = units.find(u => u.id == unitId);
         if (unit) {
-          Modals.showUnitEditModal(unit);
+          Modals.showUnitEditModal(unit, unit.isOccupied);
         }
       });
     });
@@ -166,7 +166,7 @@ const UnitsPages = {
         const unitId = row.dataset.unitId;
         const unit = units.find(u => u.id == unitId);
         if (unit) {
-          Modals.showUnitEditModal(unit);
+          Modals.showUnitEditModal(unit, unit.isOccupied);
         }
       });
     });
