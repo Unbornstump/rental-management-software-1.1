@@ -221,6 +221,10 @@ const Modals = {
             <small class="form-hint">Units will be named: Prefix 1, Prefix 2, etc.</small>
           </div>
           <div class="form-group">
+            <label for="start-number">Start numbering at</label>
+            <input type="number" id="start-number" name="start_number" min="1" value="1" required>
+          </div>
+          <div class="form-group">
             <label for="unit-count">Number of Units</label>
             <input type="number" id="unit-count" name="count" min="1" max="100" value="10" required>
           </div>
@@ -254,19 +258,61 @@ const Modals = {
       if (e.target === modal) modal.remove();
     });
 
+    // Function to update start number based on prefix
+    const updateStartNumber = async () => {
+      const prefixInput = modal.querySelector('#unit-prefix');
+      const startNumberInput = modal.querySelector('#start-number');
+      const prefix = prefixInput.value.trim();
+      
+      if (!prefix) {
+        startNumberInput.value = 1;
+        return;
+      }
+
+      try {
+        const allUnits = await apiClient.getUnits();
+        const propertyUnits = allUnits.filter(u => u.property == propertyId);
+        
+        // Find units matching the prefix pattern
+        let maxNumber = 0;
+        const prefixPattern = new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*(\\d+)$`, 'i');
+        
+        propertyUnits.forEach(unit => {
+          const match = unit.unit_number.match(prefixPattern);
+          if (match) {
+            const number = parseInt(match[1], 10);
+            if (number > maxNumber) {
+              maxNumber = number;
+            }
+          }
+        });
+
+        startNumberInput.value = maxNumber + 1;
+      } catch (error) {
+        console.error('Error fetching units for start number calculation:', error);
+      }
+    };
+
+    // Attach event listener to prefix input
+    modal.querySelector('#unit-prefix').addEventListener('input', updateStartNumber);
+    
+    // Initial call to set start number when modal opens
+    updateStartNumber();
+
     modal.querySelector('#bulk-unit-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
       const prefix = formData.get('prefix').trim();
       const count = parseInt(formData.get('count'));
+      const startNumber = parseInt(formData.get('start_number'));
       const unitType = formData.get('unit_type');
       const rentAmount = parseFloat(formData.get('rent_amount'));
 
       // Generate unit numbers
       const unitsToCreate = [];
-      for (let i = 1; i <= count; i++) {
+      for (let i = 0; i < count; i++) {
         unitsToCreate.push({
-          unit_number: `${prefix} ${i}`,
+          unit_number: `${prefix} ${startNumber + i}`,
           unit_type: unitType,
           rent_amount: rentAmount,
           property: propertyId,
@@ -282,7 +328,52 @@ const Modals = {
         // Reload units page
         PageLoaders.loadPage('property-units');
       } catch (error) {
-        alert('Error creating units: ' + error.message);
+        let errorMessage = 'Error creating units. ';
+        
+        if (error.response && error.response.data) {
+          const data = error.response.data;
+          
+          // Handle bulk create specific errors
+          if (data.errors && Array.isArray(data.errors)) {
+            const conflictUnits = data.errors
+              .filter(err => err.errors && err.errors.non_field_errors)
+              .map(err => err.unit_number);
+            
+            if (conflictUnits.length > 0) {
+              errorMessage += `The following units already exist: ${conflictUnits.join(', ')}. `;
+            } else {
+              // Show all errors if not just conflicts
+              const errorDetails = data.errors.map(err => 
+                `${err.unit_number}: ${JSON.stringify(err.errors)}`
+              ).join('; ');
+              errorMessage += errorDetails;
+            }
+          } else if (data.error) {
+            errorMessage += data.error;
+          } else if (typeof data === 'object') {
+            const errorDetails = [];
+            for (const key in data) {
+              if (Array.isArray(data[key])) {
+                errorDetails.push(...data[key]);
+              } else {
+                errorDetails.push(data[key]);
+              }
+            }
+            if (errorDetails.length > 0) {
+              errorMessage += errorDetails.join(' ');
+            } else if (data.detail) {
+              errorMessage += data.detail;
+            } else {
+              errorMessage += JSON.stringify(data);
+            }
+          } else {
+            errorMessage += data;
+          }
+        } else {
+          errorMessage += error.message;
+        }
+        
+        alert(errorMessage);
       }
     });
   },
@@ -779,7 +870,34 @@ const Modals = {
             }
           }
         } catch (error) {
-          alert('Error saving tenant: ' + error.message);
+          let errorMessage = 'Error saving tenant: ';
+          
+          if (error.response && error.response.data) {
+            const data = error.response.data;
+            if (typeof data === 'object') {
+              const errorDetails = [];
+              for (const key in data) {
+                if (Array.isArray(data[key])) {
+                  errorDetails.push(...data[key]);
+                } else {
+                  errorDetails.push(data[key]);
+                }
+              }
+              if (errorDetails.length > 0) {
+                errorMessage += errorDetails.join(' ');
+              } else if (data.detail) {
+                errorMessage += data.detail;
+              } else {
+                errorMessage += JSON.stringify(data);
+              }
+            } else {
+              errorMessage += data;
+            }
+          } else {
+            errorMessage += error.message;
+          }
+          
+          alert(errorMessage);
         }
       });
     } else {
@@ -809,7 +927,34 @@ const Modals = {
             PageLoaders.loadPage('tenants');
           }
         } catch (error) {
-          alert('Error saving tenant: ' + error.message);
+          let errorMessage = 'Error saving tenant: ';
+          
+          if (error.response && error.response.data) {
+            const data = error.response.data;
+            if (typeof data === 'object') {
+              const errorDetails = [];
+              for (const key in data) {
+                if (Array.isArray(data[key])) {
+                  errorDetails.push(...data[key]);
+                } else {
+                  errorDetails.push(data[key]);
+                }
+              }
+              if (errorDetails.length > 0) {
+                errorMessage += errorDetails.join(' ');
+              } else if (data.detail) {
+                errorMessage += data.detail;
+              } else {
+                errorMessage += JSON.stringify(data);
+              }
+            } else {
+              errorMessage += data;
+            }
+          } else {
+            errorMessage += error.message;
+          }
+          
+          alert(errorMessage);
         }
       });
     }

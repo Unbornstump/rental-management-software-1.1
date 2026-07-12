@@ -286,9 +286,38 @@ class UnitViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [permissions.IsAuthenticated(), RolePermission([User.MANAGER, User.PROPERTY_OFFICER, User.CARETAKER])()]
-        if self.action in ['create', 'update', 'partial_update']:
+        if self.action in ['create', 'update', 'partial_update', 'bulk_create']:
             return [permissions.IsAuthenticated(), RolePermission([User.MANAGER, User.PROPERTY_OFFICER])()]
         return [permissions.IsAuthenticated(), RolePermission([User.MANAGER])()]
+
+    @action(detail=False, methods=['post'], url_path='bulk-create', url_name='bulk_create')
+    def bulk_create(self, request):
+        units_data = request.data
+        if not isinstance(units_data, list):
+            return Response({'error': 'Expected a list of units'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        created_units = []
+        errors = []
+        
+        try:
+            with transaction.atomic():
+                for unit_data in units_data:
+                    serializer = self.get_serializer(data=unit_data)
+                    if serializer.is_valid():
+                        serializer.save()
+                        created_units.append(serializer.data)
+                    else:
+                        errors.append({
+                            'unit_number': unit_data.get('unit_number'),
+                            'errors': serializer.errors
+                        })
+                if errors:
+                    transaction.set_rollback(True)
+                    return Response({'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response(created_units, status=status.HTTP_201_CREATED)
 
 
 class LandlordViewSet(viewsets.ModelViewSet):

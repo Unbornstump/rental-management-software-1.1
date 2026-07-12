@@ -271,11 +271,8 @@ class ApiClient {
   }
 
   async bulkCreateUnits(unitsArray) {
-    // Create multiple units in parallel
-    const promises = unitsArray.map(unit => 
-      this.post('/api/units/', unit)
-    );
-    return Promise.all(promises);
+    // Use the backend bulk create endpoint
+    return this.post('/api/units/bulk-create/', unitsArray);
   }
 
   async updateUnit(id, data) {

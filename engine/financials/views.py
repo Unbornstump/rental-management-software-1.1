@@ -338,7 +338,7 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
         if self.action in ['record_payment', 'record_for_tenant']:
             return [IsAuthenticated(), RolePermission([CustomUser.MANAGER, CustomUser.ACCOUNTANT])()]
         # Make summary/payment grid and related dashboard endpoints broadly accessible to any authenticated user
-        if self.action in ['tenant_dashboard', 'payment_grid', 'summary', 'tenant_history', 'bulk_dashboard']:
+        if self.action in ['tenant_dashboard', 'payment_grid', 'summary', 'tenant_history', 'bulk_dashboard', 'global_summary']:
             return [IsAuthenticated()]
         if self.action == 'generate_billing_cycle':
             return [IsAuthenticated(), RolePermission([CustomUser.MANAGER])()]
@@ -719,10 +719,17 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
         # Get all properties (assuming manager has access to all properties)
         properties = Property.objects.filter(is_active=True).order_by('name')
 
-        # Get all active leases for these properties
+        # Calculate the first and last day of the billing month
+        from calendar import monthrange
+        month_start = date(year, month, 1)
+        month_end = date(year, month, monthrange(year, month)[1])
+
+        # Get leases that were active during the billing month
+        # A lease is active if it overlaps with the billing month
         active_leases = Lease.objects.filter(
-            status=Lease.ACTIVE,
-            unit__property__in=properties
+            unit__property__in=properties,
+            start_date__lte=month_end,
+            end_date__gte=month_start
         ).select_related('tenant', 'unit', 'unit__property')
 
         # Get rent payments for the selected month/year

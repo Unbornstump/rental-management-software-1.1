@@ -31,6 +31,8 @@ const PageLoaders = {
     });
   },
 
+
+
   renderPropertySpaceHeader(title, propertyName, actionsHtml = '') {
     return SharedComponents.renderPropertySpaceHeader(title, propertyName, actionsHtml);
   },
@@ -513,20 +515,14 @@ const PageLoaders = {
         break;
       case 'treasury':
         // Load global treasury overview
-        contentDiv.innerHTML = `
-          <div class="property-space-header">
-            <div style="display:flex;align-items:center;gap:12px;">
-              <button class="back-link" id="back-to-properties">← Back to Properties</button>
-              <div>
-                <h1 class="page-title">Treasury</h1>
-                <p class="property-list-subtitle">Overview across all properties</p>
-              </div>
-            </div>
-            <div style="display:flex;gap:8px;">
-              <button class="action-button secondary-btn" id="export-csv-btn">Export CSV</button>
-              <button class="action-button secondary-btn" id="print-report-btn">Print Monthly Report</button>
-            </div>
+        const actionsHtml = `
+          <div style="display:flex;gap:8px;">
+            <button class="action-button secondary-btn" id="export-csv-btn">Export CSV</button>
+            <button class="action-button secondary-btn" id="print-report-btn">Print Monthly Report</button>
           </div>
+        `;
+        contentDiv.innerHTML = `
+          ${SharedComponents.renderPageHeaderWithBack('Treasury', 'Overview across all properties', 'properties', actionsHtml)}
           <div class="financials-global-controls">
             <label>Month:</label>
             <select id="global-month"></select>
@@ -537,6 +533,7 @@ const PageLoaders = {
           <div class="financials-overhead" id="financials-overhead">Loading...</div>
           <div class="financials-per-property" id="financials-per-property">Loading...</div>
         `;
+        SharedComponents.attachPageHeaderWithBackHandler(contentDiv);
         try {
           const p = TreasuryPages.loadTreasury(contentDiv, AppState.getPageParams());
           if (p && typeof p.then === 'function') {

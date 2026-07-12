@@ -1,47 +1,69 @@
 /* Admin Pages Styles */
 
-/* Admin Hub Grid */
-.admin-hub-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 24px;
+/* Admin Hub List */
+.admin-hub-list {
   margin-top: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
 }
 
-.admin-hub-card {
+.admin-hub-item {
   background: var(--color-surface);
-  border: 2px solid var(--color-border);
-  border-radius: 12px;
-  padding: 32px;
+  border: none;
+  padding: 20px 24px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  text-align: center;
+  gap: 16px;
+  text-align: left;
+  width: 100%;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.admin-hub-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  border-color: var(--color-text);
+.admin-hub-item:last-child {
+  border-bottom: none;
 }
 
-.admin-hub-icon {
-  font-size: 48px;
-  margin-bottom: 8px;
+.admin-hub-item:hover {
+  background: var(--color-hover-bg);
 }
 
-.admin-hub-title {
-  font-size: 18px;
+.admin-hub-item-icon {
+  color: var(--color-text);
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.admin-hub-item-text {
+  flex: 1;
+}
+
+.admin-hub-item-title {
+  font-size: 16px;
   font-weight: 600;
   color: var(--color-text);
+  margin-bottom: 4px;
 }
 
-.admin-hub-subtitle {
-  font-size: 13px;
+.admin-hub-item-subtitle {
+  font-size: 14px;
   color: var(--color-text-secondary);
+}
+
+.admin-hub-item-chevron {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.admin-hub-item:hover .admin-hub-item-chevron {
+  opacity: 1;
 }
 
 .admin-page {

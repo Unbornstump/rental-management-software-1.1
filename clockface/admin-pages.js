@@ -10,47 +10,83 @@ const AdminPages = {
   async loadAdminHub() {
     const html = `
       <div class="admin-page">
-        <div class="page-header">
-          <button class="back-link" id="admin-back-btn">← Back to Properties</button>
-          <div>
-            <h1>Admin</h1>
-            <p class="subtitle">Control room for people, roles, and system settings</p>
-          </div>
-        </div>
+        ${SharedComponents.renderPageHeaderWithBack('Admin', 'Control room for people, roles, and system settings', 'properties')}
 
-        <div class="admin-hub-grid">
-          <button class="admin-hub-card" id="admin-staff-card">
-            <div class="admin-hub-icon">👥</div>
-            <div class="admin-hub-title">Staff Management</div>
-            <div class="admin-hub-subtitle">Add, edit, and manage staff accounts</div>
+        <div class="admin-hub-list">
+          <button class="admin-hub-item" id="admin-staff-card">
+            <div class="admin-hub-item-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="admin-hub-item-text">
+              <div class="admin-hub-item-title">Staff Management</div>
+              <div class="admin-hub-item-subtitle">Add, edit, and manage staff accounts</div>
+            </div>
+            <svg class="admin-hub-item-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </button>
 
-          <button class="admin-hub-card" id="admin-roles-card">
-            <div class="admin-hub-icon">🔐</div>
-            <div class="admin-hub-title">Roles & Permissions</div>
-            <div class="admin-hub-subtitle">View access levels for each role</div>
+          <button class="admin-hub-item" id="admin-roles-card">
+            <div class="admin-hub-item-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="admin-hub-item-text">
+              <div class="admin-hub-item-title">Roles & Permissions</div>
+              <div class="admin-hub-item-subtitle">View access levels for each role</div>
+            </div>
+            <svg class="admin-hub-item-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </button>
 
-          <button class="admin-hub-card" id="admin-audit-card">
-            <div class="admin-hub-icon">📋</div>
-            <div class="admin-hub-title">Audit Log</div>
-            <div class="admin-hub-subtitle">Track system actions and changes</div>
+          <button class="admin-hub-item" id="admin-audit-card">
+            <div class="admin-hub-item-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="10 9 9 9 8 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="admin-hub-item-text">
+              <div class="admin-hub-item-title">Audit Log</div>
+              <div class="admin-hub-item-subtitle">Track system actions and changes</div>
+            </div>
+            <svg class="admin-hub-item-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </button>
 
-          <button class="admin-hub-card" id="admin-settings-card">
-            <div class="admin-hub-icon">⚙️</div>
-            <div class="admin-hub-title">System Settings</div>
-            <div class="admin-hub-subtitle">Configure company profile and defaults</div>
+          <button class="admin-hub-item" id="admin-settings-card">
+            <div class="admin-hub-item-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51v-.09a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="admin-hub-item-text">
+              <div class="admin-hub-item-title">System Settings</div>
+              <div class="admin-hub-item-subtitle">Configure company profile and defaults</div>
+            </div>
+            <svg class="admin-hub-item-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </button>
         </div>
       </div>
     `;
 
     document.getElementById('page-content').innerHTML = html;
-
-    document.getElementById('admin-back-btn').addEventListener('click', () => {
-      PageLoaders.loadPage('properties');
-    });
+    SharedComponents.attachPageHeaderWithBackHandler(document.getElementById('page-content'));
 
     document.getElementById('admin-staff-card').addEventListener('click', () => {
       PageLoaders.navigate('admin-staff');
@@ -92,12 +128,12 @@ const AdminPages = {
   },
 
   async loadStaffManagement() {
+    const actionsHtml = `
+      <button id="add-staff-btn" class="action-button">+ Add Staff Member</button>
+    `;
     const html = `
       <div class="admin-page">
-        <div class="page-header">
-          <h1>Staff Management</h1>
-          <button id="add-staff-btn" class="action-button">+ Add Staff Member</button>
-        </div>
+        ${SharedComponents.renderPageHeaderWithBack('Staff Management', null, 'admin-hub', actionsHtml)}
 
         <div id="staff-table-container" class="table-container">
           <table id="staff-table" class="data-table">
@@ -121,6 +157,7 @@ const AdminPages = {
     `;
 
     document.getElementById('page-content').innerHTML = html;
+    SharedComponents.attachPageHeaderWithBackHandler(document.getElementById('page-content'));
 
     try {
       const [staff, currentUser] = await Promise.all([apiClient.getStaff(), apiClient.getMe().catch(() => null)]);
@@ -574,10 +611,7 @@ const AdminPages = {
   async loadRolesPermissions() {
     const html = `
       <div class="admin-page">
-        <div class="page-header">
-          <h1>Roles & Permissions</h1>
-          <p class="subtitle">This is a read-only reference showing what each role can access.</p>
-        </div>
+        ${SharedComponents.renderPageHeaderWithBack('Roles & Permissions', 'This is a read-only reference showing what each role can access.', 'admin-hub')}
 
         <div class="table-container">
           <table class="data-table permissions-table">
@@ -610,15 +644,16 @@ const AdminPages = {
     `;
 
     document.getElementById('page-content').innerHTML = html;
+    SharedComponents.attachPageHeaderWithBackHandler(document.getElementById('page-content'));
   },
 
   async loadAuditLog() {
+    const actionsHtml = `
+      <button id="export-audit-btn" class="action-button secondary">Export to CSV</button>
+    `;
     const html = `
       <div class="admin-page">
-        <div class="page-header">
-          <h1>Audit Log</h1>
-          <button id="export-audit-btn" class="action-button secondary">Export to CSV</button>
-        </div>
+        ${SharedComponents.renderPageHeaderWithBack('Audit Log', null, 'admin-hub', actionsHtml)}
 
         <div class="filter-bar">
           <input type="text" id="filter-user" placeholder="Filter by user" class="filter-input">
@@ -663,6 +698,7 @@ const AdminPages = {
     `;
 
     document.getElementById('page-content').innerHTML = html;
+    SharedComponents.attachPageHeaderWithBackHandler(document.getElementById('page-content'));
     this.loadAuditLogData();
     document.getElementById('apply-filters-btn').addEventListener('click', () => this.loadAuditLogData());
     document.getElementById('export-audit-btn').addEventListener('click', () => this.exportAuditLog());
@@ -753,9 +789,7 @@ const AdminPages = {
 
       const html = `
         <div class="admin-page">
-          <div class="page-header">
-            <h1>System Settings</h1>
-          </div>
+          ${SharedComponents.renderPageHeaderWithBack('System Settings', null, 'admin-hub')}
 
           <form id="settings-form" class="settings-form">
             <section class="settings-section">
@@ -826,6 +860,7 @@ const AdminPages = {
       `;
 
       document.getElementById('page-content').innerHTML = html;
+      SharedComponents.attachPageHeaderWithBackHandler(document.getElementById('page-content'));
 
       document.getElementById('settings-form').addEventListener('submit', async (e) => {
         e.preventDefault();

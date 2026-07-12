@@ -146,13 +146,15 @@ const ControlCenter = {
       // Update Financial Hub card
       const financialCard = document.querySelector('.financial-hub-card');
       if (financialCard) {
-        const revenue = financialStats.revenue || 0;
-        const outstanding = financialStats.outstanding || 0;
-        const transactions = financialStats.transactions || 0;
+        const collectionRate = financialStats.collection_rate || 0;
+        const netToOwners = financialStats.net_to_owners || 0;
+        const lastUpdated = financialStats.last_updated ? new Date(financialStats.last_updated) : null;
 
-        financialCard.querySelector('[data-stat="revenue"]').textContent = `KES ${revenue.toLocaleString()}`;
-        financialCard.querySelector('[data-stat="outstanding"]').textContent = `KES ${outstanding.toLocaleString()}`;
-        financialCard.querySelector('[data-stat="transactions"]').textContent = transactions;
+        financialCard.querySelector('[data-stat="collection-rate"]').textContent = `${collectionRate}%`;
+        financialCard.querySelector('[data-stat="net-to-owners"]').textContent = `KES ${netToOwners.toLocaleString()}`;
+        financialCard.querySelector('[data-stat="last-updated"]').textContent = lastUpdated 
+          ? `Updated ${lastUpdated.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+          : 'No data';
       }
     } catch (error) {
       console.error('Error loading Control Center stats:', error);
@@ -166,9 +168,9 @@ const ControlCenter = {
 
       const financialCard = document.querySelector('.financial-hub-card');
       if (financialCard) {
-        financialCard.querySelector('[data-stat="revenue"]').textContent = 'KES 0';
-        financialCard.querySelector('[data-stat="outstanding"]').textContent = 'KES 0';
-        financialCard.querySelector('[data-stat="transactions"]').textContent = '0';
+        financialCard.querySelector('[data-stat="collection-rate"]').textContent = '0%';
+        financialCard.querySelector('[data-stat="net-to-owners"]').textContent = 'KES 0';
+        financialCard.querySelector('[data-stat="last-updated"]').textContent = 'No data';
       }
     }
   },

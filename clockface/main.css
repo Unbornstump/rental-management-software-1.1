@@ -5,6 +5,52 @@ body {
   color: var(--color-text);
 }
 
+/* Page Header with Inline Back Arrow */
+.page-header-with-back {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.back-arrow-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  transition: color 0.2s ease, background-color 0.2s ease;
+  margin-top: 2px; /* Adjust to align with title baseline */
+}
+
+.back-arrow-btn:hover {
+  color: var(--color-text);
+  background-color: var(--color-bg);
+}
+
+.page-header-main {
+  flex: 1;
+}
+
+.page-title-with-back {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 8px 0;
+  line-height: 1.2;
+}
+
+.page-subtitle-with-back {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
 .main-container {
   display: flex;
   height: 100vh;
@@ -21,6 +67,9 @@ body {
   left: 50%;
   transform: translateX(-50%);
   z-index: 2000;
+  display: flex;
+  gap: 24px;
+  align-items: center;
 }
 
 /* Dynamic Island-inspired Navigation */
@@ -2061,6 +2110,8 @@ body {
 .trend-bar {
   border-radius: 2px;
   transition: height 0.3s ease;
+  width: 100%;
+  min-height: 2px;
 }
 
 .trend-bar.rate-bar {

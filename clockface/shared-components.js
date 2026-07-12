@@ -87,6 +87,23 @@ const SharedComponents = {
     `;
   },
 
+  renderPageHeaderWithBack(title, subtitle, backTo, actionsHtml = '') {
+    return `
+      <div class="page-header-with-back">
+        <button class="back-arrow-btn" data-back-to="${backTo}" aria-label="Go back">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="page-header-main">
+          <h1 class="page-title-with-back">${title}</h1>
+          ${subtitle ? `<p class="page-subtitle-with-back">${subtitle}</p>` : ''}
+        </div>
+        ${actionsHtml}
+      </div>
+    `;
+  },
+
   handleQuickAction(action) {
     const property = AppState.getPropertyContext();
     switch(action) {
@@ -141,5 +158,15 @@ const SharedComponents = {
     toast.classList.add('visible');
     clearTimeout(toast._hideTimer);
     toast._hideTimer = setTimeout(() => toast.classList.remove('visible'), durationMs);
+  },
+
+  attachPageHeaderWithBackHandler(container) {
+    const backBtn = container.querySelector('.back-arrow-btn');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => {
+        const backTo = backBtn.dataset.backTo;
+        PageLoaders.navigate(backTo);
+      });
+    }
   },
 };
