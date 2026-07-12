@@ -355,6 +355,33 @@ textarea {
   padding: 10px 20px;
 }
 
+.vacate-delete-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.vacate-delete-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(90deg, #1A1A1A 0%, #7f1d1d 100%);
+  border: none;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-bottom: 0;
+}
+
+.vacate-delete-btn:hover {
+  background: linear-gradient(90deg, #333 0%, #991b1b 100%);
+}
+
+.trash-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
 .destructive-warning {
   font-size: 13px;
   color: var(--color-danger-text);
@@ -364,4 +391,7 @@ textarea {
   border-radius: 6px;
   margin: 0;
   line-height: 1.4;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  margin-top: -4px;
 }
