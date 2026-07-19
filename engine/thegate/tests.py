@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import check_password, make_password
 from django.test import TestCase
 from rest_framework.test import APIClient
 
@@ -130,6 +131,113 @@ class StaffManagementTests(TestCase):
         self.assertEqual(response.status_code, 204)
         self.assertFalse(User.objects.filter(id=staff_user.id).exists())
         self.assertFalse(AuditLog.objects.filter(target_id=staff_user.id).exists())
+
+
+class PasswordRecoveryFlowTests(TestCase):
+    def test_recovery_code_verification_marks_code_used_and_returns_token(self):
+        user = User.objects.create_user(
+            username='recoveryuser',
+            password='securepass123',
+            role=User.MANAGER,
+        )
+        user.recovery_code_hash = make_password('RMS-TEST-1234-5678')
+        user.recovery_code_used = False
+        user.save(update_fields=['recovery_code_hash', 'recovery_code_used'])
+
+        response = self.client.post('/api/auth/recover/verify-code/', {
+            'username': 'recoveryuser',
+            'recovery_code': 'RMS-TEST-1234-5678',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('verification_token', response.data)
+        user.refresh_from_db()
+        self.assertTrue(user.recovery_code_used)
+
+    def test_old_recovery_code_is_invalid_after_password_reset(self):
+        user = User.objects.create_user(
+            username='rotationuser',
+            password='securepass123',
+            role=User.MANAGER,
+        )
+        old_code = 'RMS-OLD-0000-0000'
+        user.recovery_code_hash = make_password(old_code)
+        user.recovery_code_used = False
+        user.save(update_fields=['recovery_code_hash', 'recovery_code_used'])
+
+        SecurityQuestion.objects.create(
+            user=user,
+            question_1='What was the name of your first pet?',
+            answer_1_hash=make_password('fluffy'.lower()),
+            question_2='What city were you born in?',
+            answer_2_hash=make_password('nairobi'.lower()),
+        )
+
+        verify_response = self.client.post('/api/auth/recover/verify-question/', {
+            'username': 'rotationuser',
+            'question': 'What was the name of your first pet?',
+            'answer': 'fluffy',
+        })
+        self.assertEqual(verify_response.status_code, 200)
+        token = verify_response.data['verification_token']
+
+        reset_response = self.client.post('/api/auth/recover/set-password/', {
+            'username': 'rotationuser',
+            'new_password': 'Newstrong123',
+            'method': 'question',
+            'verification_token': token,
+        })
+        self.assertEqual(reset_response.status_code, 200)
+
+        old_code_response = self.client.post('/api/auth/recover/verify-code/', {
+            'username': 'rotationuser',
+            'recovery_code': old_code,
+        })
+        self.assertEqual(old_code_response.status_code, 400)
+        self.assertIn('error', old_code_response.data)
+        self.assertIn('invalid', old_code_response.data['error'].lower())
+
+    def test_email_reset_returns_specific_error_when_no_recovery_email_is_set(self):
+        User.objects.create_user(
+            username='emaillessuser',
+            password='securepass123',
+            role=User.MANAGER,
+        )
+
+        response = self.client.post('/api/auth/recover/send-email/', {
+            'username': 'emaillessuser',
+        })
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data['error'], 'No recovery email is set for this account. Please use another method.')
+
+    def test_security_question_endpoint_returns_question_options_and_accepts_selected_answer(self):
+        user = User.objects.create_user(
+            username='questionuser',
+            password='securepass123',
+            role=User.MANAGER,
+        )
+        SecurityQuestion.objects.create(
+            user=user,
+            question_1='What was the name of your first pet?',
+            answer_1_hash=make_password('fluffy'.lower()),
+            question_2='What city were you born in?',
+            answer_2_hash=make_password('nairobi'.lower()),
+        )
+
+        question_response = self.client.get('/api/auth/recover/question-text/?username=questionuser')
+        self.assertEqual(question_response.status_code, 200)
+        self.assertIn('questions', question_response.data)
+        self.assertIn('What was the name of your first pet?', question_response.data['questions'])
+
+        verify_response = self.client.post('/api/auth/recover/verify-question/', {
+            'username': 'questionuser',
+            'question': 'What was the name of your first pet?',
+            'answer': 'FLUFFY',
+        })
+
+        self.assertEqual(verify_response.status_code, 200)
+        self.assertIn('verification_token', verify_response.data)
 
 
 class AdminAuditAndSettingsTests(TestCase):

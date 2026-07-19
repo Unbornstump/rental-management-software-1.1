@@ -40,6 +40,17 @@ const WorkspaceLoading = {
     overlay.querySelector('.error-state').style.display = 'flex';
   },
 
+  showAuthError() {
+    const overlay = this.getOverlay();
+    if (!overlay) return;
+    overlay.querySelector('.loading-content').style.display = 'none';
+
+    const errorState = overlay.querySelector('.error-state');
+    errorState.style.display = 'flex';
+    errorState.querySelector('.error-title').textContent = 'Authentication Error';
+    errorState.querySelector('.error-message').textContent = 'Your session may have expired. Please log in again.';
+  },
+
   waitForPaint() {
     return new Promise(resolve => {
       requestAnimationFrame(() => requestAnimationFrame(resolve));
@@ -102,7 +113,13 @@ const WorkspaceLoading = {
       await this.complete();
     } catch (error) {
       console.error('Workspace loading failed:', error);
-      this.showError();
+
+      // Check for 401 auth error specifically
+      if (error.response?.status === 401) {
+        this.showAuthError();
+      } else {
+        this.showError();
+      }
     } finally {
       this.isRunning = false;
     }

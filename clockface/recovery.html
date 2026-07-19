@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account Recovery - RMS</title>
+  <script>
+    (function () {
+      const storageKey = 'theme';
+      function isValidTheme(theme) {
+        return theme === 'light' || theme === 'dark' || theme === 'system';
+      }
+      function getStoredTheme() {
+        try {
+          const storedTheme = localStorage.getItem(storageKey);
+          return isValidTheme(storedTheme) ? storedTheme : 'dark';
+        } catch (error) {
+          return 'dark';
+        }
+      }
+      function resolveTheme(theme) {
+        if (theme !== 'system') return theme;
+        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      const theme = getStoredTheme();
+      const resolvedTheme = resolveTheme(theme);
+      const root = document.documentElement;
+      const bg = resolvedTheme === 'dark' ? '#0f1115' : '#fafafa';
+      const text = resolvedTheme === 'dark' ? '#f5f7fa' : '#1a1a1a';
+      root.setAttribute('data-theme', resolvedTheme);
+      root.setAttribute('data-theme-preference', theme);
+      root.style.colorScheme = resolvedTheme;
+      root.style.backgroundColor = bg;
+      root.style.color = text;
+      root.classList.toggle('theme-dark', resolvedTheme === 'dark');
+      root.classList.toggle('theme-light', resolvedTheme === 'light');
+      document.body && Object.assign(document.body.style, { backgroundColor: bg, color: text });
+    })();
+  </script>
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="recovery.css">
+</head>
+<body>
+  <div class="recovery-container">
+    <div class="recovery-card">
+      <div class="recovery-header">
+        <a href="#" class="back-to-login" id="back-to-login">← Back to Home</a>
+      </div>
+      
+      <div class="recovery-error" id="recovery-error"></div>
+      
+      <h1 class="recovery-title">RMS</h1>
+      <h2 class="recovery-subtitle">Account Recovery</h2>
+      
+      <div class="recovery-methods" id="recovery-methods">
+        <!-- Recovery method options will be inserted here -->
+      </div>
+      
+      <div class="recovery-form" id="recovery-form" hidden>
+        <!-- Specific recovery method form will be inserted here -->
+      </div>
+    </div>
+  </div>
+  
+  <script src="api-client.js"></script>
+  <script src="state.js"></script>
+  <script src="recovery.js"></script>
+</body>
+</html>

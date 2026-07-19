@@ -1,36 +1,12 @@
-const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
+// Browser-compatible API client
+// Uses fetch API instead of Node.js axios
 
-// Load environment variables from .env file
-function loadEnv() {
-  const envPath = path.join(__dirname, '.env');
-  if (fs.existsSync(envPath)) {
-    const envContent = fs.readFileSync(envPath, 'utf-8');
-    const lines = envContent.split('\n');
-    lines.forEach(line => {
-      const [key, value] = line.split('=');
-      if (key && value) {
-        process.env[key.trim()] = value.trim();
-      }
-    });
-  }
-}
-
-loadEnv();
-
-const BASE_URL = process.env.RMS_BACKEND_URL || 'http://127.0.0.1:8000';
+const BASE_URL = window.RMS_BACKEND_URL || 'http://127.0.0.1:8000';
 
 class ApiClient {
   constructor() {
     this.baseURL = BASE_URL;
     this.token = null;
-    this.client = axios.create({
-      baseURL: this.baseURL,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
   }
 
   getHeaders() {
@@ -43,74 +19,90 @@ class ApiClient {
     return headers;
   }
 
-  async login(username, password) {
-    const response = await axios.post(`${this.baseURL}/api/auth/login/`, {
-      username,
-      password
+  async request(url, options = {}) {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...this.getHeaders(),
+        ...options.headers
+      }
     });
-    this.token = response.data.access;
-    this.user = response.data.user;
-    return response.data;
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const error = new Error(data.detail || data.error || 'Request failed');
+      error.response = { data, status: response.status };
+      throw error;
+    }
+
+    return data;
+  }
+
+  async login(username, password) {
+    const data = await this.request(`${this.baseURL}/api/auth/login/`, {
+      method: 'POST',
+      body: JSON.stringify({ username, password })
+    });
+    this.token = data.access;
+    this.user = data.user;
+    return data;
   }
 
   async getSetupStatus() {
-    const response = await axios.get(`${this.baseURL}/api/auth/setup-status/`);
-    return response.data;
+    return this.request(`${this.baseURL}/api/auth/setup-status/`);
   }
 
   async registerManager(fullName, username, password) {
-    const response = await axios.post(`${this.baseURL}/api/auth/register/`, {
-      full_name: fullName,
-      username,
-      password
+    const data = await this.request(`${this.baseURL}/api/auth/register/`, {
+      method: 'POST',
+      body: JSON.stringify({ full_name: fullName, username, password })
     });
-    this.user = response.data;
-    return response.data;
+    this.user = data;
+    return data;
   }
 
   async refreshToken(refreshToken) {
-    const response = await axios.post(`${this.baseURL}/api/auth/refresh/`, {
-      refresh: refreshToken
+    const data = await this.request(`${this.baseURL}/api/auth/refresh/`, {
+      method: 'POST',
+      body: JSON.stringify({ refresh: refreshToken })
     });
-    this.token = response.data.access;
-    return response.data;
+    this.token = data.access;
+    return data;
   }
 
   async get(path, params = {}) {
-    const response = await axios.get(`${this.baseURL}${path}`, {
-      headers: this.getHeaders(),
-      params
-    });
-    return response.data;
+    const url = new URL(`${this.baseURL}${path}`);
+    Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+    return this.request(url.toString());
   }
 
   async post(path, data) {
-    const response = await axios.post(`${this.baseURL}${path}`, data, {
-      headers: this.getHeaders()
+    return this.request(`${this.baseURL}${path}`, {
+      method: 'POST',
+      body: JSON.stringify(data)
     });
-    return response.data;
   }
 
   async put(path, data) {
-    const response = await axios.put(`${this.baseURL}${path}`, data, {
-      headers: this.getHeaders()
+    return this.request(`${this.baseURL}${path}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
     });
-    return response.data;
   }
 
   async delete(path) {
-    const response = await axios.delete(`${this.baseURL}${path}`, {
-      headers: this.getHeaders()
+    return this.request(`${this.baseURL}${path}`, {
+      method: 'DELETE'
     });
-    return response.data;
   }
 
   async patch(path, data) {
-    const response = await axios.patch(`${this.baseURL}${path}`, data, {
-        headers: this.getHeaders()
+    return this.request(`${this.baseURL}${path}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
     });
-    return response.data;
-}
+  }
 
   // User & Auth endpoints
   async changePassword(newPassword, oldPassword = null) {
@@ -141,6 +133,48 @@ class ApiClient {
       answer_1: answer1,
       answer_2: answer2
     });
+  }
+
+  // Password Recovery - New Endpoints
+  async recoverSendEmail(email) {
+    return this.post('/api/auth/recover/send-email/', { email });
+  }
+
+  async recoverVerifyCode(username, code) {
+    return this.post('/api/auth/recover/verify-code/', { username, recovery_code: code });
+  }
+
+  async recoverVerifyQuestion(username, question, answer) {
+    return this.post('/api/auth/recover/verify-question/', { username, question, answer });
+  }
+
+  async recoverSetPassword(username, newPassword, method = 'code', verificationToken = '') {
+    return this.post('/api/auth/recover/set-password/', {
+      username,
+      new_password: newPassword,
+      method,
+      verification_token: verificationToken
+    });
+  }
+
+  async recoverGenerateCode() {
+    return this.post('/api/auth/recover/generate-code/', {});
+  }
+
+  async getRecoverySettings() {
+    return this.get('/api/auth/recover/settings/');
+  }
+
+  async updateRecoverySettings(recoveryEmail = null, securityQuestion = null, securityAnswer = null) {
+    const payload = {};
+    if (recoveryEmail !== null) payload.recovery_email = recoveryEmail;
+    if (securityQuestion !== null) payload.security_question = securityQuestion;
+    if (securityAnswer !== null) payload.security_answer = securityAnswer;
+    return this.patch('/api/auth/recover/settings/update/', payload);
+  }
+
+  async getRecoveryQuestionText(username) {
+    return this.get(`/api/auth/recover/question-text/?username=${encodeURIComponent(username)}`);
   }
 
   // Staff management endpoints (manager only) - via thegate

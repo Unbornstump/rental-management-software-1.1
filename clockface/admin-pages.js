@@ -840,15 +840,56 @@ const AdminPages = {
               </div>
               <div class="form-group">
                 <label for="current-password">Current Password</label>
-                <input type="password" id="current-password" placeholder="Required to change password">
+                <div class="password-input-wrapper">
+                  <input type="password" id="current-password" placeholder="Required to change password">
+                  <button type="button" class="password-toggle" id="current-password-toggle" aria-label="Toggle password visibility">
+                    <svg class="eye-icon eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <svg class="eye-icon eye-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
               <div class="form-group">
                 <label for="new-password">New Password</label>
-                <input type="password" id="new-password" placeholder="Leave blank to keep current password">
+                <div class="password-input-wrapper">
+                  <input type="password" id="new-password" placeholder="Leave blank to keep current password">
+                  <button type="button" class="password-toggle" id="new-password-toggle" aria-label="Toggle password visibility">
+                    <svg class="eye-icon eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <svg class="eye-icon eye-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section class="settings-section">
+              <div class="settings-section-heading">Account Recovery</div>
+              <div class="form-group">
+                <label>Recovery Email</label>
+                <div id="recovery-email-display" style="margin-bottom: 12px; font-size: 14px; color: #9ca3af;"></div>
+                <button type="button" class="secondary-link" id="edit-recovery-email-btn">Edit Recovery Email</button>
               </div>
               <div class="form-group">
-                <label>Security Questions</label>
-                <button type="button" class="secondary-link" id="security-questions-btn">View / Update Security Questions</button>
+                <label>Security Question</label>
+                <div id="security-question-display" style="margin-bottom: 12px; font-size: 14px; color: #9ca3af;"></div>
+                <button type="button" class="secondary-link" id="edit-security-question-btn">Edit Security Question</button>
+              </div>
+              <div class="form-group">
+                <label>Recovery Code</label>
+                <div id="recovery-code-status" style="margin-bottom: 12px; font-size: 14px;"></div>
+                <button type="button" class="secondary-link" id="generate-recovery-code-btn">Generate New Recovery Code</button>
               </div>
             </section>
 
@@ -904,9 +945,62 @@ const AdminPages = {
         }
       });
 
-      document.getElementById('security-questions-btn').addEventListener('click', () => {
-        alert('Security question setup is available from the recovery flow. Use the password recovery option to update it.');
+      // Load recovery settings
+      this.loadRecoverySettings(currentUser);
+
+      // Recovery email button handler
+      document.getElementById('edit-recovery-email-btn').addEventListener('click', () => {
+        this.showEditRecoveryEmailDialog();
       });
+
+      // Security question button handler
+      document.getElementById('edit-security-question-btn').addEventListener('click', () => {
+        this.showEditSecurityQuestionDialog();
+      });
+
+      // Generate recovery code button handler
+      document.getElementById('generate-recovery-code-btn').addEventListener('click', () => {
+        this.showGenerateRecoveryCodeDialog();
+      });
+
+      // Wire up password toggles for account settings
+      const currentPasswordToggle = document.getElementById('current-password-toggle');
+      const currentPasswordInput = document.getElementById('current-password');
+      if (currentPasswordToggle && currentPasswordInput) {
+        currentPasswordToggle.addEventListener('click', () => {
+          const selectionStart = currentPasswordInput.selectionStart;
+          const selectionEnd = currentPasswordInput.selectionEnd;
+          if (currentPasswordInput.type === 'password') {
+            currentPasswordInput.type = 'text';
+            currentPasswordToggle.classList.add('visible');
+          } else {
+            currentPasswordInput.type = 'password';
+            currentPasswordToggle.classList.remove('visible');
+          }
+          if (typeof selectionStart === 'number' && typeof selectionEnd === 'number') {
+            currentPasswordInput.setSelectionRange(selectionStart, selectionEnd);
+          }
+        });
+      }
+
+      const newPasswordToggle = document.getElementById('new-password-toggle');
+      const newPasswordInput = document.getElementById('new-password');
+      if (newPasswordToggle && newPasswordInput) {
+        newPasswordToggle.addEventListener('click', () => {
+          const selectionStart = newPasswordInput.selectionStart;
+          const selectionEnd = newPasswordInput.selectionEnd;
+          if (newPasswordInput.type === 'password') {
+            newPasswordInput.type = 'text';
+            newPasswordToggle.classList.add('visible');
+          } else {
+            newPasswordInput.type = 'password';
+            newPasswordToggle.classList.remove('visible');
+          }
+          if (typeof selectionStart === 'number' && typeof selectionEnd === 'number') {
+            newPasswordInput.setSelectionRange(selectionStart, selectionEnd);
+          }
+        });
+      }
     } catch (error) {
       console.error('Failed to load settings:', error);
       document.getElementById('page-content').innerHTML = '<div class="error">Failed to load system settings</div>';
@@ -930,6 +1024,199 @@ const AdminPages = {
     if (!Number.isInteger(gracePeriod) || gracePeriod <= 0) errors['grace-period'] = 'Grace period must be a positive number.';
 
     return errors;
+  },
+
+  async loadRecoverySettings(currentUser) {
+    try {
+      const settings = await apiClient.getRecoverySettings();
+      
+      // Display recovery email
+      const emailDisplay = document.getElementById('recovery-email-display');
+      if (settings.recovery_email_masked) {
+        emailDisplay.textContent = `📧 ${settings.recovery_email_masked}`;
+      } else {
+        emailDisplay.textContent = '❌ No recovery email set';
+      }
+      
+      // Display security question
+      const questionDisplay = document.getElementById('security-question-display');
+      if (settings.security_question) {
+        questionDisplay.textContent = `❓ ${settings.security_question}`;
+      } else {
+        questionDisplay.textContent = '❌ No security question set';
+      }
+      
+      // Display recovery code status
+      const codeStatusDisplay = document.getElementById('recovery-code-status');
+      if (settings.has_recovery_code) {
+        codeStatusDisplay.innerHTML = `<span style="color: #10b981;">✓ Active</span>`;
+      } else {
+        codeStatusDisplay.innerHTML = `<span style="color: #ef4444;">✗ No active code</span>`;
+      }
+    } catch (error) {
+      console.error('Failed to load recovery settings:', error);
+    }
+  },
+
+  showEditRecoveryEmailDialog() {
+    const html = `
+      <div id="recovery-email-modal" class="modal-overlay">
+        <div class="modal-card">
+          <h2>Recovery Email</h2>
+          <p>Set your recovery email for password reset assistance.</p>
+          <form id="recovery-email-form">
+            <div class="form-group">
+              <label for="recovery-email-input">Email Address</label>
+              <input type="email" id="recovery-email-input" required placeholder="Enter your recovery email">
+              <div id="recovery-email-form-error" class="field-error"></div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="cancel-btn" onclick="document.getElementById('recovery-email-modal').remove()">Cancel</button>
+              <button type="submit" class="action-button">Save Email</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    document.getElementById('recovery-email-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('recovery-email-input').value.trim();
+      
+      if (!email) {
+        document.getElementById('recovery-email-form-error').textContent = 'Email is required';
+        return;
+      }
+
+      try {
+        await apiClient.updateRecoverySettings(email);
+        document.getElementById('recovery-email-modal').remove();
+        SharedComponents.showToast('Recovery email updated successfully');
+        this.loadRecoverySettings();
+      } catch (error) {
+        document.getElementById('recovery-email-form-error').textContent = error.response?.data?.error || 'Failed to update email';
+      }
+    });
+  },
+
+  showEditSecurityQuestionDialog() {
+    const QUESTIONS = [
+      'What was the name of your first pet?',
+      'What city were you born in?',
+      'What was your mother\'s maiden name?',
+      'What was the name of your primary school?',
+      'What was the make of your first car?',
+      'What is your oldest sibling\'s middle name?',
+      'What street did you grow up on?',
+      'What was your childhood nickname?'
+    ];
+
+    const html = `
+      <div id="security-question-modal" class="modal-overlay">
+        <div class="modal-card">
+          <h2>Security Question</h2>
+          <p>Choose a security question and provide your answer.</p>
+          <form id="security-question-form">
+            <div class="form-group">
+              <label for="question-select">Security Question</label>
+              <select id="question-select" required>
+                <option value="">Select a question...</option>
+                ${QUESTIONS.map(q => `<option value="${q}">${q}</option>`).join('')}
+              </select>
+              <div id="question-select-error" class="field-error"></div>
+            </div>
+            <div class="form-group">
+              <label for="question-answer">Your Answer</label>
+              <input type="text" id="question-answer" required placeholder="Enter your answer">
+              <div id="question-answer-error" class="field-error"></div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="cancel-btn" onclick="document.getElementById('security-question-modal').remove()">Cancel</button>
+              <button type="submit" class="action-button">Save Question</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    document.getElementById('security-question-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const question = document.getElementById('question-select').value.trim();
+      const answer = document.getElementById('question-answer').value.trim();
+      
+      if (!question) {
+        document.getElementById('question-select-error').textContent = 'Please select a question';
+        return;
+      }
+
+      if (!answer) {
+        document.getElementById('question-answer-error').textContent = 'Answer is required';
+        return;
+      }
+
+      try {
+        await apiClient.updateRecoverySettings(null, question, answer);
+        document.getElementById('security-question-modal').remove();
+        SharedComponents.showToast('Security question updated successfully');
+        this.loadRecoverySettings();
+      } catch (error) {
+        document.getElementById('question-answer-error').textContent = error.response?.data?.error || 'Failed to update question';
+      }
+    });
+  },
+
+  showGenerateRecoveryCodeDialog() {
+    const html = `
+      <div id="generate-code-modal" class="modal-overlay">
+        <div class="modal-card">
+          <h2>Generate Recovery Code</h2>
+          <p>Generate a new recovery code. The current code (if any) will be invalidated.</p>
+          <div class="form-actions">
+            <button type="button" class="cancel-btn" onclick="document.getElementById('generate-code-modal').remove()">Cancel</button>
+            <button type="button" class="action-button" id="generate-code-btn">Generate New Code</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    document.getElementById('generate-code-btn').addEventListener('click', async () => {
+      try {
+        const result = await apiClient.recoverGenerateCode();
+        document.getElementById('generate-code-modal').innerHTML = `
+          <div class="modal-card">
+            <h2>Recovery Code Generated</h2>
+            <p>Your new recovery code:</p>
+            <div class="recovery-code" style="font-family: 'Courier New', monospace; font-size: 18px; font-weight: bold; text-align: center; background: var(--background-tertiary, #0f1115); padding: 16px; border-radius: 6px; margin: 20px 0; letter-spacing: 2px;">${result.recovery_code}</div>
+            <p style="font-size: 13px; color: #9ca3af;">Save this code somewhere safe. It can only be used once.</p>
+            <button type="button" id="copy-recovery-code-btn" class="action-button">Copy to Clipboard</button>
+            <div class="form-actions" style="margin-top: 20px;">
+              <button type="button" class="action-button" id="close-generate-code-btn">Done</button>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('copy-recovery-code-btn').addEventListener('click', async () => {
+          await navigator.clipboard.writeText(result.recovery_code);
+          const btn = document.getElementById('copy-recovery-code-btn');
+          btn.textContent = 'Copied ✓';
+          setTimeout(() => { btn.textContent = 'Copy to Clipboard'; }, 2000);
+        });
+
+        document.getElementById('close-generate-code-btn').addEventListener('click', () => {
+          document.getElementById('generate-code-modal').remove();
+          this.loadRecoverySettings();
+        });
+      } catch (error) {
+        SharedComponents.showToast('Failed to generate recovery code');
+        document.getElementById('generate-code-modal').remove();
+      }
+    });
   }
 };
 

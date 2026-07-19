@@ -120,12 +120,58 @@ app.on('window-all-closed', () => {
   }
 });
 
+let recoveryWindow = null;
+
+function createRecoveryWindow() {
+  recoveryWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    },
+    title: 'Account Recovery - RMS'
+  });
+
+  recoveryWindow.maximize();
+  recoveryWindow.loadFile('recovery.html');
+  
+  recoveryWindow.on('closed', () => {
+    recoveryWindow = null;
+  });
+}
+
 // IPC handlers
 ipcMain.on('open-login-window', () => {
   if (loginWindow) {
     loginWindow.close();
   }
   createLoginWindow();
+});
+
+ipcMain.on('open-recovery-window', () => {
+  if (recoveryWindow) {
+    recoveryWindow.close();
+  }
+  createRecoveryWindow();
+});
+
+ipcMain.on('recovery-success', (event, authData) => {
+  if (recoveryWindow) {
+    recoveryWindow.close();
+  }
+  if (loginWindow) {
+    loginWindow.close();
+  }
+  if (homepageWindow) {
+    homepageWindow.close();
+  }
+  createMainWindow(
+    authData.token, 
+    authData.role, 
+    authData.username, 
+    authData.mustChangePassword
+  );
 });
 
 ipcMain.on('login-success', (event, authData) => {

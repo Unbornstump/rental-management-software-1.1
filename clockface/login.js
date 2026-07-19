@@ -60,6 +60,63 @@ function showInactivityMessage() {
   }
 }
 
+function togglePasswordVisibility(input, toggle) {
+  if (!input) return;
+  const selectionStart = input.selectionStart;
+  const selectionEnd = input.selectionEnd;
+
+  if (input.type === 'password') {
+    input.type = 'text';
+    toggle.classList.add('visible');
+  } else {
+    input.type = 'password';
+    toggle.classList.remove('visible');
+  }
+
+  if (typeof selectionStart === 'number' && typeof selectionEnd === 'number') {
+    input.setSelectionRange(selectionStart, selectionEnd);
+  }
+}
+
+function createPasswordFieldToggle(input) {
+  if (!input || input.dataset.passwordToggleAttached === 'true') return;
+  if (input.parentElement && input.parentElement.classList.contains('password-input-wrapper')) {
+    input.dataset.passwordToggleAttached = 'true';
+    return;
+  }
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'password-input-wrapper';
+  input.parentNode.insertBefore(wrapper, input);
+  wrapper.appendChild(input);
+
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'password-toggle';
+  toggle.setAttribute('aria-label', 'Toggle password visibility');
+  toggle.innerHTML = `
+    <svg class="eye-icon eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+    <svg class="eye-icon eye-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+      <line x1="1" y1="1" x2="23" y2="23"/>
+    </svg>
+  `;
+  wrapper.appendChild(toggle);
+
+  toggle.addEventListener('click', () => togglePasswordVisibility(input, toggle));
+
+  input.dataset.passwordToggleAttached = 'true';
+}
+
+function attachPasswordToggles(container) {
+  if (!container) return;
+  container.querySelectorAll('input[type="password"]').forEach(createPasswordFieldToggle);
+}
+
 function initializeLoginPage() {
   showInactivityMessage();
 
@@ -79,6 +136,8 @@ function initializeLoginPage() {
     });
   }
 
+  attachPasswordToggles(document.body);
+
   const forgotPasswordLink = document.getElementById('forgot-password-link');
   if (forgotPasswordLink) {
     forgotPasswordLink.addEventListener('click', (e) => {
@@ -86,6 +145,8 @@ function initializeLoginPage() {
       showRecoveryForm();
     });
   }
+
+  attachPasswordToggles(document.body);
 
   const loginForm = document.getElementById('login-form');
   if (loginForm) {
@@ -124,11 +185,6 @@ function initializeLoginPage() {
         AppState.setUsername(username);
         AppState.setMustChangePassword(data.user.must_change_password);
         AppState.setAuthToken(data.access);
-
-        if (data.requires_security_questions_setup) {
-          showSecurityQuestionSetup();
-          return;
-        }
 
         if (data.user.must_change_password) {
           showPasswordChangeDialog();
@@ -265,6 +321,7 @@ function showCreateManagerAccount() {
     </form>
   `;
 
+  attachPasswordToggles(container);
   bindManagerFormValidation();
 }
 
@@ -375,23 +432,25 @@ function showSecurityQuestionSetup() {
       <span class="setup-progress-label">Step 3 of 3</span>
     </div>
     <h2 class="setup-card-title">Set Up Account Recovery</h2>
-    <p class="setup-card-copy">Choose two security questions. These will be used to recover your account if you forget your password.</p>
+    <p class="setup-card-copy">Configure your recovery email and security question for account recovery.</p>
     <form id="security-setup-form" class="setup-form-grid">
       <div class="setup-form-group">
-        <label class="setup-label" for="setup-question-1">Question 1</label>
-        <select id="setup-question-1" class="setup-input">
-          ${RECOVERY_QUESTIONS.map((question) => `<option value="${question}">${question}</option>`).join('')}
-        </select>
-        <input type="text" id="setup-answer-1" class="setup-input" placeholder="Your answer">
-        <span class="field-error" id="setup-answer-1-error"></span>
+        <label class="setup-label" for="setup-recovery-email">Recovery Email</label>
+        <input type="email" id="setup-recovery-email" class="setup-input" placeholder="Enter recovery email address" required>
+        <span class="field-error" id="setup-recovery-email-error"></span>
       </div>
       <div class="setup-form-group">
-        <label class="setup-label" for="setup-question-2">Question 2</label>
-        <select id="setup-question-2" class="setup-input">
+        <label class="setup-label" for="setup-security-question">Security Question</label>
+        <select id="setup-security-question" class="setup-input" required>
+          <option value="">Select a question...</option>
           ${RECOVERY_QUESTIONS.map((question) => `<option value="${question}">${question}</option>`).join('')}
         </select>
-        <input type="text" id="setup-answer-2" class="setup-input" placeholder="Your answer">
-        <span class="field-error" id="setup-answer-2-error"></span>
+        <span class="field-error" id="setup-security-question-error"></span>
+      </div>
+      <div class="setup-form-group">
+        <label class="setup-label" for="setup-security-answer">Your Answer</label>
+        <input type="text" id="setup-security-answer" class="setup-input" placeholder="Your answer" required>
+        <span class="field-error" id="setup-security-answer-error"></span>
       </div>
       <div class="setup-button-row">
         <button type="submit" class="login-button" id="setup-save-button">Save & Continue</button>
@@ -402,56 +461,106 @@ function showSecurityQuestionSetup() {
 
   document.getElementById('security-setup-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const question1 = document.getElementById('setup-question-1').value;
-    const answer1 = document.getElementById('setup-answer-1').value.trim();
-    const question2 = document.getElementById('setup-question-2').value;
-    const answer2 = document.getElementById('setup-answer-2').value.trim();
+    const email = document.getElementById('setup-recovery-email').value.trim();
+    const question = document.getElementById('setup-security-question').value;
+    const answer = document.getElementById('setup-security-answer').value.trim();
 
-    document.getElementById('setup-answer-1-error').textContent = '';
-    document.getElementById('setup-answer-2-error').textContent = '';
+    document.getElementById('setup-recovery-email-error').textContent = '';
+    document.getElementById('setup-security-question-error').textContent = '';
+    document.getElementById('setup-security-answer-error').textContent = '';
 
-    if (!answer1) {
-      document.getElementById('setup-answer-1-error').textContent = 'This field is required';
+    if (!email) {
+      document.getElementById('setup-recovery-email-error').textContent = 'Recovery email is required';
       return;
     }
 
-    if (!answer2) {
-      document.getElementById('setup-answer-2-error').textContent = 'This field is required';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      document.getElementById('setup-recovery-email-error').textContent = 'Please enter a valid email address';
       return;
     }
 
-    if (question1 === question2) {
-      document.getElementById('setup-answer-2-error').textContent = 'Choose two different questions';
+    if (!question) {
+      document.getElementById('setup-security-question-error').textContent = 'Please select a security question';
+      return;
+    }
+
+    if (!answer) {
+      document.getElementById('setup-security-answer-error').textContent = 'Please provide an answer';
       return;
     }
 
     const saveButton = document.getElementById('setup-save-button');
     saveButton.disabled = true;
-    saveButton.textContent = 'Saving...';
+    saveButton.textContent = 'Setting up...';
 
     try {
-      await apiClient.saveSecurityQuestions(question1, answer1, question2, answer2);
-      showSetupComplete();
+      // Save recovery settings
+      await apiClient.updateRecoverySettings(email, question, answer);
+      // Generate initial recovery code
+      const codeResult = await apiClient.recoverGenerateCode();
+      setupState.recoveryCode = codeResult.recovery_code;
+      showRecoveryCodeDisplay();
     } catch (error) {
       saveButton.disabled = false;
       saveButton.textContent = 'Save & Continue';
-      document.getElementById('setup-answer-2-error').textContent = 'Unable to save security questions';
+      const errorMsg = error?.response?.data?.error || 'Unable to save recovery settings';
+      document.getElementById('setup-security-answer-error').textContent = errorMsg;
     }
   });
 }
 
-function showSetupComplete() {
+function showRecoveryCodeDisplay() {
   const container = document.getElementById('setup-flow');
   container.innerHTML = `
-    <div class="setup-success-icon">✓</div>
-    <h2 class="setup-card-title">You're all set!</h2>
-    <p class="setup-card-copy">Your manager account has been created. You can now start adding your properties.</p>
+    <div class="setup-progress">
+      <span class="setup-progress-dot active"></span>
+      <span class="setup-progress-dot active"></span>
+      <span class="setup-progress-dot active"></span>
+      <span class="setup-progress-label">Step 3 of 3</span>
+    </div>
+    <h2 class="setup-card-title">Save Your Recovery Code</h2>
+    <p class="setup-card-copy">Write down or save this code somewhere safe. You'll need it if you forget your password.</p>
+    <div class="setup-recovery-code-display" style="background: var(--background-tertiary, #0f1115); border: 1px solid var(--background-tertiary-hover, #1a1d23); padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; font-family: 'Courier New', monospace;">
+      <div style="font-size: 14px; color: #9ca3af; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">Recovery Code</div>
+      <div style="font-size: 28px; font-weight: bold; letter-spacing: 3px; color: #fff; word-break: break-all;">${setupState.recoveryCode}</div>
+    </div>
+    <div class="setup-button-row" style="margin-bottom: 16px;">
+      <button type="button" class="login-button" id="copy-recovery-code-btn" style="background: var(--background-tertiary, #1a1d23); color: #7c8aff; border: 1px solid #7c8aff;">Copy to Clipboard</button>
+    </div>
+    <div style="margin: 20px 0; padding: 16px; background: rgba(124, 138, 255, 0.1); border-left: 3px solid #7c8aff; border-radius: 4px;">
+      <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+        <input type="checkbox" id="setup-code-saved-checkbox" style="width: 18px; height: 18px; cursor: pointer;">
+        <span style="color: #d1d5db; font-size: 14px;">I have saved my recovery code</span>
+      </label>
+    </div>
     <div class="setup-button-row">
-      <button type="button" class="login-button" id="setup-enter-button">Enter RMS</button>
+      <button type="button" class="login-button" id="setup-complete-button" disabled>Enter RMS</button>
     </div>
   `;
 
-  document.getElementById('setup-enter-button').addEventListener('click', async () => {
+  const copyBtn = document.getElementById('copy-recovery-code-btn');
+  const checkbox = document.getElementById('setup-code-saved-checkbox');
+  const completeBtn = document.getElementById('setup-complete-button');
+
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(setupState.recoveryCode);
+      copyBtn.textContent = 'Copied ✓';
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy to Clipboard';
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+    }
+  });
+
+  checkbox.addEventListener('change', () => {
+    completeBtn.disabled = !checkbox.checked;
+  });
+
+  completeBtn.addEventListener('click', async () => {
+    completeBtn.disabled = true;
+    completeBtn.textContent = 'Entering RMS...';
     try {
       const result = await apiClient.login(setupState.username, setupState.password);
       AppState.setUserRole(result.user.role);
@@ -466,80 +575,23 @@ function showSetupComplete() {
         user: result.user
       });
     } catch (error) {
-      console.error('Automatic login after setup failed', error);
+      console.error('Login failed after setup:', error);
+      completeBtn.disabled = false;
+      completeBtn.textContent = 'Enter RMS';
     }
   });
 }
 
+function showSetupComplete() {
+  // This is now handled by showRecoveryCodeDisplay()
+  // Kept for backwards compatibility if needed
+}
+
 function showRecoveryForm() {
-  const container = document.getElementById('recovery-form-container');
-  container.hidden = false;
-  container.innerHTML = `
-    <div class="recovery-panel">
-      <h3>Account Recovery</h3>
-      <p>Answer your security questions to receive a temporary password.</p>
-      <form id="recovery-form">
-        <div class="form-group">
-          <label for="recovery-answer-1">${RECOVERY_QUESTIONS[0]}</label>
-          <input type="text" id="recovery-answer-1" class="login-input" required>
-          <span class="field-error" id="recovery-answer-1-error"></span>
-        </div>
-        <div class="form-group">
-          <label for="recovery-answer-2">${RECOVERY_QUESTIONS[1]}</label>
-          <input type="text" id="recovery-answer-2" class="login-input" required>
-          <span class="field-error" id="recovery-answer-2-error"></span>
-        </div>
-        <button type="submit" class="login-button">Verify Answers</button>
-      </form>
-      <button type="button" class="forgot-password" id="back-to-login">← Back to Login</button>
-    </div>
-  `;
-
-  document.getElementById('recovery-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const answer1 = document.getElementById('recovery-answer-1').value.trim();
-    const answer2 = document.getElementById('recovery-answer-2').value.trim();
-
-    if (!answer1 || !answer2) {
-      document.getElementById('recovery-answer-1-error').textContent = answer1 ? '' : 'This field is required';
-      document.getElementById('recovery-answer-2-error').textContent = answer2 ? '' : 'This field is required';
-      return;
-    }
-
-    try {
-      const result = await apiClient.verifySecurityQuestions(answer1, answer2);
-      container.innerHTML = `
-        <div class="recovery-panel recovery-result">
-          <h3>Identity verified</h3>
-          <p>Your temporary password:</p>
-          <div class="recovery-code">${result.recovery_code}</div>
-          <button type="button" class="login-button" id="copy-recovery-code">Copy to Clipboard</button>
-          <p class="helper-text">Use this to log in. You will be asked to set a new password immediately after.</p>
-          <button type="button" class="forgot-password" id="go-to-login">Go to Login</button>
-        </div>
-      `;
-
-      document.getElementById('copy-recovery-code').addEventListener('click', async () => {
-        await navigator.clipboard.writeText(result.recovery_code);
-        const copyBtn = document.getElementById('copy-recovery-code');
-        copyBtn.textContent = 'Copied ✓';
-        setTimeout(() => { copyBtn.textContent = 'Copy to Clipboard'; }, 2000);
-      });
-
-      document.getElementById('go-to-login').addEventListener('click', () => {
-        container.hidden = true;
-        container.innerHTML = '';
-      });
-    } catch (error) {
-      document.getElementById('recovery-answer-1-error').textContent = 'One or more answers are incorrect. Please try again.';
-      document.getElementById('recovery-answer-2-error').textContent = '';
-    }
-  });
-
-  document.getElementById('back-to-login').addEventListener('click', () => {
-    container.hidden = true;
-    container.innerHTML = '';
-  });
+  if (typeof ipcRenderer !== 'undefined') {
+    ipcRenderer.send('open-recovery-window');
+    window.close();
+  }
 }
 
 function showPasswordChangeDialog() {
@@ -564,6 +616,21 @@ function showPasswordChangeDialog() {
   }
 
   if (passwordChangeForm) {
+    attachPasswordToggles(passwordChangeForm);
+    
+    // Wire up the static password toggles in the HTML
+    const newPasswordToggle = document.getElementById('new-password-toggle');
+    const newPasswordInput = document.getElementById('new-password');
+    if (newPasswordToggle && newPasswordInput) {
+      newPasswordToggle.addEventListener('click', () => togglePasswordVisibility(newPasswordInput, newPasswordToggle));
+    }
+    
+    const confirmPasswordToggle = document.getElementById('confirm-password-toggle');
+    const confirmPasswordInput = document.getElementById('confirm-password');
+    if (confirmPasswordToggle && confirmPasswordInput) {
+      confirmPasswordToggle.addEventListener('click', () => togglePasswordVisibility(confirmPasswordInput, confirmPasswordToggle));
+    }
+    
     passwordChangeForm.onsubmit = async (e) => {
       e.preventDefault();
 

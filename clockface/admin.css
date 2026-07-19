@@ -98,6 +98,51 @@
   text-align: center;
 }
 
+/* Password toggle styles for admin pages */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper input {
+  padding-right: 48px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--color-text-muted);
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.password-toggle:hover {
+  color: var(--color-text);
+}
+
+.eye-icon {
+  display: block;
+}
+
+.eye-closed {
+  display: none;
+}
+
+.password-toggle.visible .eye-open {
+  display: none;
+}
+
+.password-toggle.visible .eye-closed {
+  display: block;
+}
+
 .permissions-table .permission-no {
   color: #9e9e9e;
   text-align: center;

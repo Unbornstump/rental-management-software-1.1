@@ -106,6 +106,10 @@ body.password-change-active .login-container {
   box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.12);
 }
 
+.password-input-wrapper .modal-input {
+  padding-right: 48px;
+}
+
 .modal-button {
   background-color: var(--color-primary);
   color: var(--color-on-primary);
@@ -363,6 +367,10 @@ body.password-change-active .login-container {
   position: relative;
   display: flex;
   align-items: center;
+}
+
+.password-input-wrapper input {
+  padding-right: 48px;
 }
 
 .password-input-wrapper .login-input {

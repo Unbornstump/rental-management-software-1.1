@@ -75,6 +75,16 @@ class CustomUser(AbstractUser):
         on_delete=models.SET_NULL,
         related_name='created_staff'
     )
+    
+    # Password recovery fields
+    recovery_email = models.EmailField(null=True, blank=True, help_text="Email used for password recovery")
+    security_question = models.CharField(max_length=255, null=True, blank=True, help_text="Recovery security question")
+    security_answer_hash = models.CharField(max_length=255, null=True, blank=True, help_text="Hashed recovery security answer")
+    recovery_code_hash = models.CharField(max_length=255, null=True, blank=True, help_text="Hashed recovery code")
+    recovery_code_used = models.BooleanField(default=False, help_text="Whether recovery code has been used")
+    recovery_code_expires_at = models.DateTimeField(null=True, blank=True, help_text="When recovery code expires")
+    recovery_attempts = models.IntegerField(default=0, help_text="Failed recovery attempts counter")
+    recovery_locked_until = models.DateTimeField(null=True, blank=True, help_text="When account recovery unlock happens")
 
     def save(self, *args, **kwargs):
         if self.role == self.MANAGER:

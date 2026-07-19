@@ -1577,7 +1577,7 @@ const Modals = {
       if (typeof ipcRenderer !== 'undefined') {
         ipcRenderer.send('logout');
       } else {
-        // Fallback for web
+        // Fallback for web - use relative path to avoid file:// protocol issues
         window.location.href = 'login.html';
       }
     }, 300);
