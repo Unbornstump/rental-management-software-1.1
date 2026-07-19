@@ -26,3 +26,9 @@ build/
 
 rms_desktop/
 .qoder
+
+*.md
+!README.md
+
+/test_financial_hub.py
+/tests.py
