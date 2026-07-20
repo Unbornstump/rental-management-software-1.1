@@ -356,11 +356,6 @@ class ApiClient {
     return this.delete(`/api/leases/${id}/`);
   }
 
-  // CRUD methods for Deposits
-  async createDeposit(data) {
-    return this.post('/api/deposits/', data);
-  }
-
   // Financials - Rent Payments
   async getRentPayments(params = {}) {
     const queryString = new URLSearchParams(params).toString();

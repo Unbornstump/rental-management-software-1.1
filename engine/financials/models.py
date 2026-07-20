@@ -96,10 +96,6 @@ class PaymentTransaction(models.Model):
         RentPayment, related_name='transactions', on_delete=models.CASCADE
     )
     amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
-    deposit_amount = models.DecimalField(
-        max_digits=12, decimal_places=2, default=Decimal('0.00'),
-        validators=[MinValueValidator(Decimal('0.00'))]
-    )
     payment_method = models.CharField(max_length=32, choices=RentPayment.PAYMENT_METHOD_CHOICES, blank=True)
     reference_number = models.CharField(max_length=128, blank=True)
     payment_date = models.DateField()

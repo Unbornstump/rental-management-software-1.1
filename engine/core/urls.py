@@ -6,7 +6,7 @@ from .views import (
     LandlordPayoutViewSet, TenantViewSet, TenantUnitViewSet,
     LeaseViewSet, InvoiceViewSet, PaymentViewSet,
     PenaltyRuleViewSet, ReminderViewSet, ExpenseViewSet,
-    DepositViewSet, MessageTemplateViewSet, MessageLogViewSet,
+    MessageTemplateViewSet, MessageLogViewSet,
     MaintenanceRequestViewSet, MaintenanceAssignmentViewSet,
     AuditLogViewSet, SystemSettingsViewSet,
 )
@@ -27,7 +27,6 @@ router.register(r'payments', PaymentViewSet)
 router.register(r'penalty-rules', PenaltyRuleViewSet)
 router.register(r'reminders', ReminderViewSet)
 router.register(r'expenses', ExpenseViewSet)
-router.register(r'deposits', DepositViewSet)
 router.register(r'message-templates', MessageTemplateViewSet)
 router.register(r'message-logs', MessageLogViewSet)
 router.register(r'maintenance-requests', MaintenanceRequestViewSet)

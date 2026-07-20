@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from .models import (
     Property, Unit, Landlord, LandlordProperty, Commission, LandlordPayout,
     Tenant, TenantUnit, Lease, Invoice, Payment, PenaltyRule, Reminder,
-    Expense, Deposit, MessageTemplate, MessageLog,
+    Expense, MessageTemplate, MessageLog,
     MaintenanceRequest, MaintenanceAssignment, AuditLog, SystemSettings,
 )
 
@@ -129,7 +129,7 @@ class LeaseSerializer(serializers.ModelSerializer):
         model = Lease
         fields = [
             'id', 'tenant', 'tenant_name', 'unit', 'unit_number', 'start_date', 'end_date',
-            'rent_amount', 'deposit_amount', 'status', 'date_created',
+            'rent_amount', 'status', 'date_created',
         ]
         read_only_fields = ['id', 'date_created']
 
@@ -195,13 +195,6 @@ class ExpenseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expense
         fields = ['id', 'property', 'unit', 'category', 'amount', 'date', 'description', 'added_by']
-        read_only_fields = ['id']
-
-
-class DepositSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Deposit
-        fields = ['id', 'lease', 'amount_paid', 'date_paid', 'amount_refunded', 'refund_date', 'deductions']
         read_only_fields = ['id']
 
 

@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q, Sum, F, Count, Case, When
 from django.db import transaction
 from django.utils import timezone
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from .models import (
@@ -125,6 +125,55 @@ def next_month_name(month, year):
     return date(year, month + 1, 1).strftime('%B')
 
 
+def _ledger_entry_sort_key(payment_date, tiebreaker):
+    """Build a consistently comparable sort key across dates, datetimes, and ids."""
+    if isinstance(tiebreaker, datetime):
+        secondary = tiebreaker.timestamp()
+    elif hasattr(tiebreaker, 'timestamp'):
+        secondary = tiebreaker.timestamp()
+    elif hasattr(tiebreaker, 'toordinal'):
+        secondary = float(tiebreaker.toordinal())
+    else:
+        secondary = float(tiebreaker)
+    return (payment_date, secondary)
+
+
+def serialize_ledger_entries(tenant):
+    method_labels = {
+        'cash': 'Cash',
+        'mpesa': 'M-Pesa',
+        'bank_transfer': 'Bank Transfer',
+        'cheque': 'Cheque',
+    }
+    entries = []
+
+    rent_txs = PaymentTransaction.objects.filter(
+        rent_payment__tenant=tenant
+    ).select_related('rent_payment', 'recorded_by').order_by('-payment_date', '-created_at')
+
+    for tx in rent_txs:
+        entries.append({
+            'id': tx.id,
+            'payment_type': 'rent',
+            'amount': tx.amount,
+            'payment_date': tx.payment_date,
+            'payment_method': tx.payment_method,
+            'payment_method_display': method_labels.get(tx.payment_method, tx.payment_method or ''),
+            'reference_number': tx.reference_number,
+            'receipt_number': tx.receipt_number,
+            'recorded_by_name': tx.recorded_by.username if tx.recorded_by else '',
+            'billing_month': tx.rent_payment.billing_month,
+            'billing_year': tx.rent_payment.billing_year,
+            'notes': tx.notes,
+            'sort_key': _ledger_entry_sort_key(tx.payment_date, tx.created_at),
+        })
+
+    entries.sort(key=lambda e: e['sort_key'], reverse=True)
+    for entry in entries:
+        entry.pop('sort_key', None)
+    return entries
+
+
 def get_or_create_rent_payment(lease, month, year, user=None):
     existing = RentPayment.objects.filter(
         tenant=lease.tenant,
@@ -150,15 +199,11 @@ def get_or_create_rent_payment(lease, month, year, user=None):
     return payment, True
 
 
-def apply_payment_record(rent_payment, incremental_amount, payment_method, reference_number, payment_date, notes, user, deposit_amount=0):
+def apply_payment_record(rent_payment, incremental_amount, payment_method, reference_number, payment_date, notes, user):
     incremental_amount = Decimal(str(incremental_amount))
-    deposit_amount = Decimal(str(deposit_amount or 0))
+
     if incremental_amount <= 0:
         raise ValueError('Payment amount must be greater than zero')
-    if deposit_amount < 0:
-        raise ValueError('Deposit amount cannot be negative')
-    if deposit_amount > incremental_amount:
-        raise ValueError('Deposit amount cannot exceed total payment amount')
 
     with transaction.atomic():
         old_status = rent_payment.status
@@ -189,7 +234,6 @@ def apply_payment_record(rent_payment, incremental_amount, payment_method, refer
         payment_tx = PaymentTransaction.objects.create(
             rent_payment=rent_payment,
             amount=incremental_amount,
-            deposit_amount=deposit_amount,
             payment_method=payment_method or '',
             reference_number=reference_number or '',
             payment_date=payment_date,
@@ -219,11 +263,8 @@ def apply_payment_record(rent_payment, incremental_amount, payment_method, refer
             old_status=old_status,
             new_status=rent_payment.status,
             old_amount_paid=old_amount,
-            new_amount_paid=new_total,
-            change_description=(
-                f"Payment +{incremental_amount} via {payment_method or 'N/A'} "
-                f"(total now {new_total})"
-            ),
+            new_amount_paid=rent_payment.amount_paid,
+            change_description=f"Rent +{incremental_amount} via {payment_method or 'N/A'} (total now {rent_payment.amount_paid})",
         )
 
     return rent_payment, payment_tx
@@ -409,7 +450,6 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
     def record_payment(self, request, pk=None):
         rent_payment = self.get_object()
         amount_paid = request.data.get('amount_paid')
-        deposit_amount = request.data.get('deposit_amount', 0)
         payment_method = request.data.get('payment_method')
         reference_number = request.data.get('reference_number', '')
         payment_date = request.data.get('payment_date', date.today())
@@ -432,7 +472,7 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
         try:
             rent_payment, _payment_tx = apply_payment_record(
                 rent_payment, amount_paid, payment_method, reference_number,
-                payment_date, notes, request.user, deposit_amount=deposit_amount
+                payment_date, notes, request.user
             )
         except ValueError as exc:
             return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
@@ -446,7 +486,6 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
         month = request.data.get('month')
         year = request.data.get('year')
         amount_paid = request.data.get('amount_paid')
-        deposit_amount = request.data.get('deposit_amount', 0)
         payment_method = request.data.get('payment_method', '')
         reference_number = request.data.get('reference_number', '')
         payment_date = request.data.get('payment_date', date.today().isoformat())
@@ -498,7 +537,7 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
         try:
             rent_payment, _payment_tx = apply_payment_record(
                 rent_payment, amount_paid, payment_method, reference_number,
-                payment_date, notes, request.user, deposit_amount=deposit_amount
+                payment_date, notes, request.user
             )
         except ValueError as exc:
             return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
@@ -571,6 +610,7 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
         credit_breakdown = compute_credit_breakdown(credit_ledger.credit_balance, active_lease.rent_amount)
         surplus_amount = max(Decimal('0'), amount_paid - amount_expected)
         month_tx_data = serialize_month_transactions(current_payment) if current_payment else []
+        ledger_entries = serialize_ledger_entries(tenant)
 
         data = {
             'tenant_id': tenant.id,
@@ -619,6 +659,7 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
             'payment_methods_summary': summarize_payment_methods(month_tx_data),
             'references_summary': summarize_references(month_tx_data),
             'payment_history': payment_history,
+            'ledger_entries': ledger_entries,
         }
 
         serializer = TenantPaymentDashboardSerializer(data)

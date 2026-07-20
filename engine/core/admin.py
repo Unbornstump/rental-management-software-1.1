@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from .models import (
     Property, Unit, Landlord, LandlordProperty, Commission, LandlordPayout,
     Tenant, TenantUnit, Lease, Invoice, Payment, PenaltyRule, Reminder,
-    Expense, Deposit, MessageTemplate, MessageLog,
+    Expense, MessageTemplate, MessageLog,
     MaintenanceRequest, MaintenanceAssignment,
 )
 
@@ -84,10 +84,6 @@ class ReminderAdmin(admin.ModelAdmin):
 class ExpenseAdmin(admin.ModelAdmin):
     list_display = ('property', 'unit', 'category', 'amount', 'date')
     list_filter = ('category', 'property')
-
-@admin.register(Deposit)
-class DepositAdmin(admin.ModelAdmin):
-    list_display = ('lease', 'amount_paid', 'date_paid', 'amount_refunded')
 
 @admin.register(MessageTemplate)
 class MessageTemplateAdmin(admin.ModelAdmin):

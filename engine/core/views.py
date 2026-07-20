@@ -12,7 +12,7 @@ from .permissions import RolePermission
 from .models import (
     Property, Unit, Landlord, LandlordProperty, Commission, LandlordPayout,
     Tenant, TenantUnit, Lease, Invoice, Payment, PenaltyRule, Reminder,
-    Expense, Deposit, MessageTemplate, MessageLog,
+    Expense, MessageTemplate, MessageLog,
     MaintenanceRequest, MaintenanceAssignment, AuditLog, SystemSettings,
 )
 from .serializers import (
@@ -21,7 +21,7 @@ from .serializers import (
     LandlordPayoutSerializer, TenantSerializer, TenantUnitSerializer,
     LeaseSerializer, InvoiceSerializer, PaymentSerializer,
     PenaltyRuleSerializer, ReminderSerializer, ExpenseSerializer,
-    DepositSerializer, MessageTemplateSerializer, MessageLogSerializer,
+    MessageTemplateSerializer, MessageLogSerializer,
     MaintenanceRequestSerializer, MaintenanceAssignmentSerializer,
     AuditLogSerializer, SystemSettingsSerializer,
 )
@@ -408,12 +408,6 @@ class ReminderViewSet(viewsets.ModelViewSet):
 class ExpenseViewSet(viewsets.ModelViewSet):
     queryset = Expense.objects.select_related('property', 'unit', 'added_by').all()
     serializer_class = ExpenseSerializer
-    permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
-
-
-class DepositViewSet(viewsets.ModelViewSet):
-    queryset = Deposit.objects.select_related('lease').all()
-    serializer_class = DepositSerializer
     permission_classes = [permissions.IsAuthenticated, RolePermission([User.MANAGER])]
 
 

@@ -9,11 +9,10 @@ const FinancialsPages = {
     return `KES ${parseFloat(amount || 0).toLocaleString()}`;
   },
 
-  buildPaymentPreviewState(data, amountValue = '', depositValue = '') {
+  buildPaymentPreviewState(data, amountValue = '') {
     const currentPaid = parseFloat(data.current_month_paid || 0);
     const expected = parseFloat(data.current_month_expected || data.rent_amount || 0);
     const enteredAmount = parseFloat(amountValue || 0);
-    const enteredDeposit = parseFloat(depositValue || 0);
     const previewPaid = currentPaid + enteredAmount;
     const status = previewPaid >= expected
       ? (previewPaid > expected ? 'overpaid' : 'paid')
@@ -28,13 +27,9 @@ const FinancialsPages = {
       owed,
       surplus,
       rent_amount: parseFloat(data.rent_amount || 0),
-      payment_deposit: enteredDeposit,
-      payment_rent: Math.max(enteredAmount - enteredDeposit, 0),
+      payment_amount: enteredAmount,
+      _livePreview: true,
     };
-  },
-
-  sumTransactionDeposits(transactions = []) {
-    return transactions.reduce((sum, tx) => sum + parseFloat(tx.deposit_amount || 0), 0);
   },
 
   renderPaymentSubmissionBanner(type, message) {
@@ -670,27 +665,29 @@ const FinancialsPages = {
     const state = container.tenantDetailState;
     const monthLabel = `${this.MONTHS[data.billing_month - 1]} ${data.billing_year}`;
     const unitLabel = `${data.unit_number}${data.unit_type ? ` (${data.unit_type})` : ''}`;
-    const hasPayment = parseFloat(data.current_month_paid || 0) > 0;
+    const hasPayment = parseFloat(data.current_month_paid || 0) > 0
+      || (data.ledger_entries && data.ledger_entries.length > 0);
 
     container.innerHTML = `
       <div class="tenant-detail-page">
-        <div class="tenant-detail-header">
-          <button class="back-link" id="back-to-financials">← Back to Financials</button>
-          <div class="tenant-detail-title">
-            <h1>${data.tenant_name}</h1>
-            <span class="tenant-detail-subtitle">— ${unitLabel}</span>
+        <div class="tenant-detail-top">
+          <button class="back-link-quiet" id="back-to-financials" type="button">
+            <span aria-hidden="true">←</span> Back
+          </button>
+          <div class="tenant-detail-actions">
+            <button class="action-button secondary-btn ${hasPayment ? '' : 'hidden'}" id="header-print-receipt" type="button">Print Receipt</button>
           </div>
-          <button class="action-button secondary-btn ${hasPayment ? '' : 'hidden'}" id="header-print-receipt">Print Receipt</button>
         </div>
+
+        <header class="tenant-detail-hero">
+          <h1 class="tenant-detail-name">${SharedComponents.escapeHtml(data.tenant_name)}</h1>
+          <p class="tenant-detail-meta">${SharedComponents.escapeHtml(unitLabel)} · ${monthLabel}</p>
+        </header>
 
         <div class="tenant-info-strip">
           <div class="info-strip-card">
             <div class="info-strip-label">Phone</div>
             <div class="info-strip-value">${data.phone || '—'}</div>
-          </div>
-          <div class="info-strip-card">
-            <div class="info-strip-label">Unit</div>
-            <div class="info-strip-value">${unitLabel}</div>
           </div>
           <div class="info-strip-card">
             <div class="info-strip-label">Lease Period</div>
@@ -716,15 +713,7 @@ const FinancialsPages = {
                 <input type="number" id="payment-amount" min="0" step="0.01" placeholder="0.00">
               </div>
               <button type="button" class="link-btn" id="pay-exact-btn">Pay Remaining (${this.formatKES(Math.max(parseFloat(data.current_month_expected || 0) - parseFloat(data.current_month_paid || 0), 0))})</button>
-              <p class="form-hint">Total amount received for this submission.</p>
-            </div>
-            <div class="form-group">
-              <label for="payment-deposit">Deposit portion <span class="label-optional">(optional)</span></label>
-              <div class="amount-input-row">
-                <span class="currency-prefix">KES</span>
-                <input type="number" id="payment-deposit" min="0" step="0.01" placeholder="0.00">
-              </div>
-              <p class="form-hint">If part of this payment is a security deposit, enter it here. The receipt will show rent and deposit separately.</p>
+              <p class="form-hint">Rent amount received for this billing month.</p>
             </div>
             <div class="form-group">
               <label for="payment-method">Method</label>
@@ -758,8 +747,8 @@ const FinancialsPages = {
         </div>
 
         <div class="tenant-history-section">
-          <h3>Payment History</h3>
-          <div id="tenant-history-table">${this.renderTenantHistoryTable(data.payment_history)}</div>
+          <h3>Payment Ledger</h3>
+          <div id="tenant-history-table">${this.renderTenantLedgerTable(data.ledger_entries)}</div>
         </div>
       </div>
     `;
@@ -769,23 +758,17 @@ const FinancialsPages = {
     });
 
     const amountInput = container.querySelector('#payment-amount');
-    const depositInput = container.querySelector('#payment-deposit');
     const submitBtn = container.querySelector('#submit-payment-btn');
     const syncPreview = () => {
-      const amount = parseFloat(amountInput.value || 0);
-      const deposit = parseFloat(depositInput.value || 0);
-      if (deposit > amount && amount > 0) {
-        depositInput.classList.add('input-invalid');
-      } else {
-        depositInput.classList.remove('input-invalid');
+      if (container.tenantDetailState) {
+        container.tenantDetailState.receiptSnapshot = null;
       }
-      const hasPositiveAmount = amount > 0 && deposit <= amount;
-      submitBtn.disabled = !hasPositiveAmount;
-      this.renderPaymentFeedbackColumn(container, data, amountInput.value, depositInput.value);
+      const amount = parseFloat(amountInput.value || 0);
+      submitBtn.disabled = !(amount > 0);
+      this.renderPaymentFeedbackColumn(container, data, amountInput.value);
     };
 
     amountInput.addEventListener('input', syncPreview);
-    depositInput.addEventListener('input', syncPreview);
 
     container.querySelector('#pay-exact-btn').addEventListener('click', () => {
       const remaining = Math.max(
@@ -807,13 +790,13 @@ const FinancialsPages = {
     const headerPrint = container.querySelector('#header-print-receipt');
     if (headerPrint) {
       headerPrint.addEventListener('click', () => {
-        this.printReceiptFromPreview(this.buildReceiptData(data, this.buildPaymentPreviewState(data, amountInput.value, depositInput.value)));
+        this.printReceiptFromPreview(this.buildReceiptData(data, this.buildPaymentPreviewState(data, amountInput.value)));
       });
     }
 
     this.attachHistorySortHandler(container);
 
-    this.renderPaymentFeedbackColumn(container, data, amountInput.value, depositInput.value);
+    this.renderPaymentFeedbackColumn(container, data, amountInput.value);
   },
 
   renderCreditArrearsBar(data) {
@@ -826,6 +809,51 @@ const FinancialsPages = {
       <div class="summary-pill"><span class="pill-label">Months in Arrears</span><span class="pill-value">${data.months_in_arrears}</span></div>
       <div class="summary-pill"><span class="pill-label">Total Outstanding</span><span class="pill-value">${this.formatKES(data.total_outstanding)}</span></div>
       <div class="summary-pill"><span class="pill-label">Streak</span><span class="pill-value">${data.payment_streak} months on time</span></div>
+    `;
+  },
+
+  renderTenantLedgerTable(entries, sortDesc = true) {
+    if (!entries || entries.length === 0) {
+      return '<p class="empty-history">No payments recorded yet</p>';
+    }
+
+    const sorted = [...entries].sort((a, b) => {
+      const da = new Date(a.payment_date).getTime();
+      const db = new Date(b.payment_date).getTime();
+      return sortDesc ? db - da : da - db;
+    });
+
+    return `
+      <table class="data-table sortable-history" id="tenant-history-sortable">
+        <thead>
+          <tr>
+            <th class="sortable-th" data-sort="date">Date ↕</th>
+            <th>Period</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>Reference</th>
+            <th>Receipt</th>
+            <th>Recorded By</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sorted.map(entry => {
+            const period = entry.billing_month && entry.billing_year
+              ? `${this.MONTHS[entry.billing_month - 1]} ${entry.billing_year}`
+              : '—';
+            return `
+            <tr class="ledger-row">
+              <td>${this.formatDate(entry.payment_date)}</td>
+              <td>${period}</td>
+              <td>${this.formatKES(entry.amount)}</td>
+              <td>${entry.payment_method_display || (entry.payment_method ? this.formatMethod(entry.payment_method) : '—')}</td>
+              <td>${entry.reference_number || '—'}</td>
+              <td>${entry.receipt_number || '—'}</td>
+              <td>${entry.recorded_by_name || '—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
     `;
   },
 
@@ -875,8 +903,13 @@ const FinancialsPages = {
     const lines = txs.map(tx => {
       const ref = tx.reference_number ? `  ${tx.reference_number}` : '';
       const method = tx.payment_method_display || this.formatMethod(tx.payment_method);
-      return `<div class="breakdown-line"><span>${this.formatDateShort(tx.payment_date)}</span><span>${this.formatKES(tx.amount)}</span><span>${method}${ref}</span></div>`;
+      return `<div class="breakdown-line breakdown-rent"><span>${this.formatDateShort(tx.payment_date)} · Rent</span><span>${this.formatKES(tx.amount)}</span><span>${method}${ref}</span></div>`;
     }).join('');
+
+    let previewLines = '';
+    if (previewState && previewState.payment_amount > 0) {
+      previewLines += `<div class="breakdown-line breakdown-preview"><span>Pending</span><span>${this.formatKES(previewState.payment_amount)}</span><span>Not yet submitted</span></div>`;
+    }
 
     const paid = previewState ? previewState.current_month_paid : parseFloat(data.current_month_paid || 0);
     const expected = previewState ? previewState.current_month_expected : parseFloat(data.current_month_expected || 0);
@@ -901,7 +934,7 @@ const FinancialsPages = {
     return `
       <div class="payment-breakdown">
         <h4>Payment breakdown — ${monthLabel}</h4>
-        <div class="breakdown-lines">${lines || '<div class="breakdown-line"><span>No transactions yet</span><span>—</span><span>—</span></div>'}</div>
+        <div class="breakdown-lines">${lines}${previewLines || (lines ? '' : '<div class="breakdown-line"><span>No transactions yet</span><span>—</span><span>—</span></div>')}</div>
         <div class="breakdown-divider"></div>
         ${totalsHtml}
       </div>`;
@@ -920,13 +953,8 @@ const FinancialsPages = {
     const breakdown = this.computeSurplusBreakdown(paid, expected, data.rent_amount);
     const txs = data.month_transactions || [];
     const latestTx = txs.length ? txs[txs.length - 1] : null;
-    const existingDeposit = this.sumTransactionDeposits(txs);
-    const previewDeposit = previewState ? parseFloat(previewState.payment_deposit || 0) : 0;
-    const totalDeposit = existingDeposit + previewDeposit;
-    const previewRent = previewState ? parseFloat(previewState.payment_rent || 0) : 0;
-    const totalRent = previewState
-      ? Math.max(paid - totalDeposit, 0)
-      : Math.max(paid - existingDeposit, 0);
+    const previewAmount = previewState ? parseFloat(previewState.payment_amount || 0) : 0;
+    const submissionTotal = previewState && previewState._livePreview ? previewAmount : paid;
 
     return {
       propertyName: data.property_name,
@@ -940,11 +968,8 @@ const FinancialsPages = {
       leaseEnd: data.lease_end,
       monthLabel: `${this.MONTHS[data.billing_month - 1]} ${data.billing_year}`,
       rentAmount: data.rent_amount,
-      rentPortion: totalRent,
-      depositPortion: totalDeposit,
-      previewRentPortion: previewRent,
-      previewDepositPortion: previewDeposit,
-      totalPaid: paid,
+      totalPaid: submissionTotal,
+      monthlyRentPaid: paid,
       methods: data.payment_methods_summary || '—',
       references: data.references_summary || '—',
       status: previewState ? previewState.current_month_status : data.current_month_status,
@@ -985,11 +1010,7 @@ const FinancialsPages = {
         <div class="receipt-divider"></div>
         <div class="receipt-row"><span>Billing Month:</span><span>${receipt.monthLabel}</span></div>
         <div class="receipt-row"><span>Monthly Rent:</span><span>${this.formatKES(receipt.rentAmount)}</span></div>
-        ${receipt.depositPortion > 0 ? `
-        <div class="receipt-row"><span>Rent portion:</span><span>${this.formatKES(receipt.rentPortion)}</span></div>
-        <div class="receipt-row"><span>Deposit portion:</span><span>${this.formatKES(receipt.depositPortion)}</span></div>
-        ` : ''}
-        <div class="receipt-row receipt-total"><span>Total Paid:</span><span>${this.formatKES(receipt.totalPaid)}</span></div>
+        <div class="receipt-row receipt-total"><span>Total Received:</span><span>${this.formatKES(receipt.totalPaid)}</span></div>
         <div class="receipt-row"><span>Method:</span><span>${receipt.methods}</span></div>
         <div class="receipt-row"><span>Reference:</span><span>${receipt.references}</span></div>
         <div class="receipt-row"><span>Status:</span><span>${statusLabel}</span></div>
@@ -1174,11 +1195,25 @@ const FinancialsPages = {
       </div>`;
   },
 
-  renderPaymentFeedbackColumn(container, data, amountValue = '', depositValue = '', submissionBanner = '') {
+  renderPaymentFeedbackColumn(container, data, amountValue = '', submissionBanner = '', receiptSnapshot = null) {
     const feedback = container.querySelector('#payment-feedback');
     if (!feedback) return;
 
-    const previewState = this.buildPaymentPreviewState(data, amountValue, depositValue);
+    let previewState;
+    if (receiptSnapshot) {
+      const paid = parseFloat(data.current_month_paid || 0);
+      const expected = parseFloat(data.current_month_expected || data.rent_amount || 0);
+      previewState = {
+        current_month_paid: paid,
+        current_month_expected: expected,
+        current_month_status: data.current_month_status,
+        owed: Math.max(expected - paid, 0),
+        surplus: Math.max(paid - expected, 0),
+        payment_amount: receiptSnapshot.amount,
+      };
+    } else {
+      previewState = this.buildPaymentPreviewState(data, amountValue);
+    }
     const receipt = this.buildReceiptData(data, previewState);
     feedback.innerHTML = `
       ${submissionBanner}
@@ -1221,7 +1256,7 @@ const FinancialsPages = {
 
   updateTenantDetailAfterPayment(container, data) {
     container.querySelector('#credit-arrears-bar').innerHTML = this.renderCreditArrearsBar(data);
-    container.querySelector('#tenant-history-table').innerHTML = this.renderTenantHistoryTable(data.payment_history);
+    container.querySelector('#tenant-history-table').innerHTML = this.renderTenantLedgerTable(data.ledger_entries);
 
     const statusBadge = container.querySelector('#header-status-badge');
     if (statusBadge) {
@@ -1233,7 +1268,6 @@ const FinancialsPages = {
     submitBtn.textContent = 'Submit Payment';
     submitBtn.disabled = true;
     container.querySelector('#payment-amount').value = '';
-    container.querySelector('#payment-deposit').value = '';
     container.querySelector('#payment-reference').value = '';
 
     const remaining = Math.max(
@@ -1252,27 +1286,24 @@ const FinancialsPages = {
         )
       : '';
 
-    this.renderPaymentFeedbackColumn(container, data, '', '', banner);
+    this.renderPaymentFeedbackColumn(
+      container,
+      data,
+      '',
+      banner,
+      container.tenantDetailState.receiptSnapshot
+    );
     this.attachHistorySortHandler(container);
   },
 
   async submitTenantPayment(container) {
     const state = container.tenantDetailState;
     const amount = parseFloat(container.querySelector('#payment-amount').value || 0);
-    const deposit = parseFloat(container.querySelector('#payment-deposit').value || 0);
     const data = state.dashboard;
 
-    if (deposit > amount) {
-      SharedComponents.showToast('Deposit cannot exceed the total payment amount.', 'error');
+    if (amount <= 0) {
+      SharedComponents.showToast('Enter a payment amount greater than zero.', 'error');
       return;
-    }
-
-    if (parseFloat(data.current_month_paid || 0) > 0) {
-      const monthLabel = `${this.MONTHS[data.billing_month - 1]} ${data.billing_year}`;
-      const confirmed = window.confirm(
-        `You already recorded a payment for ${monthLabel}. Are you sure you want to record another?`
-      );
-      if (!confirmed) return;
     }
 
     const payload = {
@@ -1280,7 +1311,6 @@ const FinancialsPages = {
       month: state.billingMonth,
       year: state.billingYear,
       amount_paid: amount,
-      deposit_amount: deposit,
       payment_method: container.querySelector('#payment-method').value,
       reference_number: container.querySelector('#payment-reference').value,
       payment_date: new Date().toISOString().split('T')[0],
@@ -1300,7 +1330,8 @@ const FinancialsPages = {
       });
       state.dashboard = updated;
       state.paymentSubmitted = true;
-      state.lastSubmissionMessage = `Payment of ${this.formatKES(amount)} submitted successfully.`;
+      state.receiptSnapshot = { amount, total: amount };
+      state.lastSubmissionMessage = `Payment submitted successfully — ${this.formatKES(amount)}.`;
 
       SharedComponents.showToast(state.lastSubmissionMessage, 'success');
       if (typeof ControlCenter !== 'undefined') ControlCenter.refreshStats();
@@ -1314,7 +1345,6 @@ const FinancialsPages = {
         container,
         data,
         container.querySelector('#payment-amount').value,
-        container.querySelector('#payment-deposit').value,
         this.renderPaymentSubmissionBanner('error', state.lastSubmissionMessage)
       );
       submitBtn.disabled = false;
@@ -1332,7 +1362,7 @@ const FinancialsPages = {
       const data = container.tenantDetailState.dashboard;
       if (data) {
         container.querySelector('#tenant-history-table').innerHTML =
-          this.renderTenantHistoryTable(data.payment_history, sortDesc);
+          this.renderTenantLedgerTable(data.ledger_entries, sortDesc);
         this.attachHistorySortHandler(container);
       }
     });

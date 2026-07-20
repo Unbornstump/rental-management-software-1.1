@@ -3332,6 +3332,16 @@ body {
   font-weight: 500;
 }
 
+.field-validation-error::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  vertical-align: -2px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23dc2626'%3E%3Cpath fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z' clip-rule='evenodd'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
 .form-group input.input-invalid,
 .form-group select.input-invalid,
 .form-group textarea.input-invalid {
@@ -4233,6 +4243,58 @@ body.panel-open::before {
   max-width: 1100px;
 }
 
+.tenant-detail-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.back-link-quiet {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 0;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s ease;
+}
+
+.back-link-quiet:hover {
+  color: #374151;
+  text-decoration: none;
+}
+
+.tenant-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tenant-detail-hero {
+  margin-bottom: 28px;
+  padding-bottom: 0;
+}
+
+.tenant-detail-name {
+  margin: 0 0 6px 0;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #111827;
+  line-height: 1.15;
+}
+
+.tenant-detail-meta {
+  margin: 0;
+  color: #6b7280;
+  font-size: 15px;
+}
+
 .tenant-detail-header {
   display: flex;
   align-items: center;
@@ -4278,7 +4340,7 @@ body.panel-open::before {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 10px;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .info-strip-card {
@@ -4580,9 +4642,118 @@ body.panel-open::before {
   color: #111827;
 }
 
+.pill-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pill-edit-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: #2563eb;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.pill-edit-btn:hover {
+  text-decoration: underline;
+}
+
+.deposit-auto-hint {
+  color: #b45309;
+  font-weight: 500;
+}
+
+.tenant-deposit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .credit-note {
   font-size: 11px;
   color: #16A34A;
+}
+
+.summary-pill.deposit-paid .pill-value { color: #16a34a; }
+.summary-pill.deposit-partial .pill-value { color: #d97706; }
+.summary-pill.deposit-unpaid .pill-value { color: #6b7280; }
+
+.ledger-type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.ledger-type-badge.type-rent {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.ledger-type-badge.type-deposit {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.breakdown-line.breakdown-preview {
+  opacity: 0.75;
+  font-style: italic;
+}
+
+.confirm-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(17, 24, 39, 0.45);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.confirm-dialog-overlay.visible {
+  opacity: 1;
+}
+
+.confirm-dialog-card {
+  width: min(420px, 100%);
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+  border: 1px solid #e5e7eb;
+}
+
+.confirm-dialog-title {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.confirm-dialog-message {
+  margin: 0 0 20px 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #4b5563;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .tenant-history-section {
@@ -5225,6 +5396,19 @@ body.panel-open::before {
 
 /* Dark theme surface hardening */
 [data-theme="dark"] .collection-glance,
+[data-theme="dark"] .confirm-dialog-card {
+  background: var(--color-surface, #1a1d24);
+  border-color: var(--color-border, #2d3340);
+}
+
+[data-theme="dark"] .confirm-dialog-title {
+  color: var(--color-text, #f5f7fa);
+}
+
+[data-theme="dark"] .confirm-dialog-message {
+  color: var(--color-text-muted, #9ca3af);
+}
+
 [data-theme="dark"] .credit-arrears-bar,
 [data-theme="dark"] .payment-breakdown,
 [data-theme="dark"] .empty-history,

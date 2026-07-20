@@ -11,11 +11,12 @@ User = get_user_model()
 class PaymentTransactionSerializer(serializers.ModelSerializer):
     recorded_by_name = serializers.CharField(source='recorded_by.username', read_only=True)
     payment_method_display = serializers.SerializerMethodField()
+    payment_type = serializers.SerializerMethodField()
 
     class Meta:
         model = PaymentTransaction
         fields = [
-            'id', 'amount', 'deposit_amount', 'payment_method', 'payment_method_display',
+            'id', 'amount', 'payment_type', 'payment_method', 'payment_method_display',
             'reference_number', 'payment_date', 'notes', 'receipt_number',
             'recorded_by_name', 'created_at',
         ]
@@ -23,6 +24,24 @@ class PaymentTransactionSerializer(serializers.ModelSerializer):
 
     def get_payment_method_display(self, obj):
         return dict(RentPayment.PAYMENT_METHOD_CHOICES).get(obj.payment_method, obj.payment_method)
+
+    def get_payment_type(self, obj):
+        return 'rent'
+
+
+class LedgerEntrySerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    payment_type = serializers.CharField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    payment_date = serializers.DateField()
+    payment_method = serializers.CharField(allow_blank=True)
+    payment_method_display = serializers.CharField(allow_blank=True)
+    reference_number = serializers.CharField(allow_blank=True)
+    receipt_number = serializers.CharField(allow_blank=True)
+    recorded_by_name = serializers.CharField(allow_blank=True)
+    billing_month = serializers.IntegerField(required=False, allow_null=True)
+    billing_year = serializers.IntegerField(required=False, allow_null=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
 
 
 class RentPaymentSerializer(serializers.ModelSerializer):
@@ -165,6 +184,7 @@ class TenantPaymentDashboardSerializer(serializers.Serializer):
     next_month_name = serializers.CharField(required=False, allow_blank=True)
 
     payment_history = RentPaymentSerializer(many=True)
+    ledger_entries = LedgerEntrySerializer(many=True, required=False)
 
 
 class BulkRentDashboardSerializer(serializers.Serializer):

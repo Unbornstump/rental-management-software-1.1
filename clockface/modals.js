@@ -93,8 +93,29 @@ const Modals = {
         },
         markValidOnPass: true,
       },
+      'tenant-email': {
+        validate: (v) => {
+          const trimmed = (v || '').trim();
+          if (!trimmed) return true;
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) {
+            return "That doesn't look like a valid email — check the format and try again.";
+          }
+          return true;
+        },
+      },
     });
     PhoneValidation.attachLiveValidation(form.querySelector('#tenant-phone'));
+  },
+
+  async confirmDismissLeaseModal(onConfirm) {
+    const confirmed = await ConfirmDialog.show({
+      title: 'Leave without confirming lease?',
+      message: 'Closing now means this tenant cannot be charged rent until a lease is created later from their profile.',
+      cancelText: 'Go back',
+      confirmText: 'Close anyway',
+      confirmVariant: 'danger',
+    });
+    if (confirmed) onConfirm();
   },
 
   // Property Modal
@@ -901,11 +922,11 @@ const Modals = {
             </div>
             <div class="form-group phone-input-wrapper">
               <label for="tenant-phone">Phone</label>
-              <input type="tel" id="tenant-phone" name="phone" value="${tenant?.phone || ''}" placeholder="e.g. 0712 345 678">
+              <input type="tel" id="tenant-phone" name="phone" value="${tenant?.phone || ''}" placeholder="07XX XXX XXX">
             </div>
             <div class="form-group">
               <label for="tenant-email">Email</label>
-              <input type="email" id="tenant-email" name="email" value="${tenant?.email || ''}">
+              <input type="text" id="tenant-email" name="email" inputmode="email" autocomplete="email" value="${tenant?.email || ''}" placeholder="Optional">
             </div>
             <div class="form-group">
               <label for="tenant-national-id">National ID</label>
@@ -1216,10 +1237,6 @@ const Modals = {
               <label for="lease-rent">Monthly Rent Amount</label>
               <input type="number" id="lease-rent" name="rent_amount" value="${unitRentAmount}" min="0" required>
             </div>
-            <div class="form-group">
-              <label for="lease-deposit">Deposit Amount</label>
-              <input type="number" id="lease-deposit" name="deposit_amount" min="0" value="0" required>
-            </div>
           </div>
           
           <div class="modal-footer">
@@ -1262,42 +1279,20 @@ const Modals = {
       userEditedEndDate = true;
     });
 
-    modal.querySelector('.modal-close').addEventListener('click', () => {
-      if (confirm('Warning: Closing this without confirming the lease means this tenant cannot be charged rent. You can create the lease later from the tenant\'s profile.')) {
-        AppState.setUnsavedChanges(false);
-        modal.remove();
-        if (isReLease) {
-          PageLoaders.loadPage('property-tenants');
-        } else {
-          PageLoaders.loadPage('property-tenants');
-        }
-      }
-    });
+    const dismissLeaseModal = () => {
+      AppState.setUnsavedChanges(false);
+      modal.remove();
+      PageLoaders.loadPage('property-tenants');
+    };
 
-    modal.querySelector('.cancel-btn').addEventListener('click', () => {
-      if (confirm('Warning: Closing this without confirming the lease means this tenant cannot be charged rent. You can create the lease later from the tenant\'s profile.')) {
-        AppState.setUnsavedChanges(false);
-        modal.remove();
-        if (isReLease) {
-          PageLoaders.loadPage('property-tenants');
-        } else {
-          PageLoaders.loadPage('property-tenants');
-        }
-      }
-    });
+    const tryDismissLeaseModal = () => {
+      this.confirmDismissLeaseModal(dismissLeaseModal);
+    };
 
+    modal.querySelector('.modal-close').addEventListener('click', tryDismissLeaseModal);
+    modal.querySelector('.cancel-btn').addEventListener('click', tryDismissLeaseModal);
     modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        if (confirm('Warning: Closing this without confirming the lease means this tenant cannot be charged rent. You can create the lease later from the tenant\'s profile.')) {
-          AppState.setUnsavedChanges(false);
-          modal.remove();
-          if (isReLease) {
-            PageLoaders.loadPage('property-tenants');
-          } else {
-            PageLoaders.loadPage('property-tenants');
-          }
-        }
-      }
+      if (e.target === modal) tryDismissLeaseModal();
     });
 
     // Track unsaved changes
@@ -1318,25 +1313,11 @@ const Modals = {
         start_date: formData.get('start_date'),
         end_date: formData.get('end_date'),
         rent_amount: parseFloat(formData.get('rent_amount')),
-        deposit_amount: parseFloat(formData.get('deposit_amount')),
         status: 'active'
       };
 
       try {
-        // Create lease
-        const lease = await apiClient.createLease(leaseData);
-        
-        // Create deposit if amount > 0
-        if (leaseData.deposit_amount > 0) {
-          await apiClient.createDeposit({
-            lease: lease.id,
-            amount_paid: leaseData.deposit_amount,
-            date_paid: todayStr,
-            amount_refunded: 0
-          });
-        }
-
-        // Link tenant to their new unit
+        await apiClient.createLease(leaseData);
         await apiClient.createTenantUnit({
           tenant: tenantId,
           unit: unitId,
