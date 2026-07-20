@@ -142,7 +142,7 @@ const UnitsPages = {
             ${units.map(unit => `
               <tr class="unit-row" data-unit-id="${unit.id}">
                 <td><strong>${unit.unit_number || 'N/A'}</strong></td>
-                <td>${unit.unit_type || 'N/A'}</td>
+                <td>${UnitTypes.formatDisplay(unit.unit_type, unit.unit_type_custom) || unit.unit_type_display || 'N/A'}</td>
                 <td>${parseFloat(unit.rent_amount || 0).toLocaleString()}</td>
                 <td>${unitTenants[unit.id] || '-'}</td>
                 <td>
@@ -212,7 +212,7 @@ const UnitsPages = {
         <li class="data-item">
           <div class="data-item-content">
             <strong>${unit.unit_number || 'N/A'}</strong>
-            <span>${unit.unit_type || 'N/A'} — ${unit.rent_amount || 'N/A'}</span>
+            <span>${UnitTypes.formatDisplay(unit.unit_type, unit.unit_type_custom) || unit.unit_type_display || 'N/A'} — ${unit.rent_amount || 'N/A'}</span>
           </div>
           <div class="data-item-actions">
             ${canManageUnits ? `<button class="action-button-small edit-btn" data-id="${unit.id}">Edit</button>` : ''}

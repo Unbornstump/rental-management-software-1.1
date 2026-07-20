@@ -47,11 +47,29 @@ class PropertySerializer(serializers.ModelSerializer):
 
 class UnitSerializer(serializers.ModelSerializer):
     property_name = serializers.CharField(source='property.name', read_only=True)
+    unit_type_display = serializers.SerializerMethodField()
 
     class Meta:
         model = Unit
-        fields = ['id', 'property', 'property_name', 'unit_number', 'unit_type', 'rent_amount', 'status', 'date_added']
-        read_only_fields = ['id', 'date_added']
+        fields = [
+            'id', 'property', 'property_name', 'unit_number', 'unit_type',
+            'unit_type_custom', 'unit_type_display', 'rent_amount', 'status', 'date_added',
+        ]
+        read_only_fields = ['id', 'date_added', 'unit_type_display']
+
+    def get_unit_type_display(self, obj):
+        return obj.get_unit_type_display_value()
+
+    def validate(self, data):
+        unit_type = data.get('unit_type', getattr(self.instance, 'unit_type', None))
+        unit_type_custom = (data.get('unit_type_custom') or '').strip()
+        if unit_type == Unit.OTHER and not unit_type_custom:
+            raise serializers.ValidationError({
+                'unit_type_custom': 'Please specify the unit type when "Other" is selected.'
+            })
+        if unit_type != Unit.OTHER:
+            data['unit_type_custom'] = ''
+        return data
 
 
 class LandlordSerializer(serializers.ModelSerializer):

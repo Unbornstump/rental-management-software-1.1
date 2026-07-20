@@ -9,10 +9,11 @@ const FinancialsPages = {
     return `KES ${parseFloat(amount || 0).toLocaleString()}`;
   },
 
-  buildPaymentPreviewState(data, amountValue = '') {
+  buildPaymentPreviewState(data, amountValue = '', depositValue = '') {
     const currentPaid = parseFloat(data.current_month_paid || 0);
     const expected = parseFloat(data.current_month_expected || data.rent_amount || 0);
     const enteredAmount = parseFloat(amountValue || 0);
+    const enteredDeposit = parseFloat(depositValue || 0);
     const previewPaid = currentPaid + enteredAmount;
     const status = previewPaid >= expected
       ? (previewPaid > expected ? 'overpaid' : 'paid')
@@ -26,8 +27,19 @@ const FinancialsPages = {
       current_month_status: status,
       owed,
       surplus,
-      rent_amount: parseFloat(data.rent_amount || 0)
+      rent_amount: parseFloat(data.rent_amount || 0),
+      payment_deposit: enteredDeposit,
+      payment_rent: Math.max(enteredAmount - enteredDeposit, 0),
     };
+  },
+
+  sumTransactionDeposits(transactions = []) {
+    return transactions.reduce((sum, tx) => sum + parseFloat(tx.deposit_amount || 0), 0);
+  },
+
+  renderPaymentSubmissionBanner(type, message) {
+    const cls = type === 'success' ? 'payment-banner-success' : 'payment-banner-error';
+    return `<div class="payment-submission-banner ${cls}" role="status">${SharedComponents.escapeHtml(message)}</div>`;
   },
 
   statusDotClass(status) {
@@ -704,7 +716,15 @@ const FinancialsPages = {
                 <input type="number" id="payment-amount" min="0" step="0.01" placeholder="0.00">
               </div>
               <button type="button" class="link-btn" id="pay-exact-btn">Pay Remaining (${this.formatKES(Math.max(parseFloat(data.current_month_expected || 0) - parseFloat(data.current_month_paid || 0), 0))})</button>
-              <p class="form-hint">This amount is added to the monthly running total.</p>
+              <p class="form-hint">Total amount received for this submission.</p>
+            </div>
+            <div class="form-group">
+              <label for="payment-deposit">Deposit portion <span class="label-optional">(optional)</span></label>
+              <div class="amount-input-row">
+                <span class="currency-prefix">KES</span>
+                <input type="number" id="payment-deposit" min="0" step="0.01" placeholder="0.00">
+              </div>
+              <p class="form-hint">If part of this payment is a security deposit, enter it here. The receipt will show rent and deposit separately.</p>
             </div>
             <div class="form-group">
               <label for="payment-method">Method</label>
@@ -749,14 +769,23 @@ const FinancialsPages = {
     });
 
     const amountInput = container.querySelector('#payment-amount');
+    const depositInput = container.querySelector('#payment-deposit');
     const submitBtn = container.querySelector('#submit-payment-btn');
     const syncPreview = () => {
-      const hasPositiveAmount = parseFloat(amountInput.value || 0) > 0;
+      const amount = parseFloat(amountInput.value || 0);
+      const deposit = parseFloat(depositInput.value || 0);
+      if (deposit > amount && amount > 0) {
+        depositInput.classList.add('input-invalid');
+      } else {
+        depositInput.classList.remove('input-invalid');
+      }
+      const hasPositiveAmount = amount > 0 && deposit <= amount;
       submitBtn.disabled = !hasPositiveAmount;
-      this.renderPaymentFeedbackColumn(container, data, amountInput.value);
+      this.renderPaymentFeedbackColumn(container, data, amountInput.value, depositInput.value);
     };
 
     amountInput.addEventListener('input', syncPreview);
+    depositInput.addEventListener('input', syncPreview);
 
     container.querySelector('#pay-exact-btn').addEventListener('click', () => {
       const remaining = Math.max(
@@ -772,16 +801,19 @@ const FinancialsPages = {
       this.submitTenantPayment(container);
     });
 
+    container.tenantDetailState.paymentSubmitted = false;
+    container.tenantDetailState.lastSubmissionMessage = '';
+
     const headerPrint = container.querySelector('#header-print-receipt');
     if (headerPrint) {
       headerPrint.addEventListener('click', () => {
-        this.printReceiptFromPreview(this.buildReceiptData(data, this.buildPaymentPreviewState(data, amountInput.value)));
+        this.printReceiptFromPreview(this.buildReceiptData(data, this.buildPaymentPreviewState(data, amountInput.value, depositInput.value)));
       });
     }
 
     this.attachHistorySortHandler(container);
 
-    this.renderPaymentFeedbackColumn(container, data, amountInput.value);
+    this.renderPaymentFeedbackColumn(container, data, amountInput.value, depositInput.value);
   },
 
   renderCreditArrearsBar(data) {
@@ -888,6 +920,13 @@ const FinancialsPages = {
     const breakdown = this.computeSurplusBreakdown(paid, expected, data.rent_amount);
     const txs = data.month_transactions || [];
     const latestTx = txs.length ? txs[txs.length - 1] : null;
+    const existingDeposit = this.sumTransactionDeposits(txs);
+    const previewDeposit = previewState ? parseFloat(previewState.payment_deposit || 0) : 0;
+    const totalDeposit = existingDeposit + previewDeposit;
+    const previewRent = previewState ? parseFloat(previewState.payment_rent || 0) : 0;
+    const totalRent = previewState
+      ? Math.max(paid - totalDeposit, 0)
+      : Math.max(paid - existingDeposit, 0);
 
     return {
       propertyName: data.property_name,
@@ -901,6 +940,10 @@ const FinancialsPages = {
       leaseEnd: data.lease_end,
       monthLabel: `${this.MONTHS[data.billing_month - 1]} ${data.billing_year}`,
       rentAmount: data.rent_amount,
+      rentPortion: totalRent,
+      depositPortion: totalDeposit,
+      previewRentPortion: previewRent,
+      previewDepositPortion: previewDeposit,
       totalPaid: paid,
       methods: data.payment_methods_summary || '—',
       references: data.references_summary || '—',
@@ -942,6 +985,10 @@ const FinancialsPages = {
         <div class="receipt-divider"></div>
         <div class="receipt-row"><span>Billing Month:</span><span>${receipt.monthLabel}</span></div>
         <div class="receipt-row"><span>Monthly Rent:</span><span>${this.formatKES(receipt.rentAmount)}</span></div>
+        ${receipt.depositPortion > 0 ? `
+        <div class="receipt-row"><span>Rent portion:</span><span>${this.formatKES(receipt.rentPortion)}</span></div>
+        <div class="receipt-row"><span>Deposit portion:</span><span>${this.formatKES(receipt.depositPortion)}</span></div>
+        ` : ''}
         <div class="receipt-row receipt-total"><span>Total Paid:</span><span>${this.formatKES(receipt.totalPaid)}</span></div>
         <div class="receipt-row"><span>Method:</span><span>${receipt.methods}</span></div>
         <div class="receipt-row"><span>Reference:</span><span>${receipt.references}</span></div>
@@ -1127,13 +1174,14 @@ const FinancialsPages = {
       </div>`;
   },
 
-  renderPaymentFeedbackColumn(container, data, amountValue = '') {
+  renderPaymentFeedbackColumn(container, data, amountValue = '', depositValue = '', submissionBanner = '') {
     const feedback = container.querySelector('#payment-feedback');
     if (!feedback) return;
 
-    const previewState = this.buildPaymentPreviewState(data, amountValue);
+    const previewState = this.buildPaymentPreviewState(data, amountValue, depositValue);
     const receipt = this.buildReceiptData(data, previewState);
     feedback.innerHTML = `
+      ${submissionBanner}
       ${this.renderPaymentStatusSummary(data, previewState)}
       ${this.renderPaymentBreakdown(data, previewState)}
       ${this.renderReceiptPreviewHtml(receipt)}
@@ -1185,6 +1233,7 @@ const FinancialsPages = {
     submitBtn.textContent = 'Submit Payment';
     submitBtn.disabled = true;
     container.querySelector('#payment-amount').value = '';
+    container.querySelector('#payment-deposit').value = '';
     container.querySelector('#payment-reference').value = '';
 
     const remaining = Math.max(
@@ -1196,19 +1245,42 @@ const FinancialsPages = {
       payExactBtn.textContent = `Pay Remaining (${this.formatKES(remaining)})`;
     }
 
-    this.renderPaymentFeedbackColumn(container, data, '');
+    const banner = container.tenantDetailState.lastSubmissionMessage
+      ? this.renderPaymentSubmissionBanner(
+          container.tenantDetailState.paymentSubmitted ? 'success' : 'error',
+          container.tenantDetailState.lastSubmissionMessage
+        )
+      : '';
+
+    this.renderPaymentFeedbackColumn(container, data, '', '', banner);
     this.attachHistorySortHandler(container);
   },
 
   async submitTenantPayment(container) {
     const state = container.tenantDetailState;
-    const amount = container.querySelector('#payment-amount').value;
+    const amount = parseFloat(container.querySelector('#payment-amount').value || 0);
+    const deposit = parseFloat(container.querySelector('#payment-deposit').value || 0);
+    const data = state.dashboard;
+
+    if (deposit > amount) {
+      SharedComponents.showToast('Deposit cannot exceed the total payment amount.', 'error');
+      return;
+    }
+
+    if (parseFloat(data.current_month_paid || 0) > 0) {
+      const monthLabel = `${this.MONTHS[data.billing_month - 1]} ${data.billing_year}`;
+      const confirmed = window.confirm(
+        `You already recorded a payment for ${monthLabel}. Are you sure you want to record another?`
+      );
+      if (!confirmed) return;
+    }
 
     const payload = {
       tenant_id: state.tenantId,
       month: state.billingMonth,
       year: state.billingYear,
       amount_paid: amount,
+      deposit_amount: deposit,
       payment_method: container.querySelector('#payment-method').value,
       reference_number: container.querySelector('#payment-reference').value,
       payment_date: new Date().toISOString().split('T')[0],
@@ -1220,18 +1292,31 @@ const FinancialsPages = {
     submitBtn.textContent = 'Submitting...';
 
     try {
-      const result = await apiClient.recordForTenant(payload);
-      state.lastPayment = result;
+      await apiClient.recordForTenant(payload);
 
-      const data = await apiClient.getTenantDashboard(state.tenantId, {
+      const updated = await apiClient.getTenantDashboard(state.tenantId, {
         month: state.billingMonth,
         year: state.billingYear
       });
-      state.dashboard = data;
+      state.dashboard = updated;
+      state.paymentSubmitted = true;
+      state.lastSubmissionMessage = `Payment of ${this.formatKES(amount)} submitted successfully.`;
 
-      this.updateTenantDetailAfterPayment(container, data);
+      SharedComponents.showToast(state.lastSubmissionMessage, 'success');
+      if (typeof ControlCenter !== 'undefined') ControlCenter.refreshStats();
+
+      this.updateTenantDetailAfterPayment(container, updated);
     } catch (error) {
-      alert('Error recording payment: ' + error.message);
+      state.paymentSubmitted = false;
+      state.lastSubmissionMessage = 'Something went wrong — this payment was not recorded. Please try again.';
+      SharedComponents.showToast(state.lastSubmissionMessage, 'error');
+      this.renderPaymentFeedbackColumn(
+        container,
+        data,
+        container.querySelector('#payment-amount').value,
+        container.querySelector('#payment-deposit').value,
+        this.renderPaymentSubmissionBanner('error', state.lastSubmissionMessage)
+      );
       submitBtn.disabled = false;
       submitBtn.textContent = 'Submit Payment';
     }

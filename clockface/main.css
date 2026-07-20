@@ -1496,6 +1496,14 @@ body {
   opacity: 1;
 }
 
+.app-toast.toast-success {
+  background: #065f46;
+}
+
+.app-toast.toast-error {
+  background: #991b1b;
+}
+
 .add-property-icon {
   font-size: 48px;
   color: #9ca3af;
@@ -3313,6 +3321,90 @@ body {
   font-size: 12px;
   color: #dc2626;
   font-weight: 500;
+}
+
+.field-validation-error {
+  display: none;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--danger, #dc2626);
+  font-weight: 500;
+}
+
+.form-group input.input-invalid,
+.form-group select.input-invalid,
+.form-group textarea.input-invalid {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.15);
+}
+
+.form-group input.input-valid,
+.form-group textarea.input-valid {
+  border-color: #16a34a !important;
+  box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.12);
+}
+
+.phone-input-wrapper {
+  position: relative;
+}
+
+.phone-valid-indicator {
+  display: none;
+  position: absolute;
+  right: 12px;
+  top: 38px;
+  color: #16a34a;
+  font-size: 14px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.label-optional {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted, #6b7280);
+}
+
+.payment-submission-banner {
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.payment-banner-success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.payment-banner-error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.financial-hub-card.stats-loading [data-stat="collection-rate"]::after {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: stats-pulse 1.2s ease-in-out infinite;
+  vertical-align: middle;
+}
+
+.stats-empty-state {
+  line-height: 1.35;
+}
+
+@keyframes stats-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
 }
 
 /* Lease Modal */

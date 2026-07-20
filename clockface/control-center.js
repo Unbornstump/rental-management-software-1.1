@@ -3,6 +3,8 @@
 
 const ControlCenter = {
   isOpen: false,
+  statsRefreshTimer: null,
+  lastStatsFetch: null,
 
   init() {
     const hamburgerBtn = document.getElementById('control-center-btn');
@@ -13,7 +15,6 @@ const ControlCenter = {
 
     if (!hamburgerBtn || !overlay) return;
 
-    // Toggle overlay open/close
     hamburgerBtn.addEventListener('click', () => {
       if (this.isOpen) {
         this.close();
@@ -22,10 +23,8 @@ const ControlCenter = {
       }
     });
 
-    // Magnetic hover effect for Dynamic Island
     this.initMagneticEffect(hamburgerBtn);
 
-    // Ripple effect for cards
     if (adminCard) {
       this.initRippleEffect(adminCard);
       adminCard.addEventListener('click', () => {
@@ -42,23 +41,18 @@ const ControlCenter = {
       });
     }
 
-    // Close on backdrop click
     if (backdrop) {
       backdrop.addEventListener('click', () => this.close());
     }
 
-    // Close on Escape key
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && this.isOpen) {
         this.close();
       }
     });
 
-    // Scroll behavior for Dynamic Island
     this.initScrollBehavior();
-
-    // Load placeholder stats for cards
-    this.loadPlaceholderStats();
+    this.refreshStats();
   },
 
   initMagneticEffect(element) {
@@ -66,10 +60,10 @@ const ControlCenter = {
       const rect = element.getBoundingClientRect();
       const x = e.clientX - rect.left - rect.width / 2;
       const y = e.clientY - rect.top - rect.height / 2;
-      
+
       const moveX = x * 0.3;
       const moveY = y * 0.3;
-      
+
       element.style.transform = `translate(${moveX}px, ${moveY}px) scale(1.06)`;
     });
 
@@ -83,7 +77,7 @@ const ControlCenter = {
       const rect = this.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      
+
       const ripple = document.createElement('span');
       ripple.style.cssText = `
         position: absolute;
@@ -97,9 +91,8 @@ const ControlCenter = {
         left: ${x - 50}px;
         top: ${y - 50}px;
       `;
-      
+
       this.appendChild(ripple);
-      
       setTimeout(() => ripple.remove(), 600);
     });
   },
@@ -107,7 +100,7 @@ const ControlCenter = {
   initScrollBehavior() {
     const navBtn = document.getElementById('control-center-btn');
     const contentArea = document.querySelector('.content-area');
-    
+
     if (!navBtn || !contentArea) return;
 
     let scrollTimeout;
@@ -127,38 +120,61 @@ const ControlCenter = {
     });
   },
 
-  async loadPlaceholderStats() {
+  formatLastUpdated(lastUpdated, hasPayments) {
+    if (!hasPayments) {
+      return 'No payments recorded yet — stats will appear here once your first payment is submitted.';
+    }
+    if (!lastUpdated) {
+      return 'Updated just now';
+    }
+    const updated = new Date(lastUpdated);
+    const now = new Date();
+    const diffMs = now - updated;
+    if (diffMs < 60000) {
+      return 'Updated just now';
+    }
+    if (diffMs < 3600000) {
+      const mins = Math.floor(diffMs / 60000);
+      return `Updated ${mins} min${mins === 1 ? '' : 's'} ago`;
+    }
+    return `Updated ${updated.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  },
+
+  setFinancialCardLoading(isLoading) {
+    const financialCard = document.querySelector('.financial-hub-card');
+    if (!financialCard) return;
+    financialCard.classList.toggle('stats-loading', isLoading);
+  },
+
+  async refreshStats() {
     try {
-      // Fetch real Administration stats
+      this.setFinancialCardLoading(true);
       const adminStats = await apiClient.getAdministrationStats();
-
-      // Fetch real Financial Hub stats (global view across all properties)
       const financialStats = await apiClient.getFinancialHubStats();
+      this.lastStatsFetch = Date.now();
 
-      // Update Administration card
       const adminCard = document.querySelector('.administration-card');
       if (adminCard) {
-        adminCard.querySelector('[data-stat="users"]').textContent = adminStats.users || '0';
-        adminCard.querySelector('[data-stat="roles"]').textContent = adminStats.roles || '0';
-        adminCard.querySelector('[data-stat="permissions"]').textContent = adminStats.permissions || '0';
+        adminCard.querySelector('[data-stat="users"]').textContent = adminStats.users ?? '0';
+        adminCard.querySelector('[data-stat="roles"]').textContent = adminStats.roles ?? '0';
+        adminCard.querySelector('[data-stat="permissions"]').textContent = adminStats.permissions ?? '0';
       }
 
-      // Update Financial Hub card
       const financialCard = document.querySelector('.financial-hub-card');
       if (financialCard) {
-        const collectionRate = financialStats.collection_rate || 0;
-        const netToOwners = financialStats.net_to_owners || 0;
+        const hasPayments = financialStats.has_payments || parseFloat(financialStats.total_collected || 0) > 0;
+        const collectionRate = financialStats.collection_rate ?? 0;
+        const netToOwners = financialStats.net_to_owners ?? 0;
         const lastUpdated = financialStats.last_updated ? new Date(financialStats.last_updated) : null;
 
         financialCard.querySelector('[data-stat="collection-rate"]').textContent = `${collectionRate}%`;
-        financialCard.querySelector('[data-stat="net-to-owners"]').textContent = `KES ${netToOwners.toLocaleString()}`;
-        financialCard.querySelector('[data-stat="last-updated"]').textContent = lastUpdated 
-          ? `Updated ${lastUpdated.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
-          : 'No data';
+        financialCard.querySelector('[data-stat="net-to-owners"]').textContent = `KES ${Number(netToOwners).toLocaleString()}`;
+        const footer = financialCard.querySelector('[data-stat="last-updated"]');
+        footer.textContent = this.formatLastUpdated(lastUpdated, hasPayments);
+        footer.classList.toggle('stats-empty-state', !hasPayments);
       }
     } catch (error) {
       console.error('Error loading Control Center stats:', error);
-      // Fallback to zeros if API fails
       const adminCard = document.querySelector('.administration-card');
       if (adminCard) {
         adminCard.querySelector('[data-stat="users"]').textContent = '0';
@@ -168,10 +184,27 @@ const ControlCenter = {
 
       const financialCard = document.querySelector('.financial-hub-card');
       if (financialCard) {
-        financialCard.querySelector('[data-stat="collection-rate"]').textContent = '0%';
-        financialCard.querySelector('[data-stat="net-to-owners"]').textContent = 'KES 0';
-        financialCard.querySelector('[data-stat="last-updated"]').textContent = 'No data';
+        financialCard.querySelector('[data-stat="collection-rate"]').textContent = '—';
+        financialCard.querySelector('[data-stat="net-to-owners"]').textContent = '—';
+        financialCard.querySelector('[data-stat="last-updated"]').textContent =
+          'Could not load stats — open Financial Hub to retry.';
       }
+    } finally {
+      this.setFinancialCardLoading(false);
+    }
+  },
+
+  startStatsPolling() {
+    this.stopStatsPolling();
+    this.statsRefreshTimer = setInterval(() => {
+      if (this.isOpen) this.refreshStats();
+    }, 30000);
+  },
+
+  stopStatsPolling() {
+    if (this.statsRefreshTimer) {
+      clearInterval(this.statsRefreshTimer);
+      this.statsRefreshTimer = null;
     }
   },
 
@@ -186,6 +219,8 @@ const ControlCenter = {
     if (navBtn) {
       navBtn.classList.add('active');
     }
+    this.refreshStats();
+    this.startStatsPolling();
   },
 
   close() {
@@ -199,6 +234,7 @@ const ControlCenter = {
     if (navBtn) {
       navBtn.classList.remove('active');
     }
+    this.stopStatsPolling();
   },
 
   navigateToAdministration() {
@@ -211,17 +247,20 @@ const ControlCenter = {
     PageLoaders.navigate('treasury');
   },
 
-  // Legacy method names for backward compatibility
   navigateToAdmin() {
     this.navigateToAdministration();
   },
 
   navigateToTreasury() {
     this.navigateToFinancialHub();
-  }
+  },
+
+  // Backward compatibility
+  loadPlaceholderStats() {
+    return this.refreshStats();
+  },
 };
 
-// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   ControlCenter.init();
 });

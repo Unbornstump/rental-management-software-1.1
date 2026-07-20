@@ -2,6 +2,101 @@
 // Handles all modal dialogs for creating/editing entities
 
 const Modals = {
+  renderUnitTypeFields(selectedType = '', customValue = '') {
+    return `
+          <div class="form-group">
+            <label for="unit-type">Unit Type</label>
+            <select id="unit-type" name="unit_type">
+              ${UnitTypes.renderSelectOptions(selectedType)}
+            </select>
+          </div>
+          <div class="form-group unit-type-other-group" id="unit-type-other-group" style="display: ${UnitTypes.isOther(selectedType) ? 'block' : 'none'};">
+            <label for="unit-type-custom">Specify unit type</label>
+            <input type="text" id="unit-type-custom" name="unit_type_custom" placeholder="e.g. Penthouse, Warehouse" value="${SharedComponents.escapeHtml(customValue)}">
+          </div>`;
+  },
+
+  attachUnitTypeOtherToggle(modal) {
+    const select = modal.querySelector('#unit-type');
+    const otherGroup = modal.querySelector('#unit-type-other-group');
+    if (!select || !otherGroup) return;
+    const toggle = () => {
+      otherGroup.style.display = UnitTypes.isOther(select.value) ? 'block' : 'none';
+    };
+    select.addEventListener('change', toggle);
+    toggle();
+  },
+
+  getUnitTypePayload(formData) {
+    const unitType = formData.get('unit_type');
+    const custom = (formData.get('unit_type_custom') || '').trim();
+    return {
+      unit_type: unitType,
+      unit_type_custom: UnitTypes.isOther(unitType) ? custom : '',
+    };
+  },
+
+  attachBulkUnitValidation(modal) {
+    const form = modal.querySelector('#bulk-unit-form');
+    FormValidation.attachForm(form, {
+      'unit-prefix': {
+        validate: (v) => (v && v.trim())
+          ? true
+          : "Give these units a name or prefix, e.g. 'Room' or 'Unit'.",
+      },
+      'unit-count': {
+        validate: (v) => {
+          const n = parseInt(v, 10);
+          if (!v || Number.isNaN(n) || n < 1) {
+            return "Enter how many units you'd like to create (must be at least 1).";
+          }
+          return true;
+        },
+      },
+      'rent-amount': {
+        validate: (v) => {
+          if (v === '' || v === null) {
+            return "Enter a rent amount to continue — this can't be left blank.";
+          }
+          if (parseFloat(v) < 0) return 'Rent amount cannot be negative.';
+          return true;
+        },
+      },
+      'unit-type': {
+        validate: (v) => (v ? true : 'Select a unit type to continue.'),
+      },
+      'unit-type-custom': {
+        validate: (v, _input, formEl) => {
+          const type = formEl.querySelector('#unit-type')?.value;
+          if (UnitTypes.isOther(type) && !(v || '').trim()) {
+            return 'Please specify the unit type when "Other" is selected.';
+          }
+          return true;
+        },
+      },
+    });
+  },
+
+  attachTenantFormValidation(modal) {
+    const form = modal.querySelector('#tenant-form');
+    FormValidation.attachForm(form, {
+      'tenant-name': {
+        validate: (v) => (v && v.trim()) ? true : 'Please enter the tenant\'s full name.',
+      },
+      'tenant-phone': {
+        validate: (v) => {
+          if (!v || !v.trim()) return 'Please enter a phone number.';
+          if (!PhoneValidation.isValidKenyanNumber(v)) {
+            return "That doesn't look like a valid phone number.";
+          }
+          return true;
+        },
+        markValidOnPass: true,
+      },
+    });
+    PhoneValidation.attachLiveValidation(form.querySelector('#tenant-phone'));
+  },
+
   // Property Modal
   showPropertyModal(property = null) {
     const isEdit = property !== null;
@@ -16,11 +111,11 @@ const Modals = {
         <form class="modal-form" id="property-form">
           <div class="form-group">
             <label for="property-name">Name</label>
-            <input type="text" id="property-name" name="name" value="${property?.name || ''}" required>
+            <input type="text" id="property-name" name="name" value="${property?.name || ''}">
           </div>
           <div class="form-group">
             <label for="property-type">Property Type</label>
-            <select id="property-type" name="property_type" required>
+            <select id="property-type" name="property_type">
               <option value="">Select type</option>
               <option value="apartment" ${property?.property_type === 'apartment' ? 'selected' : ''}>Apartment</option>
               <option value="house" ${property?.property_type === 'house' ? 'selected' : ''}>House</option>
@@ -30,7 +125,7 @@ const Modals = {
           </div>
           <div class="form-group">
             <label for="property-location">Location</label>
-            <input type="text" id="property-location" name="location" value="${property?.location || ''}" required>
+            <input type="text" id="property-location" name="location" value="${property?.location || ''}">
           </div>
           <div class="form-group">
             <label for="property-description">Description</label>
@@ -51,6 +146,12 @@ const Modals = {
 
     document.body.appendChild(modal);
 
+    FormValidation.attachForm(modal.querySelector('#property-form'), {
+      'property-name': { validate: (v) => (v && v.trim()) ? true : 'Enter a property name.' },
+      'property-type': { validate: (v) => (v ? true : 'Select a property type.') },
+      'property-location': { validate: (v) => (v && v.trim()) ? true : 'Enter a location for this property.' },
+    });
+
     modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
     modal.querySelector('.cancel-btn').addEventListener('click', () => modal.remove());
     modal.addEventListener('click', (e) => {
@@ -68,6 +169,7 @@ const Modals = {
 
     modal.querySelector('#property-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (!FormValidation.validateForm(e.target)) return;
       const formData = new FormData(e.target);
       const data = {
         name: formData.get('name'),
@@ -110,25 +212,16 @@ const Modals = {
         <form class="modal-form" id="unit-form">
           <div class="form-group">
             <label for="unit-number">Unit Number</label>
-            <input type="text" id="unit-number" name="unit_number" value="${unit?.unit_number || ''}" required>
+            <input type="text" id="unit-number" name="unit_number" value="${unit?.unit_number || ''}">
           </div>
-          <div class="form-group">
-            <label for="unit-type">Unit Type</label>
-            <select id="unit-type" name="unit_type" required>
-              <option value="">Select type</option>
-              <option value="bedsitter" ${unit?.unit_type === 'bedsitter' ? 'selected' : ''}>Bedsitter</option>
-              <option value="1br" ${unit?.unit_type === '1br' ? 'selected' : ''}>1BR</option>
-              <option value="2br" ${unit?.unit_type === '2br' ? 'selected' : ''}>2BR</option>
-              <option value="shop" ${unit?.unit_type === 'shop' ? 'selected' : ''}>Shop</option>
-            </select>
-          </div>
+          ${this.renderUnitTypeFields(unit?.unit_type || '', unit?.unit_type_custom || '')}
           <div class="form-group">
             <label for="rent-amount">Rent Amount</label>
-            <input type="number" id="rent-amount" name="rent_amount" value="${unit?.rent_amount || ''}" required>
+            <input type="number" id="rent-amount" name="rent_amount" value="${unit?.rent_amount || ''}">
           </div>
           <div class="form-group">
             <label for="property">Property</label>
-            <select id="property" name="property" required>
+            <select id="property" name="property">
               <option value="">Select property</option>
             </select>
           </div>
@@ -141,6 +234,27 @@ const Modals = {
     `;
 
     document.body.appendChild(modal);
+    this.attachUnitTypeOtherToggle(modal);
+    FormValidation.attachForm(modal.querySelector('#unit-form'), {
+      'unit-number': { validate: (v) => (v && v.trim()) ? true : 'Enter a unit number.' },
+      'unit-type': { validate: (v) => (v ? true : 'Select a unit type to continue.') },
+      'unit-type-custom': {
+        validate: (v, _input, formEl) => {
+          const type = formEl.querySelector('#unit-type')?.value;
+          if (UnitTypes.isOther(type) && !(v || '').trim()) {
+            return 'Please specify the unit type when "Other" is selected.';
+          }
+          return true;
+        },
+      },
+      'rent-amount': {
+        validate: (v) => {
+          if (v === '' || v === null) return "Enter a rent amount to continue — this can't be left blank.";
+          return true;
+        },
+      },
+      property: { validate: (v) => (v ? true : 'Select a property.') },
+    });
 
     apiClient.getProperties().then(properties => {
       const select = modal.querySelector('#property');
@@ -170,10 +284,11 @@ const Modals = {
 
     modal.querySelector('#unit-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (!FormValidation.validateForm(e.target)) return;
       const formData = new FormData(e.target);
       const data = {
         unit_number: formData.get('unit_number'),
-        unit_type: formData.get('unit_type'),
+        ...this.getUnitTypePayload(formData),
         rent_amount: parseFloat(formData.get('rent_amount')),
         property: formData.get('property')
       };
@@ -217,30 +332,21 @@ const Modals = {
         <form class="modal-form" id="bulk-unit-form">
           <div class="form-group">
             <label for="unit-prefix">Unit Prefix/Label</label>
-            <input type="text" id="unit-prefix" name="prefix" placeholder="e.g. A, B, Room, Shop" required>
+            <input type="text" id="unit-prefix" name="prefix" placeholder="e.g. A, B, Room, Shop">
             <small class="form-hint">Units will be named: Prefix 1, Prefix 2, etc.</small>
           </div>
           <div class="form-group">
             <label for="start-number">Start numbering at</label>
-            <input type="number" id="start-number" name="start_number" min="1" value="1" required>
+            <input type="number" id="start-number" name="start_number" min="1" value="1">
           </div>
           <div class="form-group">
             <label for="unit-count">Number of Units</label>
-            <input type="number" id="unit-count" name="count" min="1" max="100" value="10" required>
+            <input type="number" id="unit-count" name="count" min="1" max="100" value="10">
           </div>
-          <div class="form-group">
-            <label for="unit-type">Unit Type</label>
-            <select id="unit-type" name="unit_type" required>
-              <option value="">Select type</option>
-              <option value="bedsitter">Bedsitter</option>
-              <option value="1br">1BR</option>
-              <option value="2br">2BR</option>
-              <option value="shop">Shop</option>
-            </select>
-          </div>
+          ${this.renderUnitTypeFields()}
           <div class="form-group">
             <label for="rent-amount">Rent Amount (per month)</label>
-            <input type="number" id="rent-amount" name="rent_amount" min="0" required>
+            <input type="number" id="rent-amount" name="rent_amount" min="0">
           </div>
           <div class="modal-footer">
             <button type="button" class="action-button cancel-btn">Cancel</button>
@@ -251,6 +357,8 @@ const Modals = {
     `;
 
     document.body.appendChild(modal);
+    this.attachUnitTypeOtherToggle(modal);
+    this.attachBulkUnitValidation(modal);
 
     modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
     modal.querySelector('.cancel-btn').addEventListener('click', () => modal.remove());
@@ -301,11 +409,12 @@ const Modals = {
 
     modal.querySelector('#bulk-unit-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (!FormValidation.validateForm(e.target)) return;
       const formData = new FormData(e.target);
       const prefix = formData.get('prefix').trim();
       const count = parseInt(formData.get('count'));
       const startNumber = parseInt(formData.get('start_number'));
-      const unitType = formData.get('unit_type');
+      const typePayload = this.getUnitTypePayload(formData);
       const rentAmount = parseFloat(formData.get('rent_amount'));
 
       // Generate unit numbers
@@ -313,7 +422,7 @@ const Modals = {
       for (let i = 0; i < count; i++) {
         unitsToCreate.push({
           unit_number: `${prefix} ${startNumber + i}`,
-          unit_type: unitType,
+          ...typePayload,
           rent_amount: rentAmount,
           property: propertyId,
           status: 'vacant'
@@ -513,21 +622,12 @@ const Modals = {
         <form class="modal-form" id="unit-edit-form">
           <div class="form-group">
             <label for="unit-number">Unit Number</label>
-            <input type="text" id="unit-number" name="unit_number" value="${unit?.unit_number || ''}" required>
+            <input type="text" id="unit-number" name="unit_number" value="${unit?.unit_number || ''}">
           </div>
-          <div class="form-group">
-            <label for="unit-type">Unit Type</label>
-            <select id="unit-type" name="unit_type" required>
-              <option value="">Select type</option>
-              <option value="bedsitter" ${unit?.unit_type === 'bedsitter' ? 'selected' : ''}>Bedsitter</option>
-              <option value="1br" ${unit?.unit_type === '1br' ? 'selected' : ''}>1BR</option>
-              <option value="2br" ${unit?.unit_type === '2br' ? 'selected' : ''}>2BR</option>
-              <option value="shop" ${unit?.unit_type === 'shop' ? 'selected' : ''}>Shop</option>
-            </select>
-          </div>
+          ${this.renderUnitTypeFields(unit?.unit_type || '', unit?.unit_type_custom || '')}
           <div class="form-group">
             <label for="rent-amount">Rent Amount</label>
-            <input type="number" id="rent-amount" name="rent_amount" value="${unit?.rent_amount || ''}" required>
+            <input type="number" id="rent-amount" name="rent_amount" value="${unit?.rent_amount || ''}">
           </div>
           <div class="modal-footer">
             <button type="button" class="action-button cancel-btn">Cancel</button>
@@ -538,6 +638,26 @@ const Modals = {
     `;
 
     document.body.appendChild(modal);
+    this.attachUnitTypeOtherToggle(modal);
+    FormValidation.attachForm(modal.querySelector('#unit-edit-form'), {
+      'unit-number': { validate: (v) => (v && v.trim()) ? true : 'Enter a unit number.' },
+      'unit-type': { validate: (v) => (v ? true : 'Select a unit type to continue.') },
+      'unit-type-custom': {
+        validate: (v, _input, formEl) => {
+          const type = formEl.querySelector('#unit-type')?.value;
+          if (UnitTypes.isOther(type) && !(v || '').trim()) {
+            return 'Please specify the unit type when "Other" is selected.';
+          }
+          return true;
+        },
+      },
+      'rent-amount': {
+        validate: (v) => {
+          if (v === '' || v === null) return "Enter a rent amount to continue — this can't be left blank.";
+          return true;
+        },
+      },
+    });
 
     modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
     modal.querySelector('.cancel-btn').addEventListener('click', () => modal.remove());
@@ -547,10 +667,11 @@ const Modals = {
 
     modal.querySelector('#unit-edit-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (!FormValidation.validateForm(e.target)) return;
       const formData = new FormData(e.target);
       const data = {
         unit_number: formData.get('unit_number'),
-        unit_type: formData.get('unit_type'),
+        ...this.getUnitTypePayload(formData),
         rent_amount: parseFloat(formData.get('rent_amount'))
       };
 
@@ -628,7 +749,7 @@ const Modals = {
             </div>
             <div class="readonly-field">
               <label>Unit Type</label>
-              <div class="readonly-value">${unit?.unit_type || 'N/A'}</div>
+              <div class="readonly-value">${UnitTypes.formatDisplay(unit?.unit_type, unit?.unit_type_custom) || 'N/A'}</div>
             </div>
             <div class="readonly-field">
               <label>Rent Amount</label>
@@ -776,11 +897,11 @@ const Modals = {
             <h3 class="form-section-title">Personal Information</h3>
             <div class="form-group">
               <label for="tenant-name">Full Name</label>
-              <input type="text" id="tenant-name" name="full_name" value="${tenant?.full_name || tenant?.name || ''}" required>
+              <input type="text" id="tenant-name" name="full_name" value="${tenant?.full_name || tenant?.name || ''}">
             </div>
-            <div class="form-group">
+            <div class="form-group phone-input-wrapper">
               <label for="tenant-phone">Phone</label>
-              <input type="tel" id="tenant-phone" name="phone" value="${tenant?.phone || ''}" required>
+              <input type="tel" id="tenant-phone" name="phone" value="${tenant?.phone || ''}" placeholder="e.g. 0712 345 678">
             </div>
             <div class="form-group">
               <label for="tenant-email">Email</label>
@@ -827,6 +948,7 @@ const Modals = {
     `;
 
     document.body.appendChild(modal);
+    this.attachTenantFormValidation(modal);
 
     modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
     modal.querySelector('.cancel-btn').addEventListener('click', () => modal.remove());
@@ -897,6 +1019,7 @@ const Modals = {
       // Form submission validation
       modal.querySelector('#tenant-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (!FormValidation.validateForm(e.target)) return;
         
         // Validate unit selection for new tenants
         if (!isEdit && !selectedUnitId) {
@@ -914,19 +1037,6 @@ const Modals = {
           emergency_contact: formData.get('emergency_contact') || undefined,
           status: 'active'
         };
-
-        // Validate required fields
-        if (!data.full_name || !data.full_name.trim()) {
-          alert('Please enter a full name');
-          return;
-        }
-        if (!data.phone || !data.phone.trim()) {
-          alert('Please enter a phone number');
-          return;
-        }
-
-        // Log the data being sent for debugging
-        console.log('Creating tenant with data:', data);
 
         try {
           if (isEdit) {
@@ -1004,6 +1114,7 @@ const Modals = {
       // Edit mode - no unit selection needed
       modal.querySelector('#tenant-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (!FormValidation.validateForm(e.target)) return;
         const formData = new FormData(e.target);
         const data = {
           full_name: formData.get('full_name'),
@@ -1317,7 +1428,7 @@ const Modals = {
       filteredUnits.forEach(unit => {
         const option = document.createElement('option');
         option.value = unit.id;
-        option.textContent = `${unit.unit_number} - ${unit.unit_type}`;
+        option.textContent = `${unit.unit_number} - ${UnitTypes.formatDisplay(unit.unit_type, unit.unit_type_custom) || unit.unit_type_display || unit.unit_type}`;
         if (lease?.unit == unit.id) option.selected = true;
         unitSelect.appendChild(option);
       });

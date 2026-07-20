@@ -178,6 +178,7 @@ def financial_hub_stats(request):
     # Calculate collection rate
     collection_rate = round(float(total_collected / total_expected * 100), 1) if total_expected > 0 else 0.0
     net_to_owners = total_collected - total_commission
+    has_payments = total_collected > 0
     
     # Get last updated time (most recent payment or property update)
     last_payment = rent_payments.order_by('-updated_at').first()
@@ -186,5 +187,8 @@ def financial_hub_stats(request):
     return Response({
         'collection_rate': collection_rate,
         'net_to_owners': float(net_to_owners),
+        'total_collected': float(total_collected),
+        'total_expected': float(total_expected),
+        'has_payments': has_payments,
         'last_updated': last_updated.isoformat() if last_updated else None
     })

@@ -150,10 +150,15 @@ def get_or_create_rent_payment(lease, month, year, user=None):
     return payment, True
 
 
-def apply_payment_record(rent_payment, incremental_amount, payment_method, reference_number, payment_date, notes, user):
+def apply_payment_record(rent_payment, incremental_amount, payment_method, reference_number, payment_date, notes, user, deposit_amount=0):
     incremental_amount = Decimal(str(incremental_amount))
+    deposit_amount = Decimal(str(deposit_amount or 0))
     if incremental_amount <= 0:
         raise ValueError('Payment amount must be greater than zero')
+    if deposit_amount < 0:
+        raise ValueError('Deposit amount cannot be negative')
+    if deposit_amount > incremental_amount:
+        raise ValueError('Deposit amount cannot exceed total payment amount')
 
     with transaction.atomic():
         old_status = rent_payment.status
@@ -184,6 +189,7 @@ def apply_payment_record(rent_payment, incremental_amount, payment_method, refer
         payment_tx = PaymentTransaction.objects.create(
             rent_payment=rent_payment,
             amount=incremental_amount,
+            deposit_amount=deposit_amount,
             payment_method=payment_method or '',
             reference_number=reference_number or '',
             payment_date=payment_date,
@@ -287,7 +293,7 @@ def build_payment_grid(property_id, month, year):
         grid_units.append({
             'unit_id': unit.id,
             'unit_number': unit.unit_number,
-            'unit_type': unit.unit_type or '',
+            'unit_type': unit.get_unit_type_display_value(),
             'is_vacant': is_vacant,
             'tenant_id': lease.tenant_id if lease else None,
             'tenant_name': lease.tenant.full_name if lease else '',
@@ -403,6 +409,7 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
     def record_payment(self, request, pk=None):
         rent_payment = self.get_object()
         amount_paid = request.data.get('amount_paid')
+        deposit_amount = request.data.get('deposit_amount', 0)
         payment_method = request.data.get('payment_method')
         reference_number = request.data.get('reference_number', '')
         payment_date = request.data.get('payment_date', date.today())
@@ -424,7 +431,8 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
 
         try:
             rent_payment, _payment_tx = apply_payment_record(
-                rent_payment, amount_paid, payment_method, reference_number, payment_date, notes, request.user
+                rent_payment, amount_paid, payment_method, reference_number,
+                payment_date, notes, request.user, deposit_amount=deposit_amount
             )
         except ValueError as exc:
             return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
@@ -438,6 +446,7 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
         month = request.data.get('month')
         year = request.data.get('year')
         amount_paid = request.data.get('amount_paid')
+        deposit_amount = request.data.get('deposit_amount', 0)
         payment_method = request.data.get('payment_method', '')
         reference_number = request.data.get('reference_number', '')
         payment_date = request.data.get('payment_date', date.today().isoformat())
@@ -488,7 +497,8 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
 
         try:
             rent_payment, _payment_tx = apply_payment_record(
-                rent_payment, amount_paid, payment_method, reference_number, payment_date, notes, request.user
+                rent_payment, amount_paid, payment_method, reference_number,
+                payment_date, notes, request.user, deposit_amount=deposit_amount
             )
         except ValueError as exc:
             return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
@@ -567,7 +577,8 @@ class RentPaymentViewSet(viewsets.ModelViewSet):
             'tenant_name': tenant.full_name,
             'phone': tenant.phone or '',
             'unit_number': active_lease.unit.unit_number,
-            'unit_type': active_lease.unit.unit_type or '',
+            'unit_type': active_lease.unit.get_unit_type_display_value(),
+            'unit_type_code': active_lease.unit.unit_type or '',
             'property_name': active_lease.unit.property.name,
             'property_address': active_lease.unit.property.location or '',
             'lease_id': active_lease.id,

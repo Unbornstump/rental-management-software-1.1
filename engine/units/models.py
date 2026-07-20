@@ -3,16 +3,26 @@ from django.db import models
 
 
 class Unit(models.Model):
+    SINGLE_ROOM = 'single_room'
+    STUDIO = 'studio'
     BEDSITTER = 'bedsitter'
     ONE_BED = '1br'
     TWO_BED = '2br'
+    THREE_BED = '3br'
     SHOP = 'shop'
+    OFFICE = 'office'
+    OTHER = 'other'
 
     UNIT_TYPE_CHOICES = [
+        (SINGLE_ROOM, 'Single Room'),
+        (STUDIO, 'Studio'),
         (BEDSITTER, 'Bedsitter'),
         (ONE_BED, '1BR'),
         (TWO_BED, '2BR'),
+        (THREE_BED, '3BR'),
         (SHOP, 'Shop'),
+        (OFFICE, 'Office'),
+        (OTHER, 'Other'),
     ]
 
     OCCUPIED = 'occupied'
@@ -26,6 +36,7 @@ class Unit(models.Model):
     property = models.ForeignKey('properties.Property', related_name='units', on_delete=models.CASCADE)
     unit_number = models.CharField(max_length=64)
     unit_type = models.CharField(max_length=32, choices=UNIT_TYPE_CHOICES, default=BEDSITTER)
+    unit_type_custom = models.CharField(max_length=64, blank=True, default='')
     rent_amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=VACANT)
     date_added = models.DateTimeField(auto_now_add=True)

@@ -147,7 +147,7 @@ const SharedComponents = {
       .replace(/"/g, '&quot;');
   },
 
-  showToast(message, durationMs = 4000) {
+  showToast(message, type = 'info', durationMs = 4000) {
     let toast = document.querySelector('.app-toast');
     if (!toast) {
       toast = document.createElement('div');
@@ -155,7 +155,7 @@ const SharedComponents = {
       document.body.appendChild(toast);
     }
     toast.textContent = message;
-    toast.classList.add('visible');
+    toast.className = `app-toast visible toast-${type}`;
     clearTimeout(toast._hideTimer);
     toast._hideTimer = setTimeout(() => toast.classList.remove('visible'), durationMs);
   },
